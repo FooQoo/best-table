@@ -56,7 +56,6 @@ export function AreaPicker() {
             className="flex w-[200%] h-full transition-transform duration-300 ease-out"
             style={{ transform: level === 1 ? "translateX(-50%)" : "translateX(0%)" }}
           >
-            {/* level 0: region / prefecture list */}
             <div className="w-1/2 flex-none overflow-y-auto px-6 py-5">
               <div className="font-bold text-[13px] text-[#79726a] mb-3.5">都道府県選択</div>
               {AREA_REGIONS.map((r) => (
@@ -82,7 +81,6 @@ export function AreaPicker() {
               ))}
             </div>
 
-            {/* level 1: city checkboxes */}
             <div className="w-1/2 flex-none overflow-y-auto px-6 py-5">
               <div className="text-[13px] text-[#79726a] mb-3.5">
                 <span
