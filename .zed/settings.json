@@ -1,0 +1,5 @@
+{
+  "agent": {
+    "commit_message_instructions": "コミットメッセージは Conventional Commits 形式で作成してください。形式は `<type>(<scope>): <日本語の要約>` または `<type>: <日本語の要約>` とします。type は必ず `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert` のいずれかを使ってください。scope は変更範囲が明確な場合のみ英小文字・数字・ハイフンで付与してください。要約と本文は日本語で、簡潔かつ命令形ではなく変更内容が分かる表現にしてください。必要に応じて本文に箇条書きで主な変更点を日本語で記載してください。破壊的変更がある場合は `!` または `BREAKING CHANGE:` を使い、内容を日本語で説明してください。",
+  },
+}
