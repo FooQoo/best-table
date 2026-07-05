@@ -1,6 +1,8 @@
 import type { Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
 import { buildFinalStoreMessage } from "~/utils/final-candidate-message";
+import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
+import { RestaurantMap } from "~/components/feature/maps/restaurant-map";
 
 type FinalStorePanelProps = {
   store: Restaurant;
@@ -73,46 +75,17 @@ export function FinalStorePanel({
   );
 }
 
-function buildGoogleMapsUrl(store: Restaurant): string {
-  if (store.placeId?.startsWith("places/")) {
-    const placeId = store.placeId.replace(/^places\//, "");
-    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
-  }
-
-  const query = [store.name, store.address ?? store.area]
-    .filter(Boolean)
-    .join(" ");
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-}
-
 function FinalStoreMap({ store }: { store: Restaurant }) {
   return (
-    <div
-      className="flex-1 min-w-[220px] h-[180px] relative overflow-hidden rounded-md bg-[#e9e4d6]"
-      style={{
-        backgroundImage:
-          "linear-gradient(0deg,rgba(0,0,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px)",
-        backgroundSize: "24px 24px",
-      }}
-    >
-      <div className="absolute top-3 left-3 text-[11px] font-mono text-[#8a8474]">
-        {store.location ? "最終候補の地図（座標付きモック）" : "地図情報なし"}
+    <div className="flex-1 min-w-[220px] h-[180px] relative overflow-hidden rounded-md bg-[#e9e4d6]">
+      <div className="absolute top-3 left-3 z-10 text-[11px] font-mono text-[#8a8474] bg-[#f7f4ee]/90 border border-[#ddd4c2] rounded px-2 py-1">
+        {store.location ? "最終候補の地図" : "地図情報なし"}
       </div>
-      {store.location ? (
-        <>
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(0,0,0,.3)]"
-            style={{ background: GOLD }}
-          />
-          <div className="absolute left-4 bottom-4 text-[11px] text-[#79726a]">
-            {store.location.lat.toFixed(5)}, {store.location.lng.toFixed(5)}
-          </div>
-        </>
-      ) : (
-        <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 text-center text-[13px] leading-relaxed text-[#79726a]">
-          この店舗は座標を取得できていないため、地図マーカーは表示しません。
-        </div>
-      )}
+      <RestaurantMap
+        restaurants={store.location ? [store] : []}
+        activeRestaurantId={store.id}
+        emptyLabel="地図情報なし"
+      />
     </div>
   );
 }

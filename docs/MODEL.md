@@ -118,9 +118,9 @@ type Restaurant = {
   genre: string | null; // 料理ジャンル。グラウンディング出力に含まれないため現状つねに null
   area: string; // ヒアリングで選んだエリア名をそのまま使う自由文字列
   address: string | null; // 住所。応答本文からのベストエフォート抽出。見つからなければ null
-  location: { lat: number; lng: number } | null; // MAP表示に使う実座標。グラウンディング出力には含まれないため、mvp-cycle-2 で placeId から別途解決する。解決できない場合は null
+  location: { lat: number; lng: number } | null; // MAP表示に使う実座標。グラウンディング出力には含まれないため、placeId から別途解決する。解決できない場合は null
   phone: string | null; // 連絡先。グラウンディング出力に含まれないため現状つねに null
-  photoUrl: string | null; // 代表写真。グラウンディング出力には含まれないため、mvp-cycle-2 で placeId から別途解決する。解決できない場合は null
+  photoUrl: string | null; // 代表写真。グラウンディング出力には含まれないため、placeId から別途解決する。解決できない場合は null
 
   // AI 生成部分。ヒアリング条件を踏まえた1回の生成でまとめて埋める。生成前・失敗時は null。
   score: number | null; // 接待安全度 0-100
@@ -138,7 +138,7 @@ type Restaurant = {
 };
 ```
 
-`mvp-cycle-2` では、Place Details Essentials で `location` と同じ SKU に収まる `formattedAddress` / `shortFormattedAddress` / `types` / `viewport` / `plusCode` / `photos` も同時取得候補にする。ただし現行 `Restaurant` 型へ保存するのは、まず `address` / `location` / `photoUrl` に必要な値だけとし、追加フィールドを UI に出す場合は別途型追加する。
+Place Details Essentials で `location` と同じ SKU に収まる `formattedAddress` / `shortFormattedAddress` / `types` / `viewport` / `plusCode` / `photos` を同時取得候補にする。ただし現行 `Restaurant` 型へ保存するのは、まず `address` / `location` / `photoUrl` に必要な値だけとし、追加フィールドを UI に出す場合は別途型追加する。
 
 自由記述と固定語彙の区別:
 
@@ -148,7 +148,7 @@ type Restaurant = {
 
 生成時に満たすべき制約（`Restaurant` 型自体は自己強制しない。生成サービスと zod スキーマが担保する）:
 
-- Google 由来のフィールド（`placeId` / `genre` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。実際には Gemini のグラウンディング応答に含まれる情報が `uri` / `title` / `placeId` のみだったため、`genre` / `phone` は現状つねに `null`、`address` のみ応答本文からのベストエフォート抽出で埋まることがある。`location` / `address` / `photoUrl` は `mvp-cycle-2` で `placeId` から解決し、取得できた場合だけ埋める。
+- Google 由来のフィールド（`placeId` / `genre` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。実際には Gemini のグラウンディング応答に含まれる情報が `uri` / `title` / `placeId` のみだったため、`genre` / `phone` は現状つねに `null`、`address` のみ応答本文からのベストエフォート抽出で埋まることがある。`location` / `address` / `photoUrl` は `placeId` から解決し、取得できた場合だけ埋める。
 - AI 生成フィールド（`score` 以下）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。
 - 未生成・生成失敗時は AI 生成フィールドを `null` のままにし、Google 由来のフィールドだけで一覧・MAP表示が成立するようにする（`docs/RELIABILITY.md` の段階的表示）。
 - `evidence` / `confidence` を伴わない AI 評価文言を生成しない（`docs/RELIABILITY.md` の根拠付け方針）。
@@ -156,8 +156,8 @@ type Restaurant = {
 ### ドメインサービス
 
 - `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Gemini グラウンディング呼び出し（`app/server/clients/gemini-grounding.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を直列に実行し、`Restaurant[]` を生成する。
-- `RestaurantLocationResolver`（概念、`mvp-cycle-2` で実装）: `placeId` から地図表示用の緯度経度を解決する。解決できない場合は `null` を返し、UI はその店舗のマーカーを出さない。
-- `RestaurantPhotoResolver`（概念、`mvp-cycle-2` で実装）: `placeId` から代表写真を解決する。解決できない場合は `null` を返し、UI は既存の写真プレースホルダーに戻す。
+- `RestaurantLocationResolver`（実装は `app/server/clients/google-places.ts`）: `placeId` から地図表示用の緯度経度を解決する。解決できない場合は `null` を返し、UI はその店舗のマーカーを出さない。
+- `RestaurantPhotoResolver`（実装は `app/server/clients/google-places.ts`）: `placeId` から代表写真を解決する。解決できない場合は `null` を返し、UI は既存の写真プレースホルダーに戻す。
 
 ### リポジトリ
 

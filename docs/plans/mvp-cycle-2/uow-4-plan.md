@@ -89,3 +89,18 @@ Verify:
 - 「Google Mapで開く」から該当店舗を Google Maps で開ける。
 - 既存の理由・予約前確認事項の読みやすさを維持する。
 - `pnpm test` / `pnpm run typecheck` / `pnpm build` が通る。
+
+## 実装結果
+
+Bolt 4-1〜4-3 まで完了。
+
+- Bolt 4-1: `FinalStorePanel` の最終候補地図を UoW-3 の `RestaurantMap` に差し替えた。`location` がある場合は単店舗地図を表示し、`location` がない場合は「地図情報なし」として架空位置を出さない。
+- Bolt 4-2: Google Maps URL 生成を `app/utils/google-maps-url.ts` に切り出した。`placeId` があれば `place_id` URL、なければ店舗名 + 住所、住所がなければ店舗名 + エリアの検索 URL を生成する。
+- Bolt 4-3: 理由・予約前確認事項・連絡先・アクセス・地図・「Google Mapで開く」リンクが同時に表示されることをテストで固定した。
+
+Verify:
+- `pnpm test`（127件）
+- `pnpm run typecheck`
+- `pnpm build`
+- `MODE=mock pnpm exec react-router dev --host 127.0.0.1 --port 5180` で `/` `/hearing` `/results` `/compare` が 200
+- in-app browser はこの環境で利用不可（`agent.browsers.list()` が空）だったため、目視の代わりに route/API とコンポーネントテストで確認
