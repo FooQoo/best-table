@@ -1,21 +1,25 @@
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
-import { type Store } from "~/mocks/data";
+import { GOLD, type Store } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
+import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
 
 type StoreListProps = {
   stores: Store[];
   compareIds: string[];
   onToggleCompare: (id: string) => void;
+  counterpartId: string | null;
 };
 
 export function StoreList({
   stores,
   compareIds,
   onToggleCompare,
+  counterpartId,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
+  const emphasisKeys = getEmphasisKeys(counterpartId);
 
   return (
     <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
@@ -52,6 +56,20 @@ export function StoreList({
                 </div>
               </div>
             </div>
+            {emphasisKeys.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {emphasisKeys.map((key) => (
+                  <span
+                    key={key}
+                    data-testid={`emphasis-${key}-${store.id}`}
+                    className="text-[11px] px-2 py-0.5 rounded-full font-bold"
+                    style={{ background: GOLD, color: "#20201c" }}
+                  >
+                    {EMPHASIS_LABELS[key]}：{store[key]}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="text-xs" style={{ color: concernColor }}>
               ⚠ {store.concern}
             </div>

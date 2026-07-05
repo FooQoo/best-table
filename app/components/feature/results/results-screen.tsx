@@ -54,6 +54,7 @@ export function ResultsScreen() {
           stores={sortedStores}
           compareIds={state.compareIds}
           onToggleCompare={toggleCompare}
+          counterpartId={state.counterpart}
         />
         <ResultsMap stores={sortedStores} />
       </div>

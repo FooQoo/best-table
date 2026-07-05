@@ -40,6 +40,7 @@ export function CompareScreen() {
           stores={selectedStores}
           finalStoreId={state.finalStoreId}
           onSelectFinalStore={selectFinalStore}
+          counterpartId={state.counterpart}
         />
 
         {finalStore && <FinalStorePanel store={finalStore} />}

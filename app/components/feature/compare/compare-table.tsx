@@ -3,11 +3,13 @@ import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
 import { GOLD, NAVY, type Store } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
+import { getEmphasisKeys } from "~/utils/scoring";
 
 type CompareTableProps = {
   stores: Store[];
   finalStoreId: string | null;
   onSelectFinalStore: (id: string) => void;
+  counterpartId: string | null;
 };
 
 const ROWS: { label: string; key: keyof Store; shaded?: boolean }[] = [
@@ -24,8 +26,10 @@ export function CompareTable({
   stores,
   finalStoreId,
   onSelectFinalStore,
+  counterpartId,
 }: CompareTableProps) {
   const t = getTheme();
+  const emphasisKeys = getEmphasisKeys(counterpartId);
 
   return (
     <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] overflow-x-auto">
@@ -64,35 +68,51 @@ export function CompareTable({
           </div>
         ))}
 
-        {ROWS.map((row) => (
-          <Fragment key={row.label}>
-            <div
-              className={`p-3.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
-            >
-              {row.label}
-            </div>
-            {stores.map((store) => (
+        {ROWS.map((row) => {
+          const emphasized = (emphasisKeys as string[]).includes(row.key);
+          return (
+            <Fragment key={row.label}>
               <div
-                key={`${row.label}-${store.id}`}
-                className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
-                style={
-                  row.key === "concern"
-                    ? {
-                        color:
-                          store.concern === "特になし" ? "#79726a" : "#9a6a2a",
-                      }
-                    : undefined
-                }
+                data-emphasized={emphasized}
+                className={`p-3.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
+                style={emphasized ? { color: "#8a6a1a" } : undefined}
               >
-                {row.key === "score" ? (
-                  <ScoreBadge score={store.score} showLabel={false} />
-                ) : (
-                  String(store[row.key])
+                {row.label}
+                {emphasized && (
+                  <span
+                    className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={{ background: GOLD, color: "#20201c" }}
+                  >
+                    重視
+                  </span>
                 )}
               </div>
-            ))}
-          </Fragment>
-        ))}
+              {stores.map((store) => (
+                <div
+                  key={`${row.label}-${store.id}`}
+                  className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
+                  style={{
+                    ...(row.key === "concern"
+                      ? {
+                          color:
+                            store.concern === "特になし"
+                              ? "#79726a"
+                              : "#9a6a2a",
+                        }
+                      : undefined),
+                    ...(emphasized ? { background: t.accentSoftBg } : undefined),
+                  }}
+                >
+                  {row.key === "score" ? (
+                    <ScoreBadge score={store.score} showLabel={false} />
+                  ) : (
+                    String(store[row.key])
+                  )}
+                </div>
+              ))}
+            </Fragment>
+          );
+        })}
 
         <div className="p-4" />
         {stores.map((store) => {
