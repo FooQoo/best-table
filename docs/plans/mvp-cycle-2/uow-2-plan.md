@@ -97,3 +97,19 @@ Verify:
 - 初回・追加取得中は店舗カード形状のスケルトンが表示され、専用ロード画面は出ない。
 - 追加取得失敗時も取得済み店舗は維持される。
 - `pnpm test` / `pnpm run typecheck` / `pnpm build` が通る。
+
+## 実装結果
+
+Bolt 2-1〜2-3 まで完了。
+
+- Bolt 2-1: `/api/restaurants/search` と `searchRestaurants` に `limit` / `offset` を追加し、`hasMore` / `nextOffset` を返す契約へ拡張した。`BookingContext` には `appendRestaurants` を追加し、既存店舗を残して新規 ID のみ追記する。
+- Bolt 2-2: 初回検索は `StoreListSkeleton`、追加取得中は既存リスト下部に `StoreListSkeletonItems` を表示する。追加失敗時に取得済み店舗を維持したまま再試行導線を表示できる footer を `StoreList` に追加した。
+- Bolt 2-3: `ResultsScreen` に最下部 sentinel と IntersectionObserver を追加し、`hasMore` / `nextOffset` / `isLoadingMore` によって重複取得を防ぐ。
+- mock mode: ページング確認のため `MAP_RENDERING_MOCK_RESTAURANTS` を20件に拡張した。
+
+Verify:
+- `pnpm test`（113件）
+- `pnpm run typecheck`
+- `pnpm build`
+- `MODE=mock pnpm exec react-router dev --host 127.0.0.1 --port 5180` で `/` `/hearing` `/results` `/compare` が 200
+- `/api/restaurants/search` mock mode で `limit=10, offset=0` が `mock-1`〜`mock-10` / `hasMore=true` / `nextOffset=10`、`offset=10` が `mock-11`〜`mock-20` / `hasMore=false`

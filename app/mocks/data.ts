@@ -114,42 +114,77 @@ export const STORES: Store[] = [
   { id: "s6", placeId: null, name: "炭火焼 楽", genre: "焼鳥・炭火焼", area: "虎ノ門", address: null, location: null, phone: "03-1234-5606", photoUrl: null, score: 72, room: "半個室あり", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", budgetLabel: "¥10,000", concerns: [{ text: "煙や匂いが気になる場合がある", evidence: ["review", "description"] }], matchingSummary: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", evidence: ["review", "description"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "78%", left: "66%" } },
 ];
 
-export const MAP_RENDERING_MOCK_RESTAURANTS: Restaurant[] = STORES.map(
-  (store, index) => {
-    const locations = [
-      { lat: 35.672176, lng: 139.765022 },
-      { lat: 35.661991, lng: 139.730278 },
-      { lat: 35.666195, lng: 139.758587 },
-      { lat: 35.681382, lng: 139.767209 },
-      { lat: 35.674511, lng: 139.736125 },
-      { lat: 35.668119, lng: 139.749591 },
-    ];
-    const addresses = [
-      "東京都中央区銀座4-6-16",
-      "東京都港区六本木6-10-1",
-      "東京都港区新橋2-16-1",
-      "東京都千代田区丸の内1-9-1",
-      "東京都港区赤坂5-3-1",
-      "東京都港区虎ノ門1-23-1",
-    ];
-    const photoUrls = [
-      "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1559329007-40df8a9345d8?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
-    ];
+const MAP_MOCK_LOCATIONS = [
+  { lat: 35.672176, lng: 139.765022 },
+  { lat: 35.661991, lng: 139.730278 },
+  { lat: 35.666195, lng: 139.758587 },
+  { lat: 35.681382, lng: 139.767209 },
+  { lat: 35.674511, lng: 139.736125 },
+  { lat: 35.668119, lng: 139.749591 },
+  { lat: 35.670297, lng: 139.771146 },
+  { lat: 35.665498, lng: 139.759642 },
+  { lat: 35.676424, lng: 139.764963 },
+  { lat: 35.658581, lng: 139.745433 },
+  { lat: 35.669785, lng: 139.761925 },
+  { lat: 35.680921, lng: 139.737204 },
+  { lat: 35.664112, lng: 139.733576 },
+  { lat: 35.673821, lng: 139.751654 },
+  { lat: 35.671405, lng: 139.746238 },
+  { lat: 35.667021, lng: 139.753481 },
+  { lat: 35.678242, lng: 139.769032 },
+  { lat: 35.662814, lng: 139.756143 },
+  { lat: 35.675936, lng: 139.741965 },
+  { lat: 35.669118, lng: 139.767854 },
+];
+
+const MAP_MOCK_ADDRESSES = [
+  "東京都中央区銀座4-6-16",
+  "東京都港区六本木6-10-1",
+  "東京都港区新橋2-16-1",
+  "東京都千代田区丸の内1-9-1",
+  "東京都港区赤坂5-3-1",
+  "東京都港区虎ノ門1-23-1",
+  "東京都中央区銀座2-8-5",
+  "東京都港区新橋3-11-8",
+  "東京都千代田区有楽町1-6-6",
+  "東京都港区芝公園4-2-8",
+  "東京都中央区銀座7-2-20",
+  "東京都千代田区紀尾井町1-2",
+  "東京都港区六本木7-14-10",
+  "東京都港区虎ノ門2-10-4",
+  "東京都港区赤坂3-12-13",
+  "東京都港区西新橋1-5-8",
+  "東京都中央区京橋3-1-1",
+  "東京都港区東新橋1-8-2",
+  "東京都港区赤坂9-7-4",
+  "東京都中央区銀座8-8-8",
+];
+
+const MAP_MOCK_PHOTO_URLS = [
+  "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1559329007-40df8a9345d8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
+];
+
+export const MAP_RENDERING_MOCK_RESTAURANTS: Restaurant[] =
+  MAP_MOCK_LOCATIONS.map((location, index) => {
+    const store = STORES[index % STORES.length];
+    const page = Math.floor(index / STORES.length) + 1;
+    const suffix = page > 1 ? ` ${page}` : "";
 
     return {
       ...store,
-      address: addresses[index] ?? store.address,
-      location: locations[index] ?? null,
-      photoUrl: photoUrls[index] ?? store.photoUrl,
+      id: `mock-${index + 1}`,
+      name: `${store.name}${suffix}`,
+      address: MAP_MOCK_ADDRESSES[index] ?? store.address,
+      location,
+      photoUrl: MAP_MOCK_PHOTO_URLS[index % MAP_MOCK_PHOTO_URLS.length],
       placeId: `mock-place-${index + 1}`,
     };
-  },
-);
+  });
 
 export function shade(hex: string, pct: number): string {
   const clean = hex.replace("#", "");

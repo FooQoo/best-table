@@ -24,6 +24,13 @@ import {
 export type RestaurantSearchResult = {
   restaurants: Restaurant[];
   fromCache: boolean;
+  hasMore: boolean;
+  nextOffset: number | null;
+};
+
+export type RestaurantSearchPagination = {
+  limit?: number;
+  offset?: number;
 };
 
 export type RestaurantSearchDeps = {
@@ -68,17 +75,25 @@ function buildEvaluationPrompt(
 
 export async function searchRestaurants(
   condition: RestaurantSearchQueryCondition,
+  pagination: RestaurantSearchPagination = {},
   deps: RestaurantSearchDeps = defaultDeps,
 ): Promise<RestaurantSearchResult> {
-  const cacheKey = buildRestaurantSearchCacheKey(condition);
+  const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
+  const offset = Math.max(0, pagination.offset ?? 0);
+  const cacheKey = `${buildRestaurantSearchCacheKey(condition)}|limit=${limit}|offset=${offset}`;
   const cached = deps.getCached(cacheKey);
   if (cached) {
-    return { restaurants: cached, fromCache: true };
+    return {
+      restaurants: cached,
+      fromCache: true,
+      hasMore: cached.length === limit,
+      nextOffset: cached.length === limit ? offset + cached.length : null,
+    };
   }
 
   const latLng = resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
-    return { restaurants: [], fromCache: false };
+    return { restaurants: [], fromCache: false, hasMore: false, nextOffset: null };
   }
 
   const candidates = await deps.searchCandidates({
@@ -86,8 +101,9 @@ export async function searchRestaurants(
     latLng,
   });
   if (candidates.length === 0) {
-    return { restaurants: [], fromCache: false };
+    return { restaurants: [], fromCache: false, hasMore: false, nextOffset: null };
   }
+  const pageCandidates = candidates.slice(offset, offset + limit);
 
   const evaluations = await deps.evaluateCandidates({
     prompt: buildEvaluationPrompt(condition, candidates),
@@ -96,17 +112,18 @@ export async function searchRestaurants(
     evaluations.map((evaluation) => [evaluation.candidateName, evaluation]),
   );
   const placeDetails = await Promise.all(
-    candidates.slice(0, 10).map((candidate) => deps.resolvePlaceDetails(candidate.placeId)),
+    pageCandidates.map((candidate) => deps.resolvePlaceDetails(candidate.placeId)),
   );
 
   const generatedAt = new Date().toISOString();
-  const restaurants: Restaurant[] = candidates.map((candidate, index) => {
+  const restaurants: Restaurant[] = pageCandidates.map((candidate, index) => {
     const evaluation = evaluationByName.get(candidate.name) ?? null;
-    const detail = index < placeDetails.length ? placeDetails[index] : null;
+    const absoluteIndex = offset + index;
+    const detail = placeDetails[index] ?? null;
     return {
       // placeId は "places/ChIJ..." のように "/" を含むことがあり、そのまま id に使うと
       // `/stores/:storeId` のルーティングが崩れるため、URL に使える形に変換する。
-      id: buildRestaurantId(candidate.placeId, cacheKey, index),
+      id: buildRestaurantId(candidate.placeId, cacheKey, absoluteIndex),
       placeId: candidate.placeId,
       name: candidate.name,
       genre: null,
@@ -131,5 +148,11 @@ export async function searchRestaurants(
   });
 
   deps.setCached(cacheKey, restaurants);
-  return { restaurants, fromCache: false };
+  const hasMore = offset + restaurants.length < candidates.length;
+  return {
+    restaurants,
+    fromCache: false,
+    hasMore,
+    nextOffset: hasMore ? offset + restaurants.length : null,
+  };
 }

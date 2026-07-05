@@ -77,6 +77,7 @@ type BookingActions = {
   toggleCompare: (id: string) => void;
   selectFinalStore: (id: string) => void;
   setRestaurants: (restaurants: Restaurant[]) => void;
+  appendRestaurants: (restaurants: Restaurant[]) => void;
   resetForNewChat: () => void;
 };
 
@@ -203,6 +204,20 @@ export function useBooking(): BookingValue {
     [setState],
   );
 
+  const appendRestaurants = useCallback(
+    (restaurants: Restaurant[]) =>
+      setState((s) => {
+        const seenIds = new Set(s.restaurants.map((restaurant) => restaurant.id));
+        const nextRestaurants = restaurants.filter((restaurant) => {
+          if (seenIds.has(restaurant.id)) return false;
+          seenIds.add(restaurant.id);
+          return true;
+        });
+        return { ...s, restaurants: [...s.restaurants, ...nextRestaurants] };
+      }),
+    [setState],
+  );
+
   const resetForNewChat = useCallback(
     () =>
       setState((s) => ({
@@ -240,6 +255,7 @@ export function useBooking(): BookingValue {
       toggleCompare,
       selectFinalStore,
       setRestaurants,
+      appendRestaurants,
       resetForNewChat,
     }),
     [
@@ -262,6 +278,7 @@ export function useBooking(): BookingValue {
       toggleCompare,
       selectFinalStore,
       setRestaurants,
+      appendRestaurants,
       resetForNewChat,
     ],
   );

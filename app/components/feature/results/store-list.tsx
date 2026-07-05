@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import type { ReactNode } from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
@@ -13,6 +14,7 @@ type StoreListProps = {
   compareIds: string[];
   onToggleCompare: (id: string) => void;
   counterpartId: string | null;
+  footer?: ReactNode;
 };
 
 export function StoreList({
@@ -20,6 +22,7 @@ export function StoreList({
   compareIds,
   onToggleCompare,
   counterpartId,
+  footer,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
@@ -106,6 +109,7 @@ export function StoreList({
           </div>
         );
       })}
+      {footer}
     </div>
   );
 }

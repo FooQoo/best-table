@@ -1,4 +1,5 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
+import { STORES } from "~/mocks/data";
 import { BookingProvider, useBooking } from "./booking-context";
 
 // BookingProvider は毎回新しい Jotai store を作るため、テストごとに状態は独立している。
@@ -88,6 +89,24 @@ describe("useBooking", () => {
     });
 
     expect(result.current.state.counterpart).toBe("important-client");
+  });
+
+  it("appendRestaurants は既存の店舗を維持して新しい店舗だけ追記する", () => {
+    const { result } = setup();
+    const first = STORES[0];
+    const second = STORES[1];
+
+    act(() => {
+      result.current.setRestaurants([first]);
+    });
+    act(() => {
+      result.current.appendRestaurants([first, second]);
+    });
+
+    expect(result.current.state.restaurants.map((restaurant) => restaurant.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
   });
 
   it("重視条件を更新すると /hearing → /results → /compare 相当の画面遷移でも保持される", () => {

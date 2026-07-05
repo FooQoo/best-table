@@ -37,6 +37,10 @@ describe("STORES がドメインモデル Restaurant の形状を満たす", () 
 });
 
 describe("MAP_RENDERING_MOCK_RESTAURANTS", () => {
+  it("追加読み込みを確認できる件数を持つ", () => {
+    expect(MAP_RENDERING_MOCK_RESTAURANTS).toHaveLength(20);
+  });
+
   it("地図表示に必要な座標・住所・代表写真・mock placeId を持つ", () => {
     MAP_RENDERING_MOCK_RESTAURANTS.forEach((restaurant, index) => {
       expect(isRestaurant(restaurant)).toBe(true);

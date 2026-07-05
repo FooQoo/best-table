@@ -37,15 +37,25 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
 describe("searchRestaurants", () => {
   it("returns an empty result without calling the AI when the area has no known coordinates", async () => {
     const deps = buildDeps();
-    const result = await searchRestaurants(unknownAreaCondition, deps);
-    expect(result).toEqual({ restaurants: [], fromCache: false });
+    const result = await searchRestaurants(unknownAreaCondition, {}, deps);
+    expect(result).toEqual({
+      restaurants: [],
+      fromCache: false,
+      hasMore: false,
+      nextOffset: null,
+    });
     expect(deps.searchCandidates).not.toHaveBeenCalled();
   });
 
   it("returns an empty result without calling evaluation when grounding finds no candidates", async () => {
     const deps = buildDeps({ searchCandidates: vi.fn(async () => []) });
-    const result = await searchRestaurants(condition, deps);
-    expect(result).toEqual({ restaurants: [], fromCache: false });
+    const result = await searchRestaurants(condition, {}, deps);
+    expect(result).toEqual({
+      restaurants: [],
+      fromCache: false,
+      hasMore: false,
+      nextOffset: null,
+    });
     expect(deps.evaluateCandidates).not.toHaveBeenCalled();
   });
 
@@ -71,7 +81,7 @@ describe("searchRestaurants", () => {
       ]),
     });
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, {}, deps);
 
     expect(result.fromCache).toBe(false);
     expect(result.restaurants).toHaveLength(1);
@@ -95,7 +105,7 @@ describe("searchRestaurants", () => {
       ]),
     });
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, {}, deps);
 
     expect(result.restaurants[0].id).not.toContain("/");
   });
@@ -108,7 +118,7 @@ describe("searchRestaurants", () => {
       evaluateCandidates: vi.fn(async () => []),
     });
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, {}, deps);
 
     expect(result.restaurants).toHaveLength(1);
     expect(result.restaurants[0]).toMatchObject({
@@ -145,18 +155,23 @@ describe("searchRestaurants", () => {
       generatedAt: new Date().toISOString(),
     };
     deps.setCached(
-      "銀座|2026-07-15|19:00|4|指定なし|指定なし|room|exec",
+      "銀座|2026-07-15|19:00|4|指定なし|指定なし|room|exec|limit=10|offset=0",
       [cachedRestaurant],
     );
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, {}, deps);
 
-    expect(result).toEqual({ restaurants: [cachedRestaurant], fromCache: true });
+    expect(result).toEqual({
+      restaurants: [cachedRestaurant],
+      fromCache: true,
+      hasMore: false,
+      nextOffset: null,
+    });
     expect(deps.searchCandidates).not.toHaveBeenCalled();
     expect(deps.evaluateCandidates).not.toHaveBeenCalled();
   });
 
-  it("resolves Place Details for up to 10 grounded candidates and merges address, location, and photo URL", async () => {
+  it("resolves Place Details for the requested 10 candidate page and merges address, location, and photo URL", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
@@ -179,10 +194,13 @@ describe("searchRestaurants", () => {
       resolvePlaceDetails,
     });
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, { limit: 10, offset: 0 }, deps);
 
     expect(resolvePlaceDetails).toHaveBeenCalledTimes(10);
     expect(resolvePlaceDetails).not.toHaveBeenCalledWith("places/place-11");
+    expect(result.restaurants).toHaveLength(10);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextOffset).toBe(10);
     expect(result.restaurants[0]).toMatchObject({
       address: "東京都中央区銀座1-1-1",
       location: { lat: 35.6717, lng: 139.7639 },
@@ -194,6 +212,27 @@ describe("searchRestaurants", () => {
       location: null,
       photoUrl: null,
     });
+  });
+
+  it("returns the next page from limit and offset without replacing it with the first page", async () => {
+    const candidates = Array.from({ length: 12 }, (_, index) => ({
+      name: `候補${index + 1}`,
+      placeId: `places/place-${index + 1}`,
+      mapsUri: null,
+      address: null,
+    }));
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => candidates),
+    });
+
+    const result = await searchRestaurants(condition, { limit: 10, offset: 10 }, deps);
+
+    expect(result.restaurants.map((restaurant) => restaurant.name)).toEqual([
+      "候補11",
+      "候補12",
+    ]);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextOffset).toBeNull();
   });
 
   it("keeps the grounding address when Place Details cannot resolve a candidate", async () => {
@@ -209,7 +248,7 @@ describe("searchRestaurants", () => {
       resolvePlaceDetails: vi.fn(async () => null),
     });
 
-    const result = await searchRestaurants(condition, deps);
+    const result = await searchRestaurants(condition, {}, deps);
 
     expect(result.restaurants[0]).toMatchObject({
       address: "東京都中央区銀座2-2-2",
