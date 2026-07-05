@@ -6,7 +6,9 @@ import { ComparePanel } from "./compare-panel";
 const stores = STORES.slice(0, 2);
 
 function setup(counterpartId: string | null) {
-  return render(<ComparePanel stores={stores} counterpartId={counterpartId} />);
+  return render(
+    <ComparePanel stores={stores} counterpartId={counterpartId} isOpen />,
+  );
 }
 
 describe("ComparePanel の相手種別に応じた強調表示", () => {
@@ -37,8 +39,16 @@ describe("ComparePanel の相手種別に応じた強調表示", () => {
 });
 
 describe("ComparePanel の境界状態", () => {
+  it("店舗が選択されていないとき、空状態を表示する", () => {
+    render(<ComparePanel stores={[]} counterpartId={null} isOpen />);
+
+    expect(screen.getByText("店舗が選択されていません")).toBeInTheDocument();
+  });
+
   it("1件のとき1件分の比較表を崩さず表示する", () => {
-    render(<ComparePanel stores={STORES.slice(0, 1)} counterpartId={null} />);
+    render(
+      <ComparePanel stores={STORES.slice(0, 1)} counterpartId={null} isOpen />,
+    );
 
     expect(screen.getByText("1件を比較中")).toBeInTheDocument();
     expect(screen.getByText(STORES[0].name)).toBeInTheDocument();
@@ -46,7 +56,7 @@ describe("ComparePanel の境界状態", () => {
 
   it("上限の5件のとき5件分の比較表を崩さず表示する", () => {
     const fiveStores = STORES.slice(0, 5);
-    render(<ComparePanel stores={fiveStores} counterpartId={null} />);
+    render(<ComparePanel stores={fiveStores} counterpartId={null} isOpen />);
 
     expect(screen.getByText("5件を比較中")).toBeInTheDocument();
     for (const store of fiveStores) {

@@ -26,7 +26,7 @@ export function StorePhoto({ store, className = "" }: StorePhotoProps) {
     <img
       src={store.photoUrl}
       alt={`${store.name}の店内写真`}
-      className={`object-cover ${className}`}
+      className={`object-cover object-center ${className}`}
       onError={() => setFailed(true)}
     />
   );

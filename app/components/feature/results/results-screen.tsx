@@ -300,10 +300,11 @@ export function ResultsScreen() {
                   onClose={() => setSelectedStoreId(null)}
                 />
               )}
-              {isCompareOpen && (
+              {(canCompare || isCompareOpen) && (
                 <ComparePanel
                   stores={compareStores}
                   counterpartId={state.counterpart}
+                  isOpen={isCompareOpen}
                 />
               )}
             </div>
@@ -316,7 +317,7 @@ export function ResultsScreen() {
         canCompare={canCompare}
         isCompareOpen={isCompareOpen}
         onToggleCompare={() =>
-          canCompare && setIsCompareOpen((open) => !open)
+          setIsCompareOpen((open) => (open ? false : canCompare))
         }
       />
     </div>

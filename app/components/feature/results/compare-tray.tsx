@@ -14,6 +14,7 @@ export function CompareTray({
   onToggleCompare,
 }: CompareTrayProps) {
   const t = getTheme();
+  const isDisabled = !isCompareOpen && !canCompare;
 
   return (
     <div className="flex-none px-8 py-4 bg-[#12202f] flex justify-between items-center">
@@ -22,12 +23,12 @@ export function CompareTray({
       </div>
       <button
         type="button"
-        disabled={!canCompare}
+        disabled={isDisabled}
         aria-pressed={isCompareOpen}
         onClick={onToggleCompare}
         className="px-7 py-3 border-none rounded-md shadow-[0_1px_3px_rgba(0,0,0,.2)] font-bold text-sm cursor-pointer transition-colors disabled:cursor-not-allowed"
         style={
-          canCompare
+          !isDisabled
             ? { background: t.accent, color: "#20201c" }
             : { background: "#3a4a58", color: "#8a97a1" }
         }

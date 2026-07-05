@@ -11,6 +11,7 @@ import { getEmphasisKeys } from "~/utils/scoring";
 type ComparePanelProps = {
   stores: Restaurant[];
   counterpartId: string | null;
+  isOpen: boolean;
 };
 
 const ROWS: { label: string; key: keyof Restaurant; shaded?: boolean }[] = [
@@ -24,14 +25,19 @@ const ROWS: { label: string; key: keyof Restaurant; shaded?: boolean }[] = [
   { label: "懸念点", key: "concerns" },
 ];
 
-export function ComparePanel({ stores, counterpartId }: ComparePanelProps) {
+export function ComparePanel({
+  stores,
+  counterpartId,
+  isOpen,
+}: ComparePanelProps) {
   const t = getTheme();
   const emphasisKeys = getEmphasisKeys(counterpartId);
 
   return (
     <div
       aria-label="比較"
-      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-[#fffdf8]"
+      data-open={isOpen ? "true" : "false"}
+      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[-10px_0_24px_rgba(20,20,20,.16)] transition-transform duration-300 data-[open=false]:pointer-events-none data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0"
     >
       <div className="flex-none border-b border-[#e4ded0] px-5 py-4">
         <h2 className="m-0 font-serif text-lg font-bold text-[#20201c]">
@@ -39,101 +45,118 @@ export function ComparePanel({ stores, counterpartId }: ComparePanelProps) {
         </h2>
       </div>
 
-      <div className="flex-1 overflow-auto p-5">
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `160px repeat(${stores.length}, minmax(150px, 1fr))`,
-          }}
-        >
-          <div className="p-4" style={{ borderBottom: `2px solid ${NAVY}` }} />
-          {stores.map((store, i) => (
+      <div className="flex-1 overflow-auto px-5">
+        {stores.length === 0 ? (
+          <div className="grid h-full place-items-center text-sm font-bold text-[#79726a]">
+            店舗が選択されていません
+          </div>
+        ) : (
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns: `160px repeat(${stores.length}, minmax(150px, 1fr))`,
+            }}
+          >
             <div
-              key={store.id}
-              className="p-4 border-l border-[#e4ded0] flex flex-col gap-2"
-              style={{
-                borderBottom: `2px solid ${NAVY}`,
-                background: i === 0 ? t.accentSoftBg : "#fff",
-              }}
-            >
+              className="p-4"
+              style={{ borderBottom: `2px solid ${NAVY}` }}
+            />
+            {stores.map((store, i) => (
               <div
-                className="self-start font-bold text-[11px] px-2.5 py-0.5 rounded-full"
-                style={
-                  i === 0
-                    ? { background: GOLD, color: "#20201c" }
-                    : { visibility: "hidden" }
-                }
+                key={store.id}
+                className="p-4 border-l border-[#e4ded0] flex flex-col gap-2"
+                style={{
+                  borderBottom: `2px solid ${NAVY}`,
+                  background: i === 0 ? t.accentSoftBg : "#fff",
+                }}
               >
-                おすすめ 1位
-              </div>
-              <StorePhoto store={store} className="w-full h-20" />
-              <div className="font-bold text-sm">{store.name}</div>
-              <div className="flex items-center justify-between gap-2 text-[11px] text-[#79726a]">
-                <span>
-                  {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}
-                </span>
-                <a
-                  href={buildGoogleMapsUrl(store)}
-                  target="_blank"
-                  rel="noopener"
-                  className="flex-none text-[#8a6a1f] underline underline-offset-2"
-                >
-                  Google Mapで開く
-                </a>
-              </div>
-            </div>
-          ))}
-
-          {ROWS.map((row) => {
-            const emphasized = (emphasisKeys as string[]).includes(row.key);
-            return (
-              <Fragment key={row.label}>
                 <div
-                  data-emphasized={emphasized}
-                  className={`p-3.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
-                  style={emphasized ? { color: "#8a6a1a" } : undefined}
+                  className="self-start font-bold text-[11px] px-2.5 py-0.5 rounded-full"
+                  style={
+                    i === 0
+                      ? { background: GOLD, color: "#20201c" }
+                      : { visibility: "hidden" }
+                  }
                 >
-                  {row.label}
-                  {emphasized && (
-                    <span
-                      className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
-                      style={{ background: GOLD, color: "#20201c" }}
-                    >
-                      重視
-                    </span>
-                  )}
+                  おすすめ 1位
                 </div>
-                {stores.map((store) => (
-                  <div
-                    key={`${row.label}-${store.id}`}
-                    className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
-                    style={{
-                      ...(row.key === "concerns"
-                        ? {
-                            color:
-                              store.concerns.length === 0
-                                ? "#79726a"
-                                : "#9a6a2a",
-                          }
-                        : undefined),
-                      ...(emphasized ? { background: t.accentSoftBg } : undefined),
-                    }}
+                <div className="flex w-full justify-center">
+                  <StorePhoto store={store} className="w-full h-20 max-w-40" />
+                </div>
+                <div className="font-bold text-sm">{store.name}</div>
+                <div className="flex items-center justify-between gap-2 text-[11px] text-[#79726a]">
+                  <span>
+                    {store.genre
+                      ? GENRE_LABELS[store.genre]
+                      : "ジャンル情報なし"}
+                  </span>
+                  <a
+                    href={buildGoogleMapsUrl(store)}
+                    target="_blank"
+                    rel="noopener"
+                    className="flex-none text-[#8a6a1f] underline underline-offset-2"
                   >
-                    {row.key === "score" ? (
-                      <ScoreBadge score={store.score} showLabel={false} />
-                    ) : row.key === "concerns" ? (
-                      store.concerns.length > 0
-                        ? store.concerns.map((c) => c.text).join(" / ")
-                        : "特になし"
-                    ) : (
-                      (store[row.key] ?? "情報なし").toString()
+                    Google Mapで開く
+                  </a>
+                </div>
+              </div>
+            ))}
+
+            {ROWS.map((row) => {
+              const emphasized = (emphasisKeys as string[]).includes(row.key);
+              return (
+                <Fragment key={row.label}>
+                  <div
+                    data-emphasized={emphasized}
+                    className={`p-3.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
+                    style={emphasized ? { color: "#8a6a1a" } : undefined}
+                  >
+                    {row.label}
+                    {emphasized && (
+                      <span
+                        className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                        style={{ background: GOLD, color: "#20201c" }}
+                      >
+                        重視
+                      </span>
                     )}
                   </div>
-                ))}
-              </Fragment>
-            );
-          })}
-        </div>
+                  {stores.map((store) => (
+                    <div
+                      key={`${row.label}-${store.id}`}
+                      className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
+                      style={{
+                        ...(row.key === "concerns"
+                          ? {
+                              color:
+                                store.concerns.length === 0
+                                  ? "#79726a"
+                                  : "#9a6a2a",
+                            }
+                          : undefined),
+                        ...(emphasized
+                          ? { background: t.accentSoftBg }
+                          : undefined),
+                      }}
+                    >
+                      {row.key === "score" ? (
+                        <ScoreBadge score={store.score} showLabel={false} />
+                      ) : row.key === "concerns" ? (
+                        store.concerns.length > 0 ? (
+                          store.concerns.map((c) => c.text).join(" / ")
+                        ) : (
+                          "特になし"
+                        )
+                      ) : (
+                        (store[row.key] ?? "情報なし").toString()
+                      )}
+                    </div>
+                  ))}
+                </Fragment>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
