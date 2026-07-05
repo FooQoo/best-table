@@ -3,15 +3,14 @@ import { CompareTable } from "~/components/feature/compare/compare-table";
 import { EmptyCompareState } from "~/components/feature/compare/empty-compare-state";
 import { FinalStorePanel } from "~/components/feature/compare/final-store-panel";
 import { useBooking } from "~/state/booking-context";
-import { STORES } from "~/mocks/data";
 
 export function CompareScreen() {
   const navigate = useNavigate();
   const { state, selectFinalStore } = useBooking();
 
-  const selectedStores = STORES.filter((s) =>
-    state.compareIds.includes(s.id),
-  ).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  const selectedStores = state.restaurants
+    .filter((s) => state.compareIds.includes(s.id))
+    .sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
   const selectedCount = selectedStores.length;
   const finalStore =
     selectedStores.find((s) => s.id === state.finalStoreId) ?? null;

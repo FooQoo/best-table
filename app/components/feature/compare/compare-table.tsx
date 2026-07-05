@@ -1,18 +1,20 @@
 import { Fragment } from "react";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
-import { GOLD, NAVY, type Store } from "~/mocks/data";
+import type { Restaurant } from "~/domain/models/restaurant";
+import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
+import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
 import { getEmphasisKeys } from "~/utils/scoring";
 
 type CompareTableProps = {
-  stores: Store[];
+  stores: Restaurant[];
   finalStoreId: string | null;
   onSelectFinalStore: (id: string) => void;
   counterpartId: string | null;
 };
 
-const ROWS: { label: string; key: keyof Store; shaded?: boolean }[] = [
+const ROWS: { label: string; key: keyof Restaurant; shaded?: boolean }[] = [
   { label: "接待安全度", key: "score", shaded: true },
   { label: "個室", key: "room" },
   { label: "静かさ", key: "quiet", shaded: true },
@@ -61,11 +63,13 @@ export function CompareTable({
               おすすめ 1位
             </div>
             <StorePhotoPlaceholder
-              label={store.photoPlaceholderLabel}
+              label={resolvePhotoPlaceholderLabel(store)}
               className="w-full h-20"
             />
             <div className="font-bold text-sm">{store.name}</div>
-            <div className="text-[11px] text-[#79726a]">{store.genre}</div>
+            <div className="text-[11px] text-[#79726a]">
+              {store.genre ?? "ジャンル情報なし"}
+            </div>
           </div>
         ))}
 
@@ -111,7 +115,7 @@ export function CompareTable({
                       ? store.concerns.map((c) => c.text).join(" / ")
                       : "特になし"
                   ) : (
-                    String(store[row.key])
+                    (store[row.key] ?? "情報なし").toString()
                   )}
                 </div>
               ))}

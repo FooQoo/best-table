@@ -1,8 +1,9 @@
-import { GOLD, NAVY, type Store } from "~/mocks/data";
+import type { Restaurant } from "~/domain/models/restaurant";
+import { GOLD, NAVY } from "~/mocks/data";
 import { buildFinalStoreMessage } from "~/utils/final-candidate-message";
 
 type FinalStorePanelProps = {
-  store: Store;
+  store: Restaurant;
   counterpartId: string | null;
   priorities: string[];
 };
@@ -21,7 +22,8 @@ export function FinalStorePanel({
     <div className="mt-7 bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] px-8 py-7">
       <div className="font-serif font-bold text-lg mb-1">{store.name}</div>
       <div className="text-[13px] text-[#79726a] mb-5">
-        {store.genre}・{store.area}・個室：{store.room}
+        {store.genre ?? "ジャンル情報なし"}・{store.area}・個室：
+        {store.room ?? "情報なし"}
       </div>
 
       <div className="mb-5">
@@ -46,13 +48,13 @@ export function FinalStorePanel({
         <div className="flex-1 min-w-[220px] flex flex-col gap-3.5">
           <div>
             <div className="font-bold text-xs text-[#79726a] mb-1">連絡先</div>
-            <div className="text-[15px]">{store.phone}</div>
+            <div className="text-[15px]">{store.phone ?? "情報なし"}</div>
           </div>
           <div>
             <div className="font-bold text-xs text-[#79726a] mb-1">
               アクセス
             </div>
-            <div className="text-[15px]">{store.access}</div>
+            <div className="text-[15px]">{store.access ?? "情報なし"}</div>
           </div>
           <a
             href="#"

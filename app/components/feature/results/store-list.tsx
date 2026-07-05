@@ -2,13 +2,14 @@ import { Link } from "react-router";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
-import { MAX_COMPARE_COUNT } from "~/domain/models/restaurant";
-import { GOLD, type Store } from "~/mocks/data";
+import { MAX_COMPARE_COUNT, type Restaurant } from "~/domain/models/restaurant";
+import { GOLD } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
+import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
 
 type StoreListProps = {
-  stores: Store[];
+  stores: Restaurant[];
   compareIds: string[];
   onToggleCompare: (id: string) => void;
   counterpartId: string | null;
@@ -41,7 +42,7 @@ export function StoreList({
           >
             <div className="flex gap-3">
               <StorePhotoPlaceholder
-                label={store.photoPlaceholderLabel}
+                label={resolvePhotoPlaceholderLabel(store)}
                 className="w-20 h-20 flex-none"
               />
               <div className="flex-1">
@@ -50,7 +51,7 @@ export function StoreList({
                   <ScoreBadge score={store.score} />
                 </div>
                 <div className="text-xs text-[#79726a] mt-1">
-                  {store.genre}・{store.area}
+                  {store.genre ?? "ジャンル情報なし"}・{store.area}
                 </div>
                 <div className="text-xs text-[#79726a] mt-0.5">
                   個室：{store.room}・予算目安：{store.budgetLabel ?? "情報なし"}

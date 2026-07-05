@@ -2,13 +2,17 @@ import { Link, useParams } from "react-router";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
-import { STORES } from "~/mocks/data";
+import { StoreAskPanel } from "~/components/feature/store-detail/store-ask-panel";
+import { useBooking } from "~/state/booking-context";
+import { getAvailabilityMessage } from "~/utils/availability-message";
 import { CONFIDENCE_LABELS, EVIDENCE_LABELS } from "~/utils/evidence-labels";
+import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
 import { buildStoreQA } from "~/utils/store-qa";
 
 export function StoreDetailScreen() {
   const { storeId } = useParams();
-  const store = STORES.find((s) => s.id === storeId);
+  const { state } = useBooking();
+  const store = state.restaurants.find((s) => s.id === storeId);
 
   if (!store) {
     return (
@@ -37,23 +41,28 @@ export function StoreDetailScreen() {
         </div>
 
         <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-6 flex gap-5">
-          <StorePhotoPlaceholder label={store.photoPlaceholderLabel} className="w-32 h-32 flex-none" />
+          <StorePhotoPlaceholder label={resolvePhotoPlaceholderLabel(store)} className="w-32 h-32 flex-none" />
           <div className="flex-1 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
               <div className="text-[13px] text-[#79726a]">
-                {store.genre}・{store.area}
+                {store.genre ?? "ジャンル情報なし"}・{store.area}
               </div>
               <ScoreBadge score={store.score} />
             </div>
-            <div className="text-[13px] text-[#79726a]">個室：{store.room}</div>
+            <div className="text-[13px] text-[#79726a]">
+              個室：{store.room ?? "情報なし"}
+            </div>
             <div className="text-[13px] text-[#79726a]">
               予算目安：{store.budgetLabel ?? "情報なし"}
             </div>
             <div className="text-[13px] text-[#79726a]">
-              アクセス：{store.access}
+              アクセス：{store.access ?? "情報なし"}
             </div>
             <div className="text-[13px] text-[#79726a]">
-              連絡先：{store.phone}
+              連絡先：{store.phone ?? "情報なし"}
+            </div>
+            <div className="text-[13px] text-[#79726a]" data-testid="availability-status">
+              空席状況：{getAvailabilityMessage()}
             </div>
           </div>
         </div>
@@ -61,7 +70,7 @@ export function StoreDetailScreen() {
         <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-6 flex flex-col gap-3">
           <div className="font-bold text-[15px]">AIによる推奨理由</div>
           <p className="text-[13px] leading-relaxed m-0">
-            {store.matchingSummary}
+            {store.matchingSummary ?? "推奨理由はまだ生成されていません。"}
           </p>
           {store.confidence && (
             <div className="text-xs" style={{ color: "#79726a" }}>
@@ -88,6 +97,8 @@ export function StoreDetailScreen() {
             </div>
           ))}
         </div>
+
+        <StoreAskPanel store={store} />
       </div>
     </div>
   );

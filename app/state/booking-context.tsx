@@ -1,6 +1,10 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { Provider as JotaiProvider, atom, useAtom } from "jotai";
-import { MAX_COMPARE_COUNT, MAX_PRIORITY_COUNT } from "~/domain/models/restaurant";
+import {
+  MAX_COMPARE_COUNT,
+  MAX_PRIORITY_COUNT,
+  type Restaurant,
+} from "~/domain/models/restaurant";
 
 export type BookingState = {
   selectedAreas: string[];
@@ -22,6 +26,10 @@ export type BookingState = {
 
   compareIds: string[];
   finalStoreId: string | null;
+
+  // UoW-7: /results が実検索(app/server/services/restaurant-search.ts)から取得した結果。
+  // /compare・/stores/:storeId は再検索せず、この一覧から id で参照する。
+  restaurants: Restaurant[];
 };
 
 export const initialBookingState: BookingState = {
@@ -44,6 +52,8 @@ export const initialBookingState: BookingState = {
 
   compareIds: [],
   finalStoreId: null,
+
+  restaurants: [],
 };
 
 export const bookingAtom = atom<BookingState>(initialBookingState);
@@ -66,6 +76,7 @@ type BookingActions = {
   setPriorityOtherText: (v: string) => void;
   toggleCompare: (id: string) => void;
   selectFinalStore: (id: string) => void;
+  setRestaurants: (restaurants: Restaurant[]) => void;
   resetForNewChat: () => void;
 };
 
@@ -186,6 +197,12 @@ export function useBooking(): BookingValue {
     [setState],
   );
 
+  const setRestaurants = useCallback(
+    (restaurants: Restaurant[]) =>
+      setState((s) => ({ ...s, restaurants })),
+    [setState],
+  );
+
   const resetForNewChat = useCallback(
     () =>
       setState((s) => ({
@@ -197,6 +214,7 @@ export function useBooking(): BookingValue {
         priorityOtherText: "",
         compareIds: [],
         finalStoreId: null,
+        restaurants: [],
       })),
     [setState],
   );
@@ -221,6 +239,7 @@ export function useBooking(): BookingValue {
       setPriorityOtherText,
       toggleCompare,
       selectFinalStore,
+      setRestaurants,
       resetForNewChat,
     }),
     [
@@ -242,6 +261,7 @@ export function useBooking(): BookingValue {
       setPriorityOtherText,
       toggleCompare,
       selectFinalStore,
+      setRestaurants,
       resetForNewChat,
     ],
   );

@@ -1,4 +1,5 @@
-import type { Store } from "~/mocks/data";
+import type { Restaurant } from "~/domain/models/restaurant";
+import { getAvailabilityMessage } from "~/utils/availability-message";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
 
 export type FinalCandidateMessage = {
@@ -12,7 +13,7 @@ type BookingForMessage = {
 };
 
 export function buildFinalStoreMessage(
-  store: Store,
+  store: Restaurant,
   booking: BookingForMessage,
 ): FinalCandidateMessage {
   const emphasisLabels = getEmphasisKeys(booking.counterpart).map(
@@ -28,7 +29,7 @@ export function buildFinalStoreMessage(
 
   const checksBeforeBooking: string[] = [
     ...store.concerns.map((concern) => concern.text),
-    "空席状況は変動するため、予約前に最新の空き状況を確認してください。",
+    getAvailabilityMessage(),
     "本画面の情報だけで予約成立を保証するものではありません。",
   ];
 

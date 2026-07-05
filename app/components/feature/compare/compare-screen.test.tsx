@@ -6,8 +6,9 @@ import { STORES } from "~/mocks/data";
 import { CompareScreen } from "./compare-screen";
 
 function Setup({ ids }: { ids: string[] }) {
-  const { toggleCompare } = useBooking();
+  const { toggleCompare, setRestaurants } = useBooking();
   useEffect(() => {
+    setRestaurants(STORES);
     ids.forEach((id) => toggleCompare(id));
     // Setup 用の初期化なので依存配列は空でよい。
     // eslint-disable-next-line react-hooks/exhaustive-deps

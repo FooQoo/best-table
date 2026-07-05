@@ -1,14 +1,29 @@
+import { useEffect } from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
+import { BookingProvider, useBooking } from "~/state/booking-context";
 import { STORES } from "~/mocks/data";
 import { StoreDetailScreen } from "./store-detail-screen";
+
+function Setup() {
+  const { setRestaurants } = useBooking();
+  useEffect(() => {
+    setRestaurants(STORES);
+    // Setup 用の初期化なので依存配列は空でよい。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
 
 function renderAt(storeId: string) {
   return render(
     <MemoryRouter initialEntries={[`/stores/${storeId}`]}>
-      <Routes>
-        <Route path="/stores/:storeId" element={<StoreDetailScreen />} />
-      </Routes>
+      <BookingProvider>
+        <Setup />
+        <Routes>
+          <Route path="/stores/:storeId" element={<StoreDetailScreen />} />
+        </Routes>
+      </BookingProvider>
     </MemoryRouter>,
   );
 }
@@ -35,6 +50,15 @@ describe("StoreDetailScreen", () => {
     expect(
       screen.getByTestId(`concern-tags-${store.id}`),
     ).toHaveTextContent("懸念点は特になし");
+  });
+
+  it("空席状況を断定せず常時表示する（実予約APIには接続しない）", () => {
+    const store = STORES[0];
+    renderAt(store.id);
+
+    expect(screen.getByTestId("availability-status")).toHaveTextContent(
+      "確認できません",
+    );
   });
 
   it("存在しない storeId のとき、見つからない旨と一覧へ戻る導線を表示する", () => {
