@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
 import { GOLD, type Store } from "~/mocks/data";
@@ -29,8 +31,6 @@ export function StoreList({
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);
         const disabled = !selected && compareCount >= 5;
-        const concernColor =
-          store.concern === "特になし" ? "#79726a" : "#9a6a2a";
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (
@@ -70,31 +70,37 @@ export function StoreList({
                 ))}
               </div>
             )}
-            <div className="text-xs" style={{ color: concernColor }}>
-              ⚠ {store.concern}
-            </div>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onToggleCompare(store.id)}
-              className="self-end flex items-center gap-2 px-4 py-2 border-[1.5px] rounded-md text-[13px] cursor-pointer transition-colors disabled:cursor-not-allowed"
-              style={{
-                borderColor: s.btnBorder,
-                background: s.btnBg,
-                color: s.btnColor,
-              }}
-            >
-              <span
-                className="w-[13px] h-[13px] flex-none rounded-[3px] border-[1.5px] flex items-center justify-center text-[9px] text-[#f7f4ee]"
+            <ConcernTags storeId={store.id} tags={store.concernTags} />
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                to={`/stores/${store.id}`}
+                className="text-[13px] text-[#8a6a1a] underline"
+              >
+                詳細を見る
+              </Link>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onToggleCompare(store.id)}
+                className="flex items-center gap-2 px-4 py-2 border-[1.5px] rounded-md text-[13px] cursor-pointer transition-colors disabled:cursor-not-allowed"
                 style={{
-                  borderColor: s.indicatorBorder,
-                  background: s.indicatorBg,
+                  borderColor: s.btnBorder,
+                  background: s.btnBg,
+                  color: s.btnColor,
                 }}
               >
-                {selected ? "✓" : ""}
-              </span>
-              {selected ? "比較から外す" : "比較に追加"}
-            </button>
+                <span
+                  className="w-[13px] h-[13px] flex-none rounded-[3px] border-[1.5px] flex items-center justify-center text-[9px] text-[#f7f4ee]"
+                  style={{
+                    borderColor: s.indicatorBorder,
+                    background: s.indicatorBg,
+                  }}
+                >
+                  {selected ? "✓" : ""}
+                </span>
+                {selected ? "比較から外す" : "比較に追加"}
+              </button>
+            </div>
           </div>
         );
       })}

@@ -19,7 +19,7 @@ const ROWS: { label: string; key: keyof Store; shaded?: boolean }[] = [
   { label: "格式", key: "prestige" },
   { label: "接客", key: "service", shaded: true },
   { label: "アクセス", key: "access" },
-  { label: "懸念点", key: "concern", shaded: true },
+  { label: "懸念点", key: "concernTags", shaded: true },
 ];
 
 export function CompareTable({
@@ -92,10 +92,10 @@ export function CompareTable({
                   key={`${row.label}-${store.id}`}
                   className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
                   style={{
-                    ...(row.key === "concern"
+                    ...(row.key === "concernTags"
                       ? {
                           color:
-                            store.concern === "特になし"
+                            store.concernTags.length === 0
                               ? "#79726a"
                               : "#9a6a2a",
                         }
@@ -105,6 +105,10 @@ export function CompareTable({
                 >
                   {row.key === "score" ? (
                     <ScoreBadge score={store.score} showLabel={false} />
+                  ) : row.key === "concernTags" ? (
+                    store.concernTags.length > 0
+                      ? store.concernTags.join(" / ")
+                      : "特になし"
                   ) : (
                     String(store[row.key])
                   )}

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { STORES } from "~/mocks/data";
 import { StoreList } from "./store-list";
 
@@ -6,12 +7,14 @@ const store = STORES[0];
 
 function setup(counterpartId: string | null) {
   return render(
-    <StoreList
-      stores={[store]}
-      compareIds={[]}
-      onToggleCompare={() => {}}
-      counterpartId={counterpartId}
-    />,
+    <MemoryRouter>
+      <StoreList
+        stores={[store]}
+        compareIds={[]}
+        onToggleCompare={() => {}}
+        counterpartId={counterpartId}
+      />
+    </MemoryRouter>,
   );
 }
 
