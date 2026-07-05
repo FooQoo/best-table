@@ -17,6 +17,7 @@ export function FinalStorePanel({
     counterpart: counterpartId,
     priorities,
   });
+  const googleMapsUrl = buildGoogleMapsUrl(store);
 
   return (
     <div className="mt-7 bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] px-8 py-7">
@@ -57,32 +58,61 @@ export function FinalStorePanel({
             <div className="text-[15px]">{store.access ?? "情報なし"}</div>
           </div>
           <a
-            href="#"
+            href={googleMapsUrl}
             target="_blank"
             rel="noopener"
             className="mt-2 self-start px-6 py-3 rounded-md font-bold text-sm no-underline transition-colors"
             style={{ background: NAVY, color: GOLD }}
           >
-            一休で予約する
+            Google Mapで開く
           </a>
         </div>
-        <div
-          className="flex-1 min-w-[220px] h-[180px] relative overflow-hidden rounded-md bg-[#e9e4d6]"
-          style={{
-            backgroundImage:
-              "linear-gradient(0deg,rgba(0,0,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        >
-          <div className="absolute top-3 left-3 text-[11px] font-mono text-[#8a8474]">
-            地図（プレースホルダー）
-          </div>
+        <FinalStoreMap store={store} />
+      </div>
+    </div>
+  );
+}
+
+function buildGoogleMapsUrl(store: Restaurant): string {
+  if (store.placeId?.startsWith("places/")) {
+    const placeId = store.placeId.replace(/^places\//, "");
+    return `https://www.google.com/maps/place/?q=place_id:${encodeURIComponent(placeId)}`;
+  }
+
+  const query = [store.name, store.address ?? store.area]
+    .filter(Boolean)
+    .join(" ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function FinalStoreMap({ store }: { store: Restaurant }) {
+  return (
+    <div
+      className="flex-1 min-w-[220px] h-[180px] relative overflow-hidden rounded-md bg-[#e9e4d6]"
+      style={{
+        backgroundImage:
+          "linear-gradient(0deg,rgba(0,0,0,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px)",
+        backgroundSize: "24px 24px",
+      }}
+    >
+      <div className="absolute top-3 left-3 text-[11px] font-mono text-[#8a8474]">
+        {store.location ? "最終候補の地図（座標付きモック）" : "地図情報なし"}
+      </div>
+      {store.location ? (
+        <>
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(0,0,0,.3)]"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white shadow-[0_1px_4px_rgba(0,0,0,.3)]"
             style={{ background: GOLD }}
           />
+          <div className="absolute left-4 bottom-4 text-[11px] text-[#79726a]">
+            {store.location.lat.toFixed(5)}, {store.location.lng.toFixed(5)}
+          </div>
+        </>
+      ) : (
+        <div className="absolute inset-x-6 top-1/2 -translate-y-1/2 text-center text-[13px] leading-relaxed text-[#79726a]">
+          この店舗は座標を取得できていないため、地図マーカーは表示しません。
         </div>
-      </div>
+      )}
     </div>
   );
 }

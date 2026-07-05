@@ -113,6 +113,25 @@ export const STORES: Store[] = [
   { id: "s6", placeId: null, name: "炭火焼 楽", genre: "焼鳥・炭火焼", area: "虎ノ門", address: null, location: null, phone: "03-1234-5606", photoUrl: null, score: 72, room: "半個室あり", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", budgetLabel: "¥10,000", concerns: [{ text: "煙や匂いが気になる場合がある", evidence: ["review", "description"] }], matchingSummary: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", evidence: ["review", "description"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "78%", left: "66%" } },
 ];
 
+export const MAP_RENDERING_MOCK_RESTAURANTS: Restaurant[] = STORES.map(
+  (store, index) => {
+    const locations = [
+      { lat: 35.672176, lng: 139.765022 },
+      { lat: 35.661991, lng: 139.730278 },
+      { lat: 35.666195, lng: 139.758587 },
+      { lat: 35.681382, lng: 139.767209 },
+      { lat: 35.674511, lng: 139.736125 },
+      { lat: 35.668119, lng: 139.749591 },
+    ];
+
+    return {
+      ...store,
+      location: locations[index] ?? null,
+      placeId: `mock-place-${index + 1}`,
+    };
+  },
+);
+
 export function shade(hex: string, pct: number): string {
   const clean = hex.replace("#", "");
   let r = parseInt(clean.substring(0, 2), 16);

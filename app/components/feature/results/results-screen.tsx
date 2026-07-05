@@ -9,6 +9,7 @@ import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
 import { ResultsSummaryBar } from "~/components/feature/results/results-summary-bar";
 import { StoreList } from "~/components/feature/results/store-list";
+import { StoreListSkeleton } from "~/components/feature/results/store-list-skeleton";
 
 type SearchResponse = { restaurants: Restaurant[]; fromCache: boolean };
 
@@ -100,9 +101,10 @@ export function ResultsScreen() {
 
       <div className="flex-1 flex overflow-hidden min-h-0">
         {isSearching ? (
-          <div className="flex-1 flex items-center justify-center text-[#79726a] text-sm">
-            条件に合う店舗をAIが探しています…
-          </div>
+          <>
+            <StoreListSkeleton />
+            <ResultsMap stores={[]} />
+          </>
         ) : hasSearched && sortedStores.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>条件に合う店舗が見つかりませんでした。</div>
