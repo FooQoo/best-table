@@ -20,7 +20,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-5 節（Bolt 5-1）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-5 節（Bolt 5-1）のとおり。
 
 ## リスク・懸念
 
@@ -29,4 +29,4 @@
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-5 Verify（説明文面に理由＋確認事項の両方が含まれる）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-5 Verify（説明文面に理由＋確認事項の両方が含まれる）を満たす。

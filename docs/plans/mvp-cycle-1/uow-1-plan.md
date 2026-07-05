@@ -28,7 +28,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-1 節（Bolt 1-1, 1-2）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-1 節（Bolt 1-1, 1-2）のとおり。
 Bolt 1-1 の Red は既存の `booking-context.test.tsx` を拡張する形で追加テストを書く。
 Bolt 1-2 の Red は「用語対応表」をテストではなくレビュー観点ドキュメントとして先に書く。
 
@@ -41,5 +41,5 @@ Bolt 1-2 の Red は「用語対応表」をテストではなくレビュー観
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-1 Verify（`pnpm test` / 4画面一気通貫確認）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-1 Verify（`pnpm test` / 4画面一気通貫確認）を満たす。
 - 用語対応表が `docs/DESIGN.md` に存在し、4画面のコンポーネントがそれに準拠している。

@@ -20,7 +20,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-2 節（Bolt 2-1, 2-2）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-2 節（Bolt 2-1, 2-2）のとおり。
 Bolt 2-1 の Red は `toggleCompare` の追加テスト（UoW-0 で一部実装済み、重複追加無視のケースを補強）。
 Bolt 2-2 の Red は「0件／1件／5件のときに何が表示されるべきか」を先にケースとして書き出し、
 可能な範囲でコンポーネントテスト（`@testing-library/react`）に落とす。
@@ -33,4 +33,4 @@ Bolt 2-2 の Red は「0件／1件／5件のときに何が表示されるべき
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-2 Verify（境界状態3パターンのスクリーンショット、戻り導線確認）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-2 Verify（境界状態3パターンのスクリーンショット、戻り導線確認）を満たす。

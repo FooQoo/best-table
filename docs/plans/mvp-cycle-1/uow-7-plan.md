@@ -20,15 +20,15 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-7 節（Bolt 7-1, 7-2, 7-3）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-7 節（Bolt 7-1, 7-2, 7-3）のとおり。
 
 ## リスク・懸念
 
 - 実検索・実空席・実 AI 基盤の具体的な接続先（API仕様）が本ドキュメント作成時点で未確定。
   UoW-7 着手時に接続先の I/F を先に固定し、モック実装で差し替え可能な形（アダプタ）にしておく。
-- 「通常検索と同等速度」の具体的な計測方法・しきい値を着手時に決める（現状 `docs/PLANS.md` には
+- 「通常検索と同等速度」の具体的な計測方法・しきい値を着手時に決める（現状 `docs/plans/mvp-cycle-1/PLANS.md` には
   数値目標が明記されていない）。
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-7 Verify（初期表示速度、AI コメント遅延表示、不確実性表現）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-7 Verify（初期表示速度、AI コメント遅延表示、不確実性表現）を満たす。

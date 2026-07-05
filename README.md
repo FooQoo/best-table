@@ -6,7 +6,7 @@
 
 - `docs/DESIGN.md`: プロダクト仕様、ユーザーフロー、画面設計
 - `docs/ARCHITECTURE.md`: コード配置、状態モデル、AI 実装ルール
-- `docs/PLANS.md`: 実装マイルストーン
+- `docs/plans/<cycle>/PLANS.md`: 実装マイルストーン（サイクルごとに定義。現行サイクルは `docs/STATUS.md` を参照）
 - `docs/RELIABILITY.md`: AI の根拠付け、キャッシュ、障害時の振る舞い
 - `docs/SECURITY.md`: センシティブ入力、プロンプトインジェクション対策
 

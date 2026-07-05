@@ -25,7 +25,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-6 節（Bolt 6-1, 6-2, 6-3）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-6 節（Bolt 6-1, 6-2, 6-3）のとおり。
 
 ## リスク・懸念（着手時に判明したギャップと解消方針）
 
@@ -37,7 +37,7 @@
    「店舗候補は Google マップによるグラウンディングと AI 評価をまとめて一度に生成するため、型を分離しない」
    という明示的な設計判断を記載済みだった。UoW-6 は分離をやめ、`docs/MODEL.md` の `Restaurant` 型
    （単一のフラット型）をそのまま `app/domain/models/restaurant.ts` に実装する。本計画の「実装方針」
-   と `docs/UNIT_OF_WORK.md` の UoW-6 責務文中「分離する」という記述はこの判断で上書きする。
+   と `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-6 責務文中「分離する」という記述はこの判断で上書きする。
 2. **懸念（concern）の形について**: `docs/MODEL.md`（134行目）は当初 `concern: { text, evidence } | null`
    （単数・nullable）としていたが、UoW-4 で実装済みの `concernTags: string[]`（複数・常時表示、
    ホバー非依存というガードレールを満たすため）と形が異なる。UoW-4 の複数懸念表示は既に実機確認済みの
@@ -61,5 +61,5 @@
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-6 Verify（型定義差分、根拠カテゴリ表示、データ不足時の表現確認）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-6 Verify（型定義差分、根拠カテゴリ表示、データ不足時の表現確認）を満たす。
 - 上記ギャップ解消により更新した `docs/MODEL.md` の記述が、実装（`app/domain/models/restaurant.ts`）と一致する。

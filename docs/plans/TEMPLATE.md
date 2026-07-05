@@ -1,7 +1,8 @@
 # UoW-N 実装計画: {タイトル}
 
-> `docs/UNIT_OF_WORK.md` の UoW 定義・依存関係・Bolt 分解を前提に、着手直前の現状分析と
-> 具体的な作業手順を書く。Red に入る前にこのファイルを埋める。
+> このサイクルの `UNIT_OF_WORK.md`（本ファイルと同じ `docs/plans/<cycle>/` フォルダに置く。
+> 例: `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md`）の UoW 定義・依存関係・Bolt 分解を前提に、
+> 着手直前の現状分析と具体的な作業手順を書く。Red に入る前にこのファイルを埋める。
 
 ## 現状分析
 
@@ -17,7 +18,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の該当セクションをそのまま実行順序として使う。差分があればここに書く。
+このサイクルの `UNIT_OF_WORK.md` の該当セクションをそのまま実行順序として使う。差分があればここに書く。
 
 ## リスク・懸念
 
@@ -25,5 +26,5 @@
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の Verify 項目を満たすこと。
+- このサイクルの `UNIT_OF_WORK.md` の Verify 項目を満たすこと。
 - {UoW 固有の完了条件があれば追記}

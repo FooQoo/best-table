@@ -13,11 +13,11 @@
 
 - 純粋関数 `scoreForCounterpart(store, counterpartId)` を新規実装し、相手種別に応じて
   どの項目（room/quiet/prestige/service/access）を強調するかを返す。
-- `docs/PLANS.md` の受け入れ条件に合わせて対応表を先に固定する:
+- `docs/plans/mvp-cycle-1/PLANS.md` の受け入れ条件に合わせて対応表を先に固定する:
   - `exec`（重要顧客）→ room, prestige, service
   - `partner`（初回取引先）→ access, quiet（会話しやすさ相当）
   - `boss`（社内上司）→ 予算, quiet, access の使いやすさ相当
-  - 現状の `COUNTERPARTS` は5種類だが、`docs/PLANS.md` の受け入れ条件は3種類（重要顧客・初回取引先・
+  - 現状の `COUNTERPARTS` は5種類だが、`docs/plans/mvp-cycle-1/PLANS.md` の受け入れ条件は3種類（重要顧客・初回取引先・
     社内上司）。`thanks`/`bond` の扱いは UoW-3 着手時に確認し、暫定で `partner` 相当の重みを流用する。
 - 変更するファイル一覧:
   - 新規: `app/utils/scoring.ts` — 重み付けロジック（純粋関数）
@@ -27,7 +27,7 @@
 
 ## Bolt 順序と Red/Green/Verify
 
-`docs/UNIT_OF_WORK.md` の UoW-3 節（Bolt 3-1, 3-2）のとおり。
+`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-3 節（Bolt 3-1, 3-2）のとおり。
 
 ## リスク・懸念（着手時に確定した内容）
 
@@ -44,7 +44,7 @@
 
 ## 完了の定義
 
-- `docs/UNIT_OF_WORK.md` の UoW-3 Verify（`pnpm test` + 相手種別パターンごとの手動確認）を満たす。
+- `docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の UoW-3 Verify（`pnpm test` + 相手種別パターンごとの手動確認）を満たす。
 - 完了の証拠: `pnpm test` 21件 green（`app/utils/scoring.test.ts` 7件、`store-list.test.tsx` 2件、
   `compare-table.test.tsx` 2件を含む）。`pnpm run typecheck` / `pnpm build` green。
   `/hearing` で「重要顧客・役員クラスの接待」を選択→`/results`→`/compare` の実機確認で、
