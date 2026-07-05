@@ -1,87 +1,27 @@
-# Welcome to React Router!
+# Best Table
 
-A modern, production-ready template for building full-stack React applications using React Router.
+接待・会食向けのレストラン比較を AI で支援する React Router プロトタイプです。
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+プロダクト仕様やアーキテクチャは README ではなく `docs/` 配下で管理しています。詳細は [AGENTS.md](AGENTS.md) を参照してください。
 
-## Features
+- `docs/DESIGN.md`: プロダクト仕様、ユーザーフロー、画面設計
+- `docs/ARCHITECTURE.md`: コード配置、状態モデル、AI 実装ルール
+- `docs/PLANS.md`: 実装マイルストーン
+- `docs/RELIABILITY.md`: AI の根拠付け、キャッシュ、障害時の振る舞い
+- `docs/SECURITY.md`: センシティブ入力、プロンプトインジェクション対策
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
-
-## Getting Started
-
-### Installation
-
-Install the dependencies:
+## セットアップ
 
 ```bash
-npm install
+pnpm install
+pnpm dev
 ```
 
-### Development
+`http://localhost:5173` で起動します。
 
-Start the development server with HMR:
+## 検証
 
 ```bash
-npm run dev
+pnpm run typecheck
+pnpm build
 ```
-
-Your application will be available at `http://localhost:5173`.
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
