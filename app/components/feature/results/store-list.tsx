@@ -144,7 +144,9 @@ export function StoreList({
                 >
                   {selected ? "✓" : ""}
                 </span>
-                {selected ? "比較から外す" : "比較に追加"}
+                <span className="inline-block w-[6em] text-left">
+                  {selected ? "比較から外す" : "比較に追加"}
+                </span>
               </button>
             </div>
           </div>

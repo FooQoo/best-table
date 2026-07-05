@@ -25,10 +25,9 @@ export type BookingState = {
   priorityOtherText: string;
 
   compareIds: string[];
-  finalStoreId: string | null;
 
   // UoW-7: /results が実検索(app/server/services/restaurant-search.ts)から取得した結果。
-  // /compare と /results 内の詳細パネルは再検索せず、この一覧から id で参照する。
+  // /results 内の詳細パネル・比較サイドパネルは再検索せず、この一覧から id で参照する。
   restaurants: Restaurant[];
 };
 
@@ -51,7 +50,6 @@ export const initialBookingState: BookingState = {
   priorityOtherText: "",
 
   compareIds: [],
-  finalStoreId: null,
 
   restaurants: [],
 };
@@ -75,7 +73,6 @@ type BookingActions = {
   togglePriorityOther: () => void;
   setPriorityOtherText: (v: string) => void;
   toggleCompare: (id: string) => void;
-  selectFinalStore: (id: string) => void;
   setRestaurants: (restaurants: Restaurant[]) => void;
   appendRestaurants: (restaurants: Restaurant[]) => void;
   resetForNewChat: () => void;
@@ -189,15 +186,6 @@ export function useBooking(): BookingValue {
     [setState],
   );
 
-  const selectFinalStore = useCallback(
-    (id: string) =>
-      setState((s) => ({
-        ...s,
-        finalStoreId: s.finalStoreId === id ? null : id,
-      })),
-    [setState],
-  );
-
   const setRestaurants = useCallback(
     (restaurants: Restaurant[]) =>
       setState((s) => ({ ...s, restaurants })),
@@ -228,7 +216,6 @@ export function useBooking(): BookingValue {
         priorityOtherOn: false,
         priorityOtherText: "",
         compareIds: [],
-        finalStoreId: null,
         restaurants: [],
       })),
     [setState],
@@ -253,7 +240,6 @@ export function useBooking(): BookingValue {
       togglePriorityOther,
       setPriorityOtherText,
       toggleCompare,
-      selectFinalStore,
       setRestaurants,
       appendRestaurants,
       resetForNewChat,
@@ -276,7 +262,6 @@ export function useBooking(): BookingValue {
       togglePriorityOther,
       setPriorityOtherText,
       toggleCompare,
-      selectFinalStore,
       setRestaurants,
       appendRestaurants,
       resetForNewChat,

@@ -5,8 +5,8 @@
 
 ## 現在地
 
-- **現行サイクル**: `docs/plans/mvp-cycle-3/`
-- **着手中の UoW**: なし（mvp-cycle-3 完了）
+- **現行サイクル**: `docs/plans/mvp-cycle-4/`
+- **着手中の UoW**: なし（mvp-cycle-4 は UoW 分解なしで一括実装・完了）
 - **次のアクション**: 次サイクルを開始する場合は `docs/plans/` 配下に新しいサイクル計画を作成する。
 
 ## ステータス一覧
@@ -36,6 +36,7 @@
 | mvp-cycle-3 | UoW-2 | 地図コンテキスト AI 相談 API | 完了 | 2-3 | [docs/plans/mvp-cycle-3/uow-2-plan.md](plans/mvp-cycle-3/uow-2-plan.md) | `/api/results/chat`、`results-chat-prompt.ts`、`gemini-results-chat.ts` を追加。表示中 `Restaurant[]` とヒアリング条件を検証し、text stream で回答。失敗はチャット内だけに表示 |
 | mvp-cycle-3 | UoW-3 | 次のおすすめ質問 | 完了 | 3-3 | [docs/plans/mvp-cycle-3/uow-3-plan.md](plans/mvp-cycle-3/uow-3-plan.md) | `results-chat-suggestions.ts` で回答後4件のおすすめ質問を deterministic に生成。相手種別・重視条件・直前質問を反映し、空席確定・予約成立へ誘導しない文言をテストで固定 |
 | mvp-cycle-3 | UoW-4 | 単一店舗詳細ページ・質問 API の廃止 | 完了 | 4-3 | [docs/plans/mvp-cycle-3/uow-4-plan.md](plans/mvp-cycle-3/uow-4-plan.md) | `/stores/:storeId`、`/api/stores/:storeId/ask`、`StoreDetailScreen`、`StoreAskPanel`、単一店舗 Q&A 専用 client/service を削除。詳細は `/results` 内パネル、AI 相談は地図チャットへ集約 |
+| mvp-cycle-4 | - | 比較のサイドパネル化・最終候補選択の廃止 | 完了 | - | [docs/plans/mvp-cycle-4/PLANS.md](plans/mvp-cycle-4/PLANS.md) | 単一マイルストーンの小規模 UI 変更のため UoW 分解せず一括実装。`/compare` ルートと `CompareScreen`・`CompareTable`・`EmptyCompareState`・`FinalStorePanel`・`finalStoreId`／`selectFinalStore`・`buildFinalStoreMessage`・`buildGoogleMapsUrl` を削除し、`/results` 内 `ComparePanel`（地図エリアを隙間なく上書き、比較トレイの「比較する」ボタンをトグル化）に統合。将来ロードマップの「予約導線受け渡し」も docs から撤回。`pnpm test` / `pnpm run typecheck` / `pnpm build` 確認済み |
 
 ## 更新履歴
 
@@ -44,3 +45,4 @@
 | 2026-07-05 | 新サイクル `mvp-cycle-3`（地図コンテキスト AI チャット、単一店舗詳細ページ・質問 API の廃止）を計画。mock UI レビューで右スライドパネル方針を採用し、`docs/plans/mvp-cycle-3/PLANS.md` と `UNIT_OF_WORK.md` を作成、UoW-1〜4 を「計画済み」として追加。 |
 | 2026-07-05 | mvp-cycle-3 UoW-1〜4 の実装計画書（`uow-1-plan.md` / `uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |
 | 2026-07-05 | mvp-cycle-3 UoW-1〜4 を実装完了。地図内 AI チャット UI、`/api/results/chat`、回答後おすすめ質問、旧単一店舗詳細ページ・質問 API 廃止を反映し、`pnpm test` / `pnpm run typecheck` / `pnpm build` を確認。 |
+| 2026-07-06 | 新サイクル `mvp-cycle-4`（比較のサイドパネル化、最終候補選択・予約導線ロードマップの廃止）を計画・即実装。`docs/plans/mvp-cycle-4/PLANS.md` を作成し、`docs/DESIGN.md`・`docs/MODEL.md`・`docs/ARCHITECTURE.md`・`docs/RELIABILITY.md` を更新。`/compare` ルート・`CompareScreen` 系・`finalStoreId` 系状態・`FinalStorePanel` 系ユーティリティを削除し、`/results` 内 `ComparePanel` に統合。単一マイルストーンの小規模変更のため `UNIT_OF_WORK.md` は作成せず完了とした。 |

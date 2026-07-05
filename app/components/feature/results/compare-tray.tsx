@@ -3,13 +3,15 @@ import { getTheme } from "~/styles/theme";
 type CompareTrayProps = {
   compareCount: number;
   canCompare: boolean;
-  onCompare: () => void;
+  isCompareOpen: boolean;
+  onToggleCompare: () => void;
 };
 
 export function CompareTray({
   compareCount,
   canCompare,
-  onCompare,
+  isCompareOpen,
+  onToggleCompare,
 }: CompareTrayProps) {
   const t = getTheme();
 
@@ -21,7 +23,8 @@ export function CompareTray({
       <button
         type="button"
         disabled={!canCompare}
-        onClick={onCompare}
+        aria-pressed={isCompareOpen}
+        onClick={onToggleCompare}
         className="px-7 py-3 border-none rounded-md shadow-[0_1px_3px_rgba(0,0,0,.2)] font-bold text-sm cursor-pointer transition-colors disabled:cursor-not-allowed"
         style={
           canCompare
@@ -29,7 +32,9 @@ export function CompareTray({
             : { background: "#3a4a58", color: "#8a97a1" }
         }
       >
-        比較する
+        <span className="inline-block w-[6em] text-center">
+          {isCompareOpen ? "比較を閉じる" : "比較する"}
+        </span>
       </button>
     </div>
   );

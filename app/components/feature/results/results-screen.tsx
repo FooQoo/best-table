@@ -6,6 +6,7 @@ import { useBooking } from "~/state/booking-context";
 import { PRIORITIES } from "~/mocks/data";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
+import { ComparePanel } from "~/components/feature/results/compare-panel";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
 import { ResultsSummaryBar } from "~/components/feature/results/results-summary-bar";
@@ -59,6 +60,7 @@ export function ResultsScreen() {
   const [scrollTarget, setScrollTarget] = useState<StoreListScrollTarget | null>(
     null,
   );
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   const handleMarkerClick = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -218,6 +220,9 @@ export function ResultsScreen() {
     sortedStores.find((store) => store.id === selectedStoreId) ?? null;
   const compareCount = state.compareIds.length;
   const canCompare = compareCount >= MIN_COMPARE_COUNT;
+  const compareStores = sortedStores.filter((store) =>
+    state.compareIds.includes(store.id),
+  );
 
   const changeConditions = () => {
     resetForNewChat();
@@ -295,6 +300,12 @@ export function ResultsScreen() {
                   onClose={() => setSelectedStoreId(null)}
                 />
               )}
+              {isCompareOpen && (
+                <ComparePanel
+                  stores={compareStores}
+                  counterpartId={state.counterpart}
+                />
+              )}
             </div>
           </>
         )}
@@ -303,7 +314,10 @@ export function ResultsScreen() {
       <CompareTray
         compareCount={compareCount}
         canCompare={canCompare}
-        onCompare={() => canCompare && navigate("/compare")}
+        isCompareOpen={isCompareOpen}
+        onToggleCompare={() =>
+          canCompare && setIsCompareOpen((open) => !open)
+        }
       />
     </div>
   );
