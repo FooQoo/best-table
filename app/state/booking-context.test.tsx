@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import { BookingProvider, useBooking } from "./booking-context";
 
 // BookingProvider は毎回新しい Jotai store を作るため、テストごとに状態は独立している。
@@ -59,5 +59,63 @@ describe("useBooking", () => {
     expect(result.current.state.counterpart).toBeNull();
     expect(result.current.state.priorities).toEqual([]);
     expect(result.current.state.compareIds).toEqual([]);
+  });
+
+  it("相手種別を設定すると取得できる", () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.setCounterpart("important-client");
+    });
+
+    expect(result.current.state.counterpart).toBe("important-client");
+  });
+
+  it("重視条件を更新すると /hearing → /results → /compare 相当の画面遷移でも保持される", () => {
+    // BookingProvider は root.tsx でアプリ全体に1つだけマウントされるため、
+    // 画面遷移は「Provider 配下で子コンポーネントが差し替わる」ことに相当する。
+    function HearingScreenStub() {
+      const { togglePriority } = useBooking();
+      return (
+        <button
+          type="button"
+          onClick={() => togglePriority("quietness")}
+        >
+          hearing
+        </button>
+      );
+    }
+    function ResultsScreenStub() {
+      const { state } = useBooking();
+      return <div data-testid="priorities">{state.priorities.join(",")}</div>;
+    }
+    function CompareScreenStub() {
+      const { state } = useBooking();
+      return <div data-testid="priorities">{state.priorities.join(",")}</div>;
+    }
+
+    const { rerender } = render(
+      <BookingProvider>
+        <HearingScreenStub />
+      </BookingProvider>,
+    );
+
+    act(() => {
+      screen.getByRole("button", { name: "hearing" }).click();
+    });
+
+    rerender(
+      <BookingProvider>
+        <ResultsScreenStub />
+      </BookingProvider>,
+    );
+    expect(screen.getByTestId("priorities").textContent).toBe("quietness");
+
+    rerender(
+      <BookingProvider>
+        <CompareScreenStub />
+      </BookingProvider>,
+    );
+    expect(screen.getByTestId("priorities").textContent).toBe("quietness");
   });
 });
