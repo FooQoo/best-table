@@ -1,15 +1,45 @@
 import { GOLD, NAVY, type Store } from "~/mocks/data";
+import { buildFinalStoreMessage } from "~/utils/final-candidate-message";
 
 type FinalStorePanelProps = {
   store: Store;
+  counterpartId: string | null;
+  priorities: string[];
 };
 
-export function FinalStorePanel({ store }: FinalStorePanelProps) {
+export function FinalStorePanel({
+  store,
+  counterpartId,
+  priorities,
+}: FinalStorePanelProps) {
+  const message = buildFinalStoreMessage(store, {
+    counterpart: counterpartId,
+    priorities,
+  });
+
   return (
     <div className="mt-7 bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] px-8 py-7">
       <div className="font-serif font-bold text-lg mb-1">{store.name}</div>
       <div className="text-[13px] text-[#79726a] mb-5">
         {store.genre}・{store.area}・個室：{store.room}
+      </div>
+
+      <div className="mb-5">
+        <div className="font-bold text-xs text-[#79726a] mb-1">
+          この店舗を選んだ理由
+        </div>
+        <p className="text-[14px] leading-relaxed m-0">{message.reason}</p>
+      </div>
+
+      <div className="mb-6">
+        <div className="font-bold text-xs text-[#79726a] mb-1">
+          予約前の確認事項
+        </div>
+        <ul className="text-[14px] leading-relaxed m-0 pl-5 list-disc">
+          {message.checksBeforeBooking.map((check) => (
+            <li key={check}>{check}</li>
+          ))}
+        </ul>
       </div>
 
       <div className="flex gap-7 flex-wrap">

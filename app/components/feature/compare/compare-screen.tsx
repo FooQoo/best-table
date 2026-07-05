@@ -43,7 +43,13 @@ export function CompareScreen() {
           counterpartId={state.counterpart}
         />
 
-        {finalStore && <FinalStorePanel store={finalStore} />}
+        {finalStore && (
+          <FinalStorePanel
+            store={finalStore}
+            counterpartId={state.counterpart}
+            priorities={state.priorities}
+          />
+        )}
       </div>
     </div>
   );
