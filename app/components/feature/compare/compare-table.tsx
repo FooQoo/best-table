@@ -28,10 +28,12 @@ export function CompareTable({
   const t = getTheme();
 
   return (
-    <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] overflow-hidden">
+    <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] overflow-x-auto">
       <div
         className="grid"
-        style={{ gridTemplateColumns: `160px repeat(${stores.length}, 1fr)` }}
+        style={{
+          gridTemplateColumns: `160px repeat(${stores.length}, minmax(150px, 1fr))`,
+        }}
       >
         <div className="p-4" style={{ borderBottom: `2px solid ${NAVY}` }} />
         {stores.map((store, i) => (

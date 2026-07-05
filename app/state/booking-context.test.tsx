@@ -31,6 +31,25 @@ describe("useBooking", () => {
     expect(result.current.state.priorities).toEqual([]);
   });
 
+  it("toggleCompare は呼ぶたびに追加・削除をトグルする", () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.toggleCompare("1");
+    });
+    expect(result.current.state.compareIds).toEqual(["1"]);
+
+    act(() => {
+      result.current.toggleCompare("2");
+    });
+    expect(result.current.state.compareIds).toEqual(["1", "2"]);
+
+    act(() => {
+      result.current.toggleCompare("1");
+    });
+    expect(result.current.state.compareIds).toEqual(["2"]);
+  });
+
   it("toggleCompare は5件を超えて追加できない", () => {
     const { result } = setup();
 
