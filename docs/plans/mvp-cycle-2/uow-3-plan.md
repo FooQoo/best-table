@@ -94,3 +94,18 @@ Verify:
 - 店舗カードとマーカーの対応が分かる。
 - 地図 key 未設定・読み込み失敗時も一覧・比較導線が使える。
 - `pnpm test` / `pnpm run typecheck` / `pnpm build` が通る。
+
+## 実装結果
+
+Bolt 3-1〜3-3 まで完了。
+
+- Bolt 3-1: `app/components/feature/maps/restaurant-map.tsx` を追加し、`@vis.gl/react-google-maps` の `APIProvider` / `Map` / `Marker` で地図を描画する。`VITE_GOOGLE_MAPS_BROWSER_KEY` 未設定時や座標なし時は地図領域だけフォールバック表示にし、一覧・比較導線は維持する。
+- Bolt 3-2: `restaurant-map-utils.ts` に `getMappableRestaurants` と `getInitialMapCamera` を追加し、`location` がある店舗だけをマーカー対象にする。複数店舗の座標から初期 center / zoom を決める。
+- Bolt 3-3: `ResultsScreen` に `activeStoreId` を追加し、`StoreList` の hover/focus と `ResultsMap` の marker click を連動させた。active 店舗カードは枠線と shadow で強調する。
+
+Verify:
+- `pnpm test`（120件）
+- `pnpm run typecheck`
+- `pnpm build`
+- `MODE=mock pnpm exec react-router dev --host 127.0.0.1 --port 5180` で `/` `/hearing` `/results` `/compare` が 200
+- in-app browser はこの環境で利用不可（`agent.browsers.list()` が空）だったため、目視の代わりに route/API とコンポーネントテストで確認

@@ -49,6 +49,7 @@ export function ResultsScreen() {
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
 
   const buildCondition = useCallback(
     (): RestaurantSearchQueryCondition => ({
@@ -220,6 +221,8 @@ export function ResultsScreen() {
               compareIds={state.compareIds}
               onToggleCompare={toggleCompare}
               counterpartId={state.counterpart}
+              activeStoreId={activeStoreId}
+              onActivateStore={setActiveStoreId}
               footer={
                 <>
                   {isLoadingMore && <StoreListSkeletonItems count={3} />}
@@ -239,7 +242,11 @@ export function ResultsScreen() {
                 </>
               }
             />
-            <ResultsMap stores={sortedStores} />
+            <ResultsMap
+              stores={sortedStores}
+              activeStoreId={activeStoreId}
+              onMarkerClick={setActiveStoreId}
+            />
           </>
         )}
       </div>

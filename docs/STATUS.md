@@ -6,8 +6,8 @@
 ## 現在地
 
 - **現行サイクル**: `docs/plans/mvp-cycle-2/`
-- **着手中の UoW**: UoW-3（検索結果地図）
-- **次のアクション**: UoW-3 Bolt 3-1（Google Maps provider と地図フォールバック）へ進む。
+- **着手中の UoW**: UoW-4（最終候補地図と Google Maps 導線）
+- **次のアクション**: UoW-4 Bolt 4-1（最終候補地図）へ進む。
 
 ## ステータス一覧
 
@@ -30,7 +30,7 @@
 | mvp-cycle-1 | UoW-7 | 検索・空席・AI 生成の実接続 | 完了 | 7-3 | [docs/plans/mvp-cycle-1/uow-7-plan.md](plans/mvp-cycle-1/uow-7-plan.md) | Bolt 7-1: `@ai-sdk/google`・`ai`・zod・`@vis.gl/react-google-maps` を導入し、Google マップによるグラウンディング、構造化評価、検索オーケストレーション、resource route を実装。Bolt 7-2: 実予約 API には接続せず、空席状況の留保表現を一本化。Bolt 7-3: 店舗詳細のオンデマンド質問応答を実装 |
 | mvp-cycle-2 | UoW-1 | Places 店舗データ解決と mock mode | 完了 | 1-3 | [docs/plans/mvp-cycle-2/uow-1-plan.md](plans/mvp-cycle-2/uow-1-plan.md) | Bolt 1-1: mock mode の地図用モックに座標・住所・代表写真・mock placeId を付与。Bolt 1-2: Places Details の FieldMask と変換境界を実装。Bolt 1-3: 検索オーケストレーションへ先頭10件の Places 解決を接続し、失敗時も候補を落とさない挙動を固定 |
 | mvp-cycle-2 | UoW-2 | 10件単位の取得・追加読み込み・スケルトン | 完了 | 2-3 | [docs/plans/mvp-cycle-2/uow-2-plan.md](plans/mvp-cycle-2/uow-2-plan.md) | API 契約を `limit` / `offset` / `hasMore` / `nextOffset` に拡張し、初回10件・追加10件を追記。初回/追加スケルトン、再試行導線、IntersectionObserver sentinel、重複取得防止を実装 |
-| mvp-cycle-2 | UoW-3 | 検索結果地図 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-3-plan.md](plans/mvp-cycle-2/uow-3-plan.md) | `/results` の右側 MAP を実地図へ置き換え、マーカーと店舗カードを連動 |
+| mvp-cycle-2 | UoW-3 | 検索結果地図 | 完了 | 3-3 | [docs/plans/mvp-cycle-2/uow-3-plan.md](plans/mvp-cycle-2/uow-3-plan.md) | `@vis.gl/react-google-maps` の共通地図部品を追加し、`/results` の右側 MAP を実地図へ置き換え。座標あり店舗のみマーカー表示、key 未設定/座標なし時のフォールバック、カード hover/focus とマーカー click の active 連動を実装 |
 | mvp-cycle-2 | UoW-4 | 最終候補地図と Google Maps 導線 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-4-plan.md](plans/mvp-cycle-2/uow-4-plan.md) | `/compare` の最終候補パネルに地図を表示し、予約ではなく Google Maps で開く導線を提供 |
 
 ## 更新履歴
@@ -52,3 +52,4 @@
 | 2026-07-05 | mvp-cycle-2 UoW-2〜4 の実装計画書（`uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |
 | 2026-07-05 | mvp-cycle-2 UoW-1 を完了。`app/server/clients/google-places.ts` に Places Details の安全な FieldMask（`location,formattedAddress,shortFormattedAddress,types,viewport,plusCode,photos`）と変換境界、Place Photos media URL 生成、server-only API key 参照を追加。`searchRestaurants` に先頭10件だけの Places 解決を接続し、`address` / `location` / `photoUrl` を補完、失敗時は候補を落とさず `null` またはグラウンディング住所へフォールバックするようテストで固定。`pnpm test`（108件）/ `pnpm run typecheck` / `pnpm build` すべて green。 |
 | 2026-07-05 | mvp-cycle-2 UoW-2 を完了。`/api/restaurants/search` と `searchRestaurants` を `limit` / `offset` / `hasMore` / `nextOffset` 契約へ拡張し、`ResultsScreen` で初回置換・追加追記を分離。`appendRestaurants` は ID 重複を除いて追記する。初回スケルトン、追加取得中の下部スケルトン、追加失敗時の再試行導線、IntersectionObserver sentinel と重複取得防止を実装。mock mode 検証用に `MAP_RENDERING_MOCK_RESTAURANTS` を20件へ拡張。`pnpm test`（113件）/ `pnpm run typecheck` / `pnpm build` すべて green。mock server で `/` `/hearing` `/results` `/compare` 200、検索APIの初回10件・追加10件応答を確認。 |
+| 2026-07-05 | mvp-cycle-2 UoW-3 を完了。`app/components/feature/maps/restaurant-map.tsx` と `restaurant-map-utils.ts` を追加し、`@vis.gl/react-google-maps` の `APIProvider` / `Map` / `Marker` で検索結果地図を描画。`VITE_GOOGLE_MAPS_BROWSER_KEY` 未設定時・座標なし時は地図領域だけフォールバック表示にし、一覧・比較導線を維持。`Restaurant.location` がある店舗だけをマーカー対象にし、初期 camera を座標群から算出。`ResultsScreen` の `activeStoreId` を `StoreList` hover/focus と `ResultsMap` marker click で共有し、対応店舗を強調。`pnpm test`（120件）/ `pnpm run typecheck` / `pnpm build` すべて green。mock server で主要4ルート 200 を確認。 |

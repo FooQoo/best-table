@@ -14,6 +14,8 @@ type StoreListProps = {
   compareIds: string[];
   onToggleCompare: (id: string) => void;
   counterpartId: string | null;
+  activeStoreId?: string | null;
+  onActivateStore?: (id: string) => void;
   footer?: ReactNode;
 };
 
@@ -22,6 +24,8 @@ export function StoreList({
   compareIds,
   onToggleCompare,
   counterpartId,
+  activeStoreId,
+  onActivateStore,
   footer,
 }: StoreListProps) {
   const t = getTheme();
@@ -35,13 +39,23 @@ export function StoreList({
       </div>
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);
+        const active = activeStoreId === store.id;
         const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (
           <div
             key={store.id}
-            className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5"
+            data-active={active ? "true" : "false"}
+            onMouseEnter={() => onActivateStore?.(store.id)}
+            onFocus={() => onActivateStore?.(store.id)}
+            className="bg-white border-[1.5px] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5 transition-colors"
+            style={{
+              borderColor: active ? GOLD : "#e4ded0",
+              boxShadow: active
+                ? "0 0 0 2px rgba(176,132,36,.22),0 1px 4px rgba(0,0,0,.08)"
+                : undefined,
+            }}
           >
             <div className="flex gap-3">
               <StorePhotoPlaceholder

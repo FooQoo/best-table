@@ -1,11 +1,13 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { STORES } from "~/mocks/data";
 import { StoreList } from "./store-list";
 
 const store = STORES[0];
 
-function setup(counterpartId: string | null) {
+function setup(counterpartId: string | null, options: { activeStoreId?: string; onActivateStore?: (id: string) => void } = {}) {
   return render(
     <MemoryRouter>
       <StoreList
@@ -13,6 +15,8 @@ function setup(counterpartId: string | null) {
         compareIds={[]}
         onToggleCompare={() => {}}
         counterpartId={counterpartId}
+        activeStoreId={options.activeStoreId}
+        onActivateStore={options.onActivateStore}
       />
     </MemoryRouter>,
   );
@@ -42,5 +46,26 @@ describe("StoreList の相手種別に応じた強調表示", () => {
     expect(
       screen.queryByTestId(`emphasis-room-${store.id}`),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("StoreList の地図連動", () => {
+  it("activeStoreId と一致する店舗カードを強調する", () => {
+    setup(null, { activeStoreId: store.id });
+
+    expect(screen.getByText(store.name).closest("[data-active]")).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+  });
+
+  it("店舗カードに hover すると active 店舗を通知する", async () => {
+    const user = userEvent.setup();
+    const onActivateStore = vi.fn();
+    setup(null, { onActivateStore });
+
+    await user.hover(screen.getByText(store.name));
+
+    expect(onActivateStore).toHaveBeenCalledWith(store.id);
   });
 });
