@@ -62,4 +62,13 @@ Verify:
 
 ## 今回着手する範囲
 
-まず Bolt 1-1 を実装する。Bolt 1-2 / 1-3 は Places API の実呼び出し境界を含むため、このファイルに計画を残したうえで次の小さな差分として進める。
+Bolt 1-1〜1-3 まで完了。
+
+- Bolt 1-1: `MAP_RENDERING_MOCK_RESTAURANTS` に座標・住所・代表写真・mock placeId を付与し、mock mode のデータ形状を固定した。
+- Bolt 1-2: `app/server/clients/google-places.ts` に Places Details の FieldMask、レスポンス変換、Place Photos media URL 生成、server-only API key 参照を実装した。FieldMask は `location,formattedAddress,shortFormattedAddress,types,viewport,plusCode,photos` に限定し、`displayName` / `rating` / `reviews` 等は取得しない。
+- Bolt 1-3: `searchRestaurants` に Places 解決依存を接続し、候補の先頭10件だけ `placeId` から `address` / `location` / `photoUrl` を補完するようにした。Places 解決が失敗しても候補自体は落とさず、グラウンディング由来の住所または `null` にフォールバックする。
+
+Verify:
+- `pnpm test`
+- `pnpm run typecheck`
+- `pnpm build`

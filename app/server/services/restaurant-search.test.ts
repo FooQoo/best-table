@@ -25,6 +25,7 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
   return {
     searchCandidates: vi.fn(async () => []),
     evaluateCandidates: vi.fn(async () => []),
+    resolvePlaceDetails: vi.fn(async () => null),
     getCached: (key) => cache.get(key) ?? null,
     setCached: (key, restaurants) => {
       cache.set(key, restaurants);
@@ -78,6 +79,8 @@ describe("searchRestaurants", () => {
       placeId: "places/abc",
       name: "桂",
       address: "東京都中央区銀座5-5-11",
+      location: null,
+      photoUrl: null,
       score: 90,
       room: "個室あり",
       matchingSummary: "接待に適した候補です。",
@@ -151,5 +154,67 @@ describe("searchRestaurants", () => {
     expect(result).toEqual({ restaurants: [cachedRestaurant], fromCache: true });
     expect(deps.searchCandidates).not.toHaveBeenCalled();
     expect(deps.evaluateCandidates).not.toHaveBeenCalled();
+  });
+
+  it("resolves Place Details for up to 10 grounded candidates and merges address, location, and photo URL", async () => {
+    const candidates = Array.from({ length: 12 }, (_, index) => ({
+      name: `候補${index + 1}`,
+      placeId: `places/place-${index + 1}`,
+      mapsUri: null,
+      address: null,
+    }));
+    const resolvePlaceDetails = vi.fn(async (placeId: string | null) => {
+      if (placeId === "places/place-1") {
+        return {
+          location: { lat: 35.6717, lng: 139.7639 },
+          address: "東京都中央区銀座1-1-1",
+          shortAddress: "銀座1-1-1",
+          photoName: "places/place-1/photos/photo-1",
+        };
+      }
+      return null;
+    });
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => candidates),
+      resolvePlaceDetails,
+    });
+
+    const result = await searchRestaurants(condition, deps);
+
+    expect(resolvePlaceDetails).toHaveBeenCalledTimes(10);
+    expect(resolvePlaceDetails).not.toHaveBeenCalledWith("places/place-11");
+    expect(result.restaurants[0]).toMatchObject({
+      address: "東京都中央区銀座1-1-1",
+      location: { lat: 35.6717, lng: 139.7639 },
+      photoUrl:
+        "https://places.googleapis.com/v1/places/place-1/photos/photo-1/media?maxHeightPx=640&skipHttpRedirect=true",
+    });
+    expect(result.restaurants[1]).toMatchObject({
+      name: "候補2",
+      location: null,
+      photoUrl: null,
+    });
+  });
+
+  it("keeps the grounding address when Place Details cannot resolve a candidate", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "住所だけ分かる店",
+          placeId: "places/address-only",
+          mapsUri: null,
+          address: "東京都中央区銀座2-2-2",
+        },
+      ]),
+      resolvePlaceDetails: vi.fn(async () => null),
+    });
+
+    const result = await searchRestaurants(condition, deps);
+
+    expect(result.restaurants[0]).toMatchObject({
+      address: "東京都中央区銀座2-2-2",
+      location: null,
+      photoUrl: null,
+    });
   });
 });

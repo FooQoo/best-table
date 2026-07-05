@@ -6,8 +6,8 @@
 ## 現在地
 
 - **現行サイクル**: `docs/plans/mvp-cycle-2/`
-- **着手中の UoW**: UoW-1（Places 店舗データ解決と mock mode）
-- **次のアクション**: 実装着手前に、UoW-1 Bolt 1-2 へ進むか、計画書全体の見直しを行うかを確認する。
+- **着手中の UoW**: UoW-2（10件単位の取得・追加読み込み・スケルトン）
+- **次のアクション**: UoW-2 Bolt 2-1（API 契約と状態追記）へ進む。
 
 ## ステータス一覧
 
@@ -28,7 +28,7 @@
 | mvp-cycle-1 | UoW-5 | 最終候補の説明文面 | 完了 | 5-1 | [docs/plans/mvp-cycle-1/uow-5-plan.md](plans/mvp-cycle-1/uow-5-plan.md) | Bolt 5-1: `app/utils/final-candidate-message.ts` に `buildFinalStoreMessage` を実装（`{ reason, checksBeforeBooking }` を返す構造化データ）。相手種別の重視観点（`getEmphasisKeys`）を推薦理由の冒頭に加え、懸念タグと「空席・予約成立を断定しない」定型確認事項を `checksBeforeBooking` に含める。`final-store-panel.tsx` に「この店舗を選んだ理由」「予約前の確認事項」セクションを追加し、`compare-screen.tsx` から `counterpartId`・`priorities` を渡すよう変更 |
 | mvp-cycle-1 | UoW-6 | ドメインデータモデルの再構成 | 完了 | 6-3 | [docs/plans/mvp-cycle-1/uow-6-plan.md](plans/mvp-cycle-1/uow-6-plan.md) | `app/domain/models/restaurant.ts` に `docs/MODEL.md` 準拠の単一 `Restaurant` 型を実装（生データとAI評価は分離しない設計に合わせ本計画を修正）。`concern` は UoW-4 の複数懸念表示を維持するため `concerns: ConcernItem[]` に変更し `docs/MODEL.md`/`docs/ARCHITECTURE.md` を更新。`budgetLabel` を追加し boss の「予算」強調を解消。`app/mocks/data.ts` の `STORES` を全フィールド移行、`app/domain/services/restaurant-cache-policy.ts` にキャッシュキー生成・鮮度判定を実装 |
 | mvp-cycle-1 | UoW-7 | 検索・空席・AI 生成の実接続 | 完了 | 7-3 | [docs/plans/mvp-cycle-1/uow-7-plan.md](plans/mvp-cycle-1/uow-7-plan.md) | Bolt 7-1: `@ai-sdk/google`・`ai`・zod・`@vis.gl/react-google-maps` を導入し、Google マップによるグラウンディング、構造化評価、検索オーケストレーション、resource route を実装。Bolt 7-2: 実予約 API には接続せず、空席状況の留保表現を一本化。Bolt 7-3: 店舗詳細のオンデマンド質問応答を実装 |
-| mvp-cycle-2 | UoW-1 | Places 店舗データ解決と mock mode | 進行中 | 1-1 | [docs/plans/mvp-cycle-2/uow-1-plan.md](plans/mvp-cycle-2/uow-1-plan.md) | Bolt 1-1: `MODE=mock` で返す地図用モックに座標・住所・代表写真・mock placeId を付与し、テストで固定。次は Places Details の FieldMask と変換境界 |
+| mvp-cycle-2 | UoW-1 | Places 店舗データ解決と mock mode | 完了 | 1-3 | [docs/plans/mvp-cycle-2/uow-1-plan.md](plans/mvp-cycle-2/uow-1-plan.md) | Bolt 1-1: mock mode の地図用モックに座標・住所・代表写真・mock placeId を付与。Bolt 1-2: Places Details の FieldMask と変換境界を実装。Bolt 1-3: 検索オーケストレーションへ先頭10件の Places 解決を接続し、失敗時も候補を落とさない挙動を固定 |
 | mvp-cycle-2 | UoW-2 | 10件単位の取得・追加読み込み・スケルトン | 計画済み | - | [docs/plans/mvp-cycle-2/uow-2-plan.md](plans/mvp-cycle-2/uow-2-plan.md) | 初回10件、最下部スクロールで追加10件。初回・追加取得中は店舗カード形状のスケルトンを表示 |
 | mvp-cycle-2 | UoW-3 | 検索結果地図 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-3-plan.md](plans/mvp-cycle-2/uow-3-plan.md) | `/results` の右側 MAP を実地図へ置き換え、マーカーと店舗カードを連動 |
 | mvp-cycle-2 | UoW-4 | 最終候補地図と Google Maps 導線 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-4-plan.md](plans/mvp-cycle-2/uow-4-plan.md) | `/compare` の最終候補パネルに地図を表示し、予約ではなく Google Maps で開く導線を提供 |
@@ -50,3 +50,4 @@
 | 2026-07-05 | 新サイクル `mvp-cycle-2`（地図表示・Places データ解決・10件単位追加取得）を計画。`docs/plans/mvp-cycle-2/PLANS.md` と `UNIT_OF_WORK.md` を作成し、UoW-1〜4 を「計画済み」として追加。 |
 | 2026-07-05 | mvp-cycle-2 UoW-1 に着手。`docs/plans/mvp-cycle-2/uow-1-plan.md` を作成し、Bolt 1-1 として `MAP_RENDERING_MOCK_RESTAURANTS` に座標・住所・代表写真・mock placeId を付与、テストを追加。`pnpm test` / `pnpm run typecheck` green。 |
 | 2026-07-05 | mvp-cycle-2 UoW-2〜4 の実装計画書（`uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |
+| 2026-07-05 | mvp-cycle-2 UoW-1 を完了。`app/server/clients/google-places.ts` に Places Details の安全な FieldMask（`location,formattedAddress,shortFormattedAddress,types,viewport,plusCode,photos`）と変換境界、Place Photos media URL 生成、server-only API key 参照を追加。`searchRestaurants` に先頭10件だけの Places 解決を接続し、`address` / `location` / `photoUrl` を補完、失敗時は候補を落とさず `null` またはグラウンディング住所へフォールバックするようテストで固定。`pnpm test`（108件）/ `pnpm run typecheck` / `pnpm build` すべて green。 |

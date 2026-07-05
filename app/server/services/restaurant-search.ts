@@ -7,6 +7,10 @@ import {
 } from "~/server/clients/gemini-grounding";
 import { evaluateRestaurantCandidates } from "~/server/clients/gemini-evaluation";
 import {
+  buildPlacePhotoMediaUrl,
+  fetchPlaceDetails,
+} from "~/server/clients/google-places";
+import {
   getCachedRestaurants,
   setCachedRestaurants,
 } from "~/server/repositories/restaurant-cache";
@@ -25,6 +29,7 @@ export type RestaurantSearchResult = {
 export type RestaurantSearchDeps = {
   searchCandidates: typeof searchRestaurantCandidates;
   evaluateCandidates: typeof evaluateRestaurantCandidates;
+  resolvePlaceDetails: typeof fetchPlaceDetails;
   getCached: typeof getCachedRestaurants;
   setCached: typeof setCachedRestaurants;
 };
@@ -32,6 +37,7 @@ export type RestaurantSearchDeps = {
 const defaultDeps: RestaurantSearchDeps = {
   searchCandidates: searchRestaurantCandidates,
   evaluateCandidates: evaluateRestaurantCandidates,
+  resolvePlaceDetails: fetchPlaceDetails,
   getCached: getCachedRestaurants,
   setCached: setCachedRestaurants,
 };
@@ -89,10 +95,14 @@ export async function searchRestaurants(
   const evaluationByName = new Map(
     evaluations.map((evaluation) => [evaluation.candidateName, evaluation]),
   );
+  const placeDetails = await Promise.all(
+    candidates.slice(0, 10).map((candidate) => deps.resolvePlaceDetails(candidate.placeId)),
+  );
 
   const generatedAt = new Date().toISOString();
   const restaurants: Restaurant[] = candidates.map((candidate, index) => {
     const evaluation = evaluationByName.get(candidate.name) ?? null;
+    const detail = index < placeDetails.length ? placeDetails[index] : null;
     return {
       // placeId は "places/ChIJ..." のように "/" を含むことがあり、そのまま id に使うと
       // `/stores/:storeId` のルーティングが崩れるため、URL に使える形に変換する。
@@ -101,10 +111,10 @@ export async function searchRestaurants(
       name: candidate.name,
       genre: null,
       area: condition.selectedAreas[0] ?? "",
-      address: candidate.address,
-      location: null,
+      address: detail?.address ?? candidate.address,
+      location: detail?.location ?? null,
       phone: null,
-      photoUrl: null,
+      photoUrl: detail?.photoName ? buildPlacePhotoMediaUrl(detail.photoName) : null,
       score: evaluation?.score ?? null,
       room: evaluation?.room ?? null,
       quiet: evaluation?.quiet ?? null,
