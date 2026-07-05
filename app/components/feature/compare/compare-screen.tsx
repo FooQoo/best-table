@@ -11,7 +11,7 @@ export function CompareScreen() {
 
   const selectedStores = STORES.filter((s) =>
     state.compareIds.includes(s.id),
-  ).sort((a, b) => b.score - a.score);
+  ).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
   const selectedCount = selectedStores.length;
   const finalStore =
     selectedStores.find((s) => s.id === state.finalStoreId) ?? null;

@@ -24,10 +24,10 @@ export function ResultsMap({ stores }: ResultsMapProps) {
           style={{
             top: store.pos.top,
             left: store.pos.left,
-            background: store.score >= 85 ? GOLD : "#eee6d0",
+            background: (store.score ?? 0) >= 85 ? GOLD : "#eee6d0",
           }}
         >
-          {store.score}
+          {store.score ?? "―"}
         </div>
       ))}
     </div>

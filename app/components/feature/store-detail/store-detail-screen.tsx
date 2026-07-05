@@ -3,6 +3,7 @@ import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
 import { STORES } from "~/mocks/data";
+import { CONFIDENCE_LABELS, EVIDENCE_LABELS } from "~/utils/evidence-labels";
 import { buildStoreQA } from "~/utils/store-qa";
 
 export function StoreDetailScreen() {
@@ -36,7 +37,7 @@ export function StoreDetailScreen() {
         </div>
 
         <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-6 flex gap-5">
-          <StorePhotoPlaceholder label={store.photo} className="w-32 h-32 flex-none" />
+          <StorePhotoPlaceholder label={store.photoPlaceholderLabel} className="w-32 h-32 flex-none" />
           <div className="flex-1 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
               <div className="text-[13px] text-[#79726a]">
@@ -45,6 +46,9 @@ export function StoreDetailScreen() {
               <ScoreBadge score={store.score} />
             </div>
             <div className="text-[13px] text-[#79726a]">個室：{store.room}</div>
+            <div className="text-[13px] text-[#79726a]">
+              予算目安：{store.budgetLabel ?? "情報なし"}
+            </div>
             <div className="text-[13px] text-[#79726a]">
               アクセス：{store.access}
             </div>
@@ -57,13 +61,19 @@ export function StoreDetailScreen() {
         <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-6 flex flex-col gap-3">
           <div className="font-bold text-[15px]">AIによる推奨理由</div>
           <p className="text-[13px] leading-relaxed m-0">
-            {store.recommendationReason}
+            {store.matchingSummary}
           </p>
+          {store.confidence && (
+            <div className="text-xs" style={{ color: "#79726a" }}>
+              根拠: {store.evidence.map((e) => EVIDENCE_LABELS[e]).join("・") || "情報なし"}
+              ｜確信度: {CONFIDENCE_LABELS[store.confidence]}
+            </div>
+          )}
           <div>
             <div className="font-bold text-xs text-[#79726a] mb-1.5">
               懸念点
             </div>
-            <ConcernTags storeId={store.id} tags={store.concernTags} />
+            <ConcernTags storeId={store.id} concerns={store.concerns} />
           </div>
         </div>
 

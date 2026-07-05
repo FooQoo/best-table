@@ -15,21 +15,21 @@ function renderAt(storeId: string) {
 
 describe("StoreDetailScreen", () => {
   it("店舗名・推奨理由・懸念タグ・質問応答例が常時表示される", () => {
-    const store = STORES.find((s) => s.concernTags.length > 0)!;
+    const store = STORES.find((s) => s.concerns.length > 0)!;
     renderAt(store.id);
 
     expect(screen.getByText(store.name)).toBeInTheDocument();
-    expect(screen.getByText(store.recommendationReason)).toBeInTheDocument();
+    expect(screen.getByText(store.matchingSummary!)).toBeInTheDocument();
     expect(
       screen.getByTestId(`concern-tags-${store.id}`),
-    ).toHaveTextContent(store.concernTags[0]);
+    ).toHaveTextContent(store.concerns[0].text);
     expect(
       screen.getByText("この店は接待向きですか？", { exact: false }),
     ).toBeInTheDocument();
   });
 
   it("懸念タグが無い店舗でも常時表示のメッセージが存在する", () => {
-    const store = STORES.find((s) => s.concernTags.length === 0)!;
+    const store = STORES.find((s) => s.concerns.length === 0)!;
     renderAt(store.id);
 
     expect(

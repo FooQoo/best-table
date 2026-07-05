@@ -10,8 +10,8 @@ describe("getEmphasisKeys", () => {
     expect(getEmphasisKeys("partner")).toEqual(["quiet", "access"]);
   });
 
-  it("社内上司・幹部との会食では落ち着き・使いやすさを強調する", () => {
-    expect(getEmphasisKeys("boss")).toEqual(["quiet", "access"]);
+  it("社内上司・幹部との会食では予算・落ち着き・使いやすさを強調する", () => {
+    expect(getEmphasisKeys("boss")).toEqual(["budgetLabel", "quiet", "access"]);
   });
 
   it("お礼・懇親の食事では初回取引先相当の重みを暫定で使う", () => {

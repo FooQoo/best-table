@@ -26,10 +26,10 @@ describe("buildStoreQA", () => {
   });
 
   it("懸念タグがある店舗では、回答のいずれかに懸念内容が反映される", () => {
-    const storeWithConcern = STORES.find((s) => s.concernTags.length > 0)!;
+    const storeWithConcern = STORES.find((s) => s.concerns.length > 0)!;
     const qa = buildStoreQA(storeWithConcern);
     const mentionsConcern = qa.some((item) =>
-      storeWithConcern.concernTags.some((tag) => item.answer.includes(tag)),
+      storeWithConcern.concerns.some((c) => item.answer.includes(c.text)),
     );
     expect(mentionsConcern).toBe(true);
   });

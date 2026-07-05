@@ -23,14 +23,14 @@ describe("StoreList の相手種別に応じた強調表示", () => {
     setup("exec");
 
     expect(screen.getByTestId(`emphasis-room-${store.id}`)).toHaveTextContent(
-      store.room,
+      store.room!,
     );
     expect(
       screen.getByTestId(`emphasis-prestige-${store.id}`),
-    ).toHaveTextContent(store.prestige);
+    ).toHaveTextContent(store.prestige!);
     expect(
       screen.getByTestId(`emphasis-service-${store.id}`),
-    ).toHaveTextContent(store.service);
+    ).toHaveTextContent(store.service!);
     expect(
       screen.queryByTestId(`emphasis-quiet-${store.id}`),
     ).not.toBeInTheDocument();

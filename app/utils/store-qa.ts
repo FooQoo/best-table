@@ -7,8 +7,8 @@ export type StoreQAItem = {
 
 export function buildStoreQA(store: Store): StoreQAItem[] {
   const concernNote =
-    store.concernTags.length > 0
-      ? `一方、口コミからは${store.concernTags.join("、")}との声もあり、事前に共有しておくと安心です。`
+    store.concerns.length > 0
+      ? `一方、口コミからは${store.concerns.map((c) => c.text).join("、")}との声もあり、事前に共有しておくと安心です。`
       : "口コミの範囲では特に大きな懸念は見当たりません。";
 
   return [

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import { useBooking } from "~/state/booking-context";
+import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { PRIORITIES, STORES } from "~/mocks/data";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
@@ -29,9 +30,11 @@ export function ResultsScreen() {
       ? "指定なし"
       : "未ヒアリング";
 
-  const sortedStores = [...STORES].sort((a, b) => b.score - a.score);
+  const sortedStores = [...STORES].sort(
+    (a, b) => (b.score ?? -1) - (a.score ?? -1),
+  );
   const compareCount = state.compareIds.length;
-  const canCompare = compareCount >= 2;
+  const canCompare = compareCount >= MIN_COMPARE_COUNT;
 
   const changeConditions = () => {
     resetForNewChat();

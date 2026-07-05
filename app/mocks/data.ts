@@ -1,3 +1,5 @@
+import type { Restaurant } from "~/domain/models/restaurant";
+
 export const NAVY = "#12202f";
 export const GOLD = "#c8a24a";
 
@@ -94,31 +96,21 @@ export const HISTORY: HistoryItem[] = [
   { title: "赤坂・お礼の会食", date: "6/20" },
 ];
 
-export type Store = {
-  id: string;
-  name: string;
-  genre: string;
-  area: string;
-  score: number;
-  room: string;
-  quiet: string;
-  prestige: string;
-  service: string;
-  access: string;
-  concernTags: string[];
-  recommendationReason: string;
-  photo: string;
+// app/mocks/ 専用の拡張。`Restaurant`（docs/MODEL.md 準拠のドメイン型）に、実データ未接続な間だけ
+// 使うプロトタイプ表示用フィールド（相対位置の MAP マーカー座標・写真プレースホルダーラベル）を足したもの。
+// `location` / `photoUrl` は実接続（UoW-7）まで null のままにし、架空の値で埋め合わせない。
+export type Store = Restaurant & {
   pos: { top: string; left: string };
-  phone: string;
+  photoPlaceholderLabel: string;
 };
 
 export const STORES: Store[] = [
-  { id: "s1", name: "日本料理 花明かり", genre: "会席・日本料理", area: "銀座", score: 94, room: "完全個室あり", quiet: "◎", prestige: "◎", service: "◎", access: "銀座駅 徒歩3分", concernTags: [], recommendationReason: "完全個室と口コミ評価の高さが揃っており、重要顧客との会食でも格式面の不安が少ない。写真からも落ち着いた内装がうかがえる。", photo: "個室 写真", pos: { top: "20%", left: "32%" }, phone: "03-1234-5601" },
-  { id: "s2", name: "鉄板焼 円", genre: "鉄板焼", area: "六本木", score: 85, room: "半個室", quiet: "○", prestige: "○", service: "◎", access: "六本木駅 徒歩5分", concernTags: ["カウンター越しの接客になる場合がある"], recommendationReason: "口コミでは接客の評価が特に高い。半個室のため完全な個室ではなく、着席位置によってはカウンター越しの接客になる点は事前に共有しておきたい。", photo: "カウンター写真", pos: { top: "48%", left: "60%" }, phone: "03-1234-5602" },
-  { id: "s3", name: "鮨 一凛", genre: "鮨", area: "新橋", score: 78, room: "カウンターのみ", quiet: "○", prestige: "○", service: "○", access: "新橋駅 徒歩2分", concernTags: ["個室がなく会話距離が近い"], recommendationReason: "駅からのアクセスが良く、少人数の会食向き。個室はなくカウンター中心のため、商談の込み入った話には向かない可能性がある。", photo: "カウンター写真", pos: { top: "66%", left: "20%" }, phone: "03-1234-5603" },
-  { id: "s4", name: "京料理 和心", genre: "京料理", area: "丸の内", score: 90, room: "個室あり", quiet: "◎", prestige: "◎", service: "○", access: "東京駅 徒歩4分", concernTags: [], recommendationReason: "個室ありで静かさ・格式感の評価も高く、役員クラスの会食に適した候補。接客面の口コミはやや分かれており、当日の混雑状況によって差が出る可能性がある。", photo: "個室 写真", pos: { top: "28%", left: "76%" }, phone: "03-1234-5604" },
-  { id: "s5", name: "創作和食 灯", genre: "創作和食", area: "赤坂", score: 66, room: "半個室のみ", quiet: "△", prestige: "○", service: "○", access: "赤坂駅 徒歩6分", concernTags: ["口コミに「賑やか」との声がある"], recommendationReason: "料理やコース内容への口コミ評価は高い一方、時間帯によっては賑やかになるとの声があり、静かに話したい会食には向き不向きがある。", photo: "店内写真", pos: { top: "58%", left: "40%" }, phone: "03-1234-5605" },
-  { id: "s6", name: "炭火焼 楽", genre: "焼鳥・炭火焼", area: "虎ノ門", score: 72, room: "半個室", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", concernTags: ["煙や匂いが気になる場合がある"], recommendationReason: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", photo: "店内写真", pos: { top: "78%", left: "66%" }, phone: "03-1234-5606" },
+  { id: "s1", placeId: null, name: "日本料理 花明かり", genre: "会席・日本料理", area: "銀座", address: null, location: null, phone: "03-1234-5601", photoUrl: null, score: 94, room: "個室あり", quiet: "◎", prestige: "◎", service: "◎", access: "銀座駅 徒歩3分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "完全個室と口コミ評価の高さが揃っており、重要顧客との会食でも格式面の不安が少ない。写真からも落ち着いた内装がうかがえる。", evidence: ["review", "photo", "description"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "20%", left: "32%" } },
+  { id: "s2", placeId: null, name: "鉄板焼 円", genre: "鉄板焼", area: "六本木", address: null, location: null, phone: "03-1234-5602", photoUrl: null, score: 85, room: "半個室あり", quiet: "○", prestige: "○", service: "◎", access: "六本木駅 徒歩5分", budgetLabel: "¥20,000", concerns: [{ text: "カウンター越しの接客になる場合がある", evidence: ["seat"] }], matchingSummary: "口コミでは接客の評価が特に高い。半個室のため完全な個室ではなく、着席位置によってはカウンター越しの接客になる点は事前に共有しておきたい。", evidence: ["review", "seat"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "48%", left: "60%" } },
+  { id: "s3", placeId: null, name: "鮨 一凛", genre: "鮨", area: "新橋", address: null, location: null, phone: "03-1234-5603", photoUrl: null, score: 78, room: "カウンターのみ", quiet: "○", prestige: "○", service: "○", access: "新橋駅 徒歩2分", budgetLabel: "¥15,000", concerns: [{ text: "個室がなく会話距離が近い", evidence: ["seat"] }], matchingSummary: "駅からのアクセスが良く、少人数の会食向き。個室はなくカウンター中心のため、商談の込み入った話には向かない可能性がある。", evidence: ["review", "access"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "66%", left: "20%" } },
+  { id: "s4", placeId: null, name: "京料理 和心", genre: "京料理", area: "丸の内", address: null, location: null, phone: "03-1234-5604", photoUrl: null, score: 90, room: "個室あり", quiet: "◎", prestige: "◎", service: "○", access: "東京駅 徒歩4分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "個室ありで静かさ・格式感の評価も高く、役員クラスの会食に適した候補。接客面の口コミはやや分かれており、当日の混雑状況によって差が出る可能性がある。", evidence: ["review", "photo"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "28%", left: "76%" } },
+  { id: "s5", placeId: null, name: "創作和食 灯", genre: "創作和食", area: "赤坂", address: null, location: null, phone: "03-1234-5605", photoUrl: null, score: 66, room: "半個室あり", quiet: "△", prestige: "○", service: "○", access: "赤坂駅 徒歩6分", budgetLabel: "¥15,000", concerns: [{ text: "口コミに「賑やか」との声がある", evidence: ["review"] }], matchingSummary: "料理やコース内容への口コミ評価は高い一方、時間帯によっては賑やかになるとの声があり、静かに話したい会食には向き不向きがある。", evidence: ["review"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "58%", left: "40%" } },
+  { id: "s6", placeId: null, name: "炭火焼 楽", genre: "焼鳥・炭火焼", area: "虎ノ門", address: null, location: null, phone: "03-1234-5606", photoUrl: null, score: 72, room: "半個室あり", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", budgetLabel: "¥10,000", concerns: [{ text: "煙や匂いが気になる場合がある", evidence: ["review", "description"] }], matchingSummary: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", evidence: ["review", "description"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "78%", left: "66%" } },
 ];
 
 export function shade(hex: string, pct: number): string {

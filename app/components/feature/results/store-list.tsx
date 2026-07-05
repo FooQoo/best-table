@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
+import { MAX_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { GOLD, type Store } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
@@ -30,7 +31,7 @@ export function StoreList({
       </div>
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);
-        const disabled = !selected && compareCount >= 5;
+        const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (
@@ -40,7 +41,7 @@ export function StoreList({
           >
             <div className="flex gap-3">
               <StorePhotoPlaceholder
-                label={store.photo}
+                label={store.photoPlaceholderLabel}
                 className="w-20 h-20 flex-none"
               />
               <div className="flex-1">
@@ -52,7 +53,7 @@ export function StoreList({
                   {store.genre}・{store.area}
                 </div>
                 <div className="text-xs text-[#79726a] mt-0.5">
-                  個室：{store.room}
+                  個室：{store.room}・予算目安：{store.budgetLabel ?? "情報なし"}
                 </div>
               </div>
             </div>
@@ -70,7 +71,7 @@ export function StoreList({
                 ))}
               </div>
             )}
-            <ConcernTags storeId={store.id} tags={store.concernTags} />
+            <ConcernTags storeId={store.id} concerns={store.concerns} />
             <div className="flex items-center justify-between gap-2">
               <Link
                 to={`/stores/${store.id}`}

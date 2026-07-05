@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { Provider as JotaiProvider, atom, useAtom } from "jotai";
+import { MAX_COMPARE_COUNT, MAX_PRIORITY_COUNT } from "~/domain/models/restaurant";
 
 export type BookingState = {
   selectedAreas: string[];
@@ -149,7 +150,7 @@ export function useBooking(): BookingValue {
         const has = s.priorities.includes(key);
         if (has)
           return { ...s, priorities: s.priorities.filter((x) => x !== key) };
-        if (s.priorities.length >= 3) return s;
+        if (s.priorities.length >= MAX_PRIORITY_COUNT) return s;
         return { ...s, priorities: [...s.priorities, key] };
       }),
     [setState],
@@ -170,7 +171,7 @@ export function useBooking(): BookingValue {
         const has = s.compareIds.includes(id);
         if (has)
           return { ...s, compareIds: s.compareIds.filter((x) => x !== id) };
-        if (s.compareIds.length >= 5) return s;
+        if (s.compareIds.length >= MAX_COMPARE_COUNT) return s;
         return { ...s, compareIds: [...s.compareIds, id] };
       }),
     [setState],

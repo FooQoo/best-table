@@ -19,7 +19,8 @@ const ROWS: { label: string; key: keyof Store; shaded?: boolean }[] = [
   { label: "格式", key: "prestige" },
   { label: "接客", key: "service", shaded: true },
   { label: "アクセス", key: "access" },
-  { label: "懸念点", key: "concernTags", shaded: true },
+  { label: "予算目安", key: "budgetLabel", shaded: true },
+  { label: "懸念点", key: "concerns" },
 ];
 
 export function CompareTable({
@@ -60,7 +61,7 @@ export function CompareTable({
               おすすめ 1位
             </div>
             <StorePhotoPlaceholder
-              label={store.photo}
+              label={store.photoPlaceholderLabel}
               className="w-full h-20"
             />
             <div className="font-bold text-sm">{store.name}</div>
@@ -92,10 +93,10 @@ export function CompareTable({
                   key={`${row.label}-${store.id}`}
                   className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
                   style={{
-                    ...(row.key === "concernTags"
+                    ...(row.key === "concerns"
                       ? {
                           color:
-                            store.concernTags.length === 0
+                            store.concerns.length === 0
                               ? "#79726a"
                               : "#9a6a2a",
                         }
@@ -105,9 +106,9 @@ export function CompareTable({
                 >
                   {row.key === "score" ? (
                     <ScoreBadge score={store.score} showLabel={false} />
-                  ) : row.key === "concernTags" ? (
-                    store.concernTags.length > 0
-                      ? store.concernTags.join(" / ")
+                  ) : row.key === "concerns" ? (
+                    store.concerns.length > 0
+                      ? store.concerns.map((c) => c.text).join(" / ")
                       : "特になし"
                   ) : (
                     String(store[row.key])

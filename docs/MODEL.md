@@ -131,7 +131,7 @@ type Restaurant = {
   service: RatingSymbol | null;
   access: string | null; // 最寄り駅・徒歩分数などの説明（例: "銀座駅 徒歩3分"）。駅名・所要時間の組み合わせは無数にあるため自由文字列
   budgetLabel: Exclude<BudgetLabel, "指定なし"> | null; // 予算の目安。BUDGET_STEPS と同じ固定語彙から最も近いものを選ばせる。「指定なし」は AI 出力としては使わず、不明は null
-  concern: { text: string; evidence: EvidenceCategory[] } | null; // text は自由文字列。懸念なしは null（「特になし」を無根拠に断定しない）
+  concerns: { text: string; evidence: EvidenceCategory[] }[]; // text は自由文字列。懸念は複数あり得るため配列とし、画面上には常時（ホバー非依存で）表示する。懸念なしは空配列（「特になし」を無根拠に断定しない）
   matchingSummary: string | null; // AIによるマッチングポイント要約。自由文字列
   evidence: EvidenceCategory[]; // 生成全体で参照した根拠カテゴリ。固定語彙
   confidence: "high" | "medium" | "low" | null; // 固定語彙
@@ -141,7 +141,7 @@ type Restaurant = {
 
 自由記述と固定語彙の区別:
 
-- **自由記述のまま**にするフィールド: `id` / `placeId` / `name` / `genre` / `address` / `phone` / `photoUrl` / `access` / `concern.text` / `matchingSummary` / `generatedAt`。実世界の値の種類が多い、または固有名詞・URL・タイムスタンプなど値そのものに意味があるため、決め打ちの語彙で表現できない。
+- **自由記述のまま**にするフィールド: `id` / `placeId` / `name` / `genre` / `address` / `phone` / `photoUrl` / `access` / `concerns[].text` / `matchingSummary` / `generatedAt`。実世界の値の種類が多い、または固有名詞・URL・タイムスタンプなど値そのものに意味があるため、決め打ちの語彙で表現できない。
 - **固定語彙として型定義**するフィールド: `area`（`AreaCity`）、`budgetLabel`（`BudgetLabel`）、`room`（`RoomAvailability`）、`quiet` / `prestige` / `service`（`RatingSymbol`）、`evidence`（`EvidenceCategory`）、`confidence`。いずれもアプリ側で選択肢が決まっている、または3〜6段階程度の小さな語彙に正規化できる。
   - `area` / `budgetLabel` は、ヒアリング画面が使う `AREA_REGIONS` / `BUDGET_STEPS`（`app/constants/` に移設後のもの）から型を導出し、値を二重管理しない。
   - `room` / `quiet` / `prestige` / `service` / `evidence` / `confidence` は、`generateObject` の zod スキーマ側で `z.enum([...])` として同じ語彙を強制し、AI がこの型に無い値を生成しないようにする。

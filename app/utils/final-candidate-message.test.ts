@@ -3,13 +3,13 @@ import { STORES } from "~/mocks/data";
 import { buildFinalStoreMessage } from "./final-candidate-message";
 
 describe("buildFinalStoreMessage", () => {
-  it("推薦理由に店舗の recommendationReason を含める", () => {
+  it("推薦理由に店舗の matchingSummary を含める", () => {
     const store = STORES[0];
     const message = buildFinalStoreMessage(store, {
       counterpart: null,
       priorities: [],
     });
-    expect(message.reason).toContain(store.recommendationReason);
+    expect(message.reason).toContain(store.matchingSummary);
   });
 
   it("相手種別に応じた重視観点を推薦理由の冒頭に含める", () => {
@@ -29,17 +29,17 @@ describe("buildFinalStoreMessage", () => {
       counterpart: null,
       priorities: [],
     });
-    expect(message.reason.startsWith(store.recommendationReason)).toBe(true);
+    expect(message.reason.startsWith(store.matchingSummary ?? "")).toBe(true);
   });
 
   it("懸念タグを予約前の確認事項に含める", () => {
-    const store = STORES.find((s) => s.concernTags.length > 0)!;
+    const store = STORES.find((s) => s.concerns.length > 0)!;
     const message = buildFinalStoreMessage(store, {
       counterpart: null,
       priorities: [],
     });
-    for (const tag of store.concernTags) {
-      expect(message.checksBeforeBooking).toContain(tag);
+    for (const concern of store.concerns) {
+      expect(message.checksBeforeBooking).toContain(concern.text);
     }
   });
 

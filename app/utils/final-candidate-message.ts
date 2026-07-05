@@ -24,10 +24,10 @@ export function buildFinalStoreMessage(
       ? `今回重視した${emphasisLabels.join("・")}の観点でも評価が高く、`
       : "";
 
-  const reason = `${emphasisNote}${store.recommendationReason}`;
+  const reason = `${emphasisNote}${store.matchingSummary ?? ""}`;
 
   const checksBeforeBooking: string[] = [
-    ...store.concernTags,
+    ...store.concerns.map((concern) => concern.text),
     "空席状況は変動するため、予約前に最新の空き状況を確認してください。",
     "本画面の情報だけで予約成立を保証するものではありません。",
   ];
