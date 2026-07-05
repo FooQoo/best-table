@@ -1,4 +1,4 @@
-import { BORDER, GOLD, INK, NAVY, hexToRgb, shade } from "~/lib/data";
+import { BORDER, GOLD, INK, NAVY, hexToRgb, shade } from "~/mocks/data";
 
 export function getTheme() {
   const primary = NAVY;
@@ -54,7 +54,11 @@ export function radioStyle(t: Theme, selected: boolean, disabled = false) {
 }
 
 // Style for toggle buttons (store compare toggle, final-select button).
-export function toggleButtonStyle(t: Theme, selected: boolean, disabled: boolean) {
+export function toggleButtonStyle(
+  t: Theme,
+  selected: boolean,
+  disabled: boolean,
+) {
   if (disabled) {
     return {
       btnBorder: "#eee",

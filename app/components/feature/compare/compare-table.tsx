@@ -1,8 +1,8 @@
 import { Fragment } from "react";
 import { ScoreBadge } from "~/components/ui/score-badge";
 import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
-import { GOLD, NAVY, type Store } from "~/lib/data";
-import { getTheme, toggleButtonStyle } from "~/lib/theme";
+import { GOLD, NAVY, type Store } from "~/mocks/data";
+import { getTheme, toggleButtonStyle } from "~/styles/theme";
 
 type CompareTableProps = {
   stores: Store[];
@@ -20,7 +20,11 @@ const ROWS: { label: string; key: keyof Store; shaded?: boolean }[] = [
   { label: "懸念点", key: "concern", shaded: true },
 ];
 
-export function CompareTable({ stores, finalStoreId, onSelectFinalStore }: CompareTableProps) {
+export function CompareTable({
+  stores,
+  finalStoreId,
+  onSelectFinalStore,
+}: CompareTableProps) {
   const t = getTheme();
 
   return (
@@ -34,15 +38,25 @@ export function CompareTable({ stores, finalStoreId, onSelectFinalStore }: Compa
           <div
             key={store.id}
             className="p-4 border-l border-[#e4ded0] flex flex-col gap-2"
-            style={{ borderBottom: `2px solid ${NAVY}`, background: i === 0 ? t.accentSoftBg : "#fff" }}
+            style={{
+              borderBottom: `2px solid ${NAVY}`,
+              background: i === 0 ? t.accentSoftBg : "#fff",
+            }}
           >
             <div
               className="self-start font-bold text-[11px] px-2.5 py-0.5 rounded-full"
-              style={i === 0 ? { background: GOLD, color: "#20201c" } : { visibility: "hidden" }}
+              style={
+                i === 0
+                  ? { background: GOLD, color: "#20201c" }
+                  : { visibility: "hidden" }
+              }
             >
               おすすめ 1位
             </div>
-            <StorePhotoPlaceholder label={store.photo} className="w-full h-20" />
+            <StorePhotoPlaceholder
+              label={store.photo}
+              className="w-full h-20"
+            />
             <div className="font-bold text-sm">{store.name}</div>
             <div className="text-[11px] text-[#79726a]">{store.genre}</div>
           </div>
@@ -59,7 +73,14 @@ export function CompareTable({ stores, finalStoreId, onSelectFinalStore }: Compa
               <div
                 key={`${row.label}-${store.id}`}
                 className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
-                style={row.key === "concern" ? { color: store.concern === "特になし" ? "#79726a" : "#9a6a2a" } : undefined}
+                style={
+                  row.key === "concern"
+                    ? {
+                        color:
+                          store.concern === "特になし" ? "#79726a" : "#9a6a2a",
+                      }
+                    : undefined
+                }
               >
                 {row.key === "score" ? (
                   <ScoreBadge score={store.score} showLabel={false} />
@@ -76,12 +97,19 @@ export function CompareTable({ stores, finalStoreId, onSelectFinalStore }: Compa
           const selected = finalStoreId === store.id;
           const s = toggleButtonStyle(t, selected, false);
           return (
-            <div key={store.id} className="p-4 border-l border-[#e4ded0] flex justify-center">
+            <div
+              key={store.id}
+              className="p-4 border-l border-[#e4ded0] flex justify-center"
+            >
               <button
                 type="button"
                 onClick={() => onSelectFinalStore(store.id)}
                 className="w-full px-3 py-2.5 border-[1.5px] rounded-md cursor-pointer font-bold text-[13px] transition-colors"
-                style={{ borderColor: s.btnBorder, background: s.btnBg, color: s.btnColor }}
+                style={{
+                  borderColor: s.btnBorder,
+                  background: s.btnBg,
+                  color: s.btnColor,
+                }}
               >
                 {selected ? "選択中 ✓" : "この店に決める"}
               </button>

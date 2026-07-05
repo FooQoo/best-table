@@ -2,8 +2,8 @@ import { useNavigate } from "react-router";
 import { AreaPicker } from "~/components/feature/top/area-picker";
 import { Input } from "~/components/ui/input";
 import { QuantityStepper } from "~/components/ui/quantity-stepper";
-import { useBooking } from "~/lib/booking-context";
-import { GOLD } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { GOLD } from "~/mocks/data";
 
 export function TopScreen() {
   const navigate = useNavigate();
@@ -58,18 +58,27 @@ function TopHero() {
     <div
       className="relative h-[300px] overflow-hidden"
       style={{
-        background: "repeating-linear-gradient(45deg,#3a3226,#3a3226 12px,#332b20 12px,#332b20 24px)",
+        background:
+          "repeating-linear-gradient(45deg,#3a3226,#3a3226 12px,#332b20 12px,#332b20 24px)",
       }}
     >
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(180deg,rgba(18,32,47,.2),rgba(18,32,47,.8))" }}
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(18,32,47,.2),rgba(18,32,47,.8))",
+        }}
       />
       <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
-        <div className="font-serif font-bold text-[32px] mb-3" style={{ color: GOLD }}>
+        <div
+          className="font-serif font-bold text-[32px] mb-3"
+          style={{ color: GOLD }}
+        >
           大切な会食を、失敗しない選択に。
         </div>
-        <div className="text-[15px] text-[#e4ded0]">接待・会食に強い、お店選びのAIサービス</div>
+        <div className="text-[15px] text-[#e4ded0]">
+          接待・会食に強い、お店選びのAIサービス
+        </div>
       </div>
     </div>
   );

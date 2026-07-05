@@ -8,7 +8,7 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import { BookingProvider } from "~/lib/booking-context";
+import { BookingProvider } from "~/state/booking-context";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [

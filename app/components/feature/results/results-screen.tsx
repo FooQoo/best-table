@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
-import { useBooking } from "~/lib/booking-context";
-import { PRIORITIES, STORES } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { PRIORITIES, STORES } from "~/mocks/data";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
 import { ResultsSummaryBar } from "~/components/feature/results/results-summary-bar";
@@ -10,8 +10,12 @@ export function ResultsScreen() {
   const navigate = useNavigate();
   const { state, toggleCompare, resetForNewChat } = useBooking();
 
-  const priorityLabelByKey = Object.fromEntries(PRIORITIES.map((p) => [p.key, p.label]));
-  const recapKeyword = state.selectedAreas.length ? state.selectedAreas.join("・") : "エリア未指定";
+  const priorityLabelByKey = Object.fromEntries(
+    PRIORITIES.map((p) => [p.key, p.label]),
+  );
+  const recapKeyword = state.selectedAreas.length
+    ? state.selectedAreas.join("・")
+    : "エリア未指定";
   const recapDateTime = `${state.date} ${state.time}`;
   const recapBudget =
     state.budgetMin !== "指定なし" || state.budgetMax !== "指定なし"
@@ -46,7 +50,11 @@ export function ResultsScreen() {
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        <StoreList stores={sortedStores} compareIds={state.compareIds} onToggleCompare={toggleCompare} />
+        <StoreList
+          stores={sortedStores}
+          compareIds={state.compareIds}
+          onToggleCompare={toggleCompare}
+        />
         <ResultsMap stores={sortedStores} />
       </div>
 

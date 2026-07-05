@@ -1,6 +1,6 @@
 import { Outlet, useNavigate } from "react-router";
-import { useBooking } from "~/lib/booking-context";
-import { GOLD, HISTORY } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { GOLD, HISTORY } from "~/mocks/data";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -19,8 +19,12 @@ export function AppLayout() {
           onClick={goTop}
           className="flex items-baseline gap-3.5 bg-transparent border-none cursor-pointer px-0.5 py-1.5 rounded hover:opacity-85 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
         >
-          <span className="font-serif font-bold text-[22px] text-[#c8a24a] tracking-wide">Best Table</span>
-          <span className="text-xs text-[#9aa5ad]">接待・会食のための、お店選びAI</span>
+          <span className="font-serif font-bold text-[22px] text-[#c8a24a] tracking-wide">
+            Best Table
+          </span>
+          <span className="text-xs text-[#9aa5ad]">
+            接待・会食のための、お店選びAI
+          </span>
         </button>
       </div>
 
@@ -34,7 +38,9 @@ export function AppLayout() {
           >
             ＋ 新しい相談を始める
           </button>
-          <div className="text-[11px] text-[#7a8894] tracking-wide px-1 mb-0.5">履歴</div>
+          <div className="text-[11px] text-[#7a8894] tracking-wide px-1 mb-0.5">
+            履歴
+          </div>
           {HISTORY.map((h) => (
             <div
               key={h.title}

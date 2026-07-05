@@ -1,4 +1,4 @@
-import { getTheme, radioStyle } from "~/lib/theme";
+import { getTheme, radioStyle } from "~/styles/theme";
 
 type SelectTileProps = {
   label: string;
@@ -9,7 +9,14 @@ type SelectTileProps = {
   onClick: () => void;
 };
 
-export function SelectTile({ label, desc, selected, disabled, round, onClick }: SelectTileProps) {
+export function SelectTile({
+  label,
+  desc,
+  selected,
+  disabled,
+  round,
+  onClick,
+}: SelectTileProps) {
   const t = getTheme();
   const s = radioStyle(t, selected, disabled);
 

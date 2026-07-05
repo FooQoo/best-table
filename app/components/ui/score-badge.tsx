@@ -1,4 +1,4 @@
-import { GOLD, type Store } from "~/lib/data";
+import { GOLD, type Store } from "~/mocks/data";
 
 type ScoreBadgeProps = {
   score: Store["score"];

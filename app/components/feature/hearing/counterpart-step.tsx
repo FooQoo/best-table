@@ -1,14 +1,16 @@
 import { SelectTile } from "~/components/ui/select-tile";
 import { Input } from "~/components/ui/input";
-import { useBooking } from "~/lib/booking-context";
-import { COUNTERPARTS } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { COUNTERPARTS } from "~/mocks/data";
 
 export function CounterpartStep() {
   const { state, setCounterpart, setCounterpartOtherText } = useBooking();
 
   return (
     <div>
-      <div className="font-bold text-[15px] mb-1">今回は、どんな会食ですか？</div>
+      <div className="font-bold text-[15px] mb-1">
+        今回は、どんな会食ですか？
+      </div>
       <div className="text-xs text-[#79726a] mb-3.5">
         選択内容をもとに、AIが重視すべき比較軸を調整します。
       </div>

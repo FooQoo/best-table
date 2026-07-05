@@ -1,4 +1,4 @@
-import { GOLD, NAVY, type Store } from "~/lib/data";
+import { GOLD, NAVY, type Store } from "~/mocks/data";
 
 type FinalStorePanelProps = {
   store: Store;
@@ -19,7 +19,9 @@ export function FinalStorePanel({ store }: FinalStorePanelProps) {
             <div className="text-[15px]">{store.phone}</div>
           </div>
           <div>
-            <div className="font-bold text-xs text-[#79726a] mb-1">アクセス</div>
+            <div className="font-bold text-xs text-[#79726a] mb-1">
+              アクセス
+            </div>
             <div className="text-[15px]">{store.access}</div>
           </div>
           <a

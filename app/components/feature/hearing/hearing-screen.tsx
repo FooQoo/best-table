@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useBooking } from "~/lib/booking-context";
-import { GOLD } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { GOLD } from "~/mocks/data";
 import { BudgetStep } from "~/components/feature/hearing/budget-step";
 import { CounterpartStep } from "~/components/feature/hearing/counterpart-step";
 import { PriorityStep } from "~/components/feature/hearing/priority-step";
@@ -14,9 +14,13 @@ export function HearingScreen() {
   const [step, setStep] = useState<HearingStep>(0);
   const { state } = useBooking();
 
-  const canNextStep0 = !!state.counterpart && !(state.counterpart === "other" && !state.counterpartOtherText.trim());
+  const canNextStep0 =
+    !!state.counterpart &&
+    !(state.counterpart === "other" && !state.counterpartOtherText.trim());
   const canNextStep1 = !(state.budgetOtherOn && !state.budgetOtherText.trim());
-  const canSubmit = state.priorities.length > 0 || (state.priorityOtherOn && !!state.priorityOtherText.trim());
+  const canSubmit =
+    state.priorities.length > 0 ||
+    (state.priorityOtherOn && !!state.priorityOtherText.trim());
   const enabledByStep = [canNextStep0, canNextStep1, canSubmit];
   const primaryEnabled = enabledByStep[step];
   const primaryLabel = step < 2 ? "次へ" : "この条件で検索する";

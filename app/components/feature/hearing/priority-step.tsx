@@ -1,10 +1,11 @@
 import { Input } from "~/components/ui/input";
 import { SelectTile } from "~/components/ui/select-tile";
-import { useBooking } from "~/lib/booking-context";
-import { PRIORITIES } from "~/lib/data";
+import { useBooking } from "~/state/booking-context";
+import { PRIORITIES } from "~/mocks/data";
 
 export function PriorityStep() {
-  const { state, togglePriority, togglePriorityOther, setPriorityOtherText } = useBooking();
+  const { state, togglePriority, togglePriorityOther, setPriorityOtherText } =
+    useBooking();
   const priorityLimitReached = state.priorities.length >= 3;
 
   return (

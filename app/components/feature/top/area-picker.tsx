@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
-import { AREA_REGIONS, GOLD, type Prefecture } from "~/lib/data";
-import { useBooking } from "~/lib/booking-context";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import { AREA_REGIONS, GOLD, type Prefecture } from "~/mocks/data";
+import { useBooking } from "~/state/booking-context";
 
 export function AreaPicker() {
   const { state, toggleCity, removeArea } = useBooking();
   const [open, setOpen] = useState(false);
   const [level, setLevel] = useState<0 | 1>(0);
-  const [activePrefecture, setActivePrefecture] = useState<Prefecture | null>(null);
+  const [activePrefecture, setActivePrefecture] = useState<Prefecture | null>(
+    null,
+  );
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -50,14 +56,21 @@ export function AreaPicker() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[460px] h-[420px] p-0 gap-0 flex flex-col overflow-hidden">
+      <PopoverContent
+        align="start"
+        className="w-[460px] h-[420px] p-0 gap-0 flex flex-col overflow-hidden"
+      >
         <div className="flex-1 overflow-hidden relative">
           <div
             className="flex w-[200%] h-full transition-transform duration-300 ease-out"
-            style={{ transform: level === 1 ? "translateX(-50%)" : "translateX(0%)" }}
+            style={{
+              transform: level === 1 ? "translateX(-50%)" : "translateX(0%)",
+            }}
           >
             <div className="w-1/2 flex-none overflow-y-auto px-6 py-5">
-              <div className="font-bold text-[13px] text-[#79726a] mb-3.5">都道府県選択</div>
+              <div className="font-bold text-[13px] text-[#79726a] mb-3.5">
+                都道府県選択
+              </div>
               {AREA_REGIONS.map((r) => (
                 <div key={r.region} className="mb-4">
                   <div className="font-bold text-[13px] mb-2">{r.region}</div>

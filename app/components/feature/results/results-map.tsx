@@ -1,4 +1,4 @@
-import { GOLD, type Store } from "~/lib/data";
+import { GOLD, type Store } from "~/mocks/data";
 
 type ResultsMapProps = {
   stores: Store[];
@@ -21,7 +21,11 @@ export function ResultsMap({ stores }: ResultsMapProps) {
         <div
           key={store.id}
           className="absolute -translate-x-1/2 -translate-y-1/2 font-bold text-xs px-2.5 py-1 rounded-full border-[1.5px] border-white shadow-[0_1px_4px_rgba(0,0,0,.2)] text-[#20201c]"
-          style={{ top: store.pos.top, left: store.pos.left, background: store.score >= 85 ? GOLD : "#eee6d0" }}
+          style={{
+            top: store.pos.top,
+            left: store.pos.left,
+            background: store.score >= 85 ? GOLD : "#eee6d0",
+          }}
         >
           {store.score}
         </div>

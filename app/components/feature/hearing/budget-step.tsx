@@ -1,14 +1,28 @@
 import { Input } from "~/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
-import { useBooking } from "~/lib/booking-context";
-import { BUDGET_STEPS, GOLD } from "~/lib/data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { useBooking } from "~/state/booking-context";
+import { BUDGET_STEPS, GOLD } from "~/mocks/data";
 
 export function BudgetStep() {
-  const { state, setBudgetMin, setBudgetMax, toggleBudgetOther, setBudgetOtherText } = useBooking();
+  const {
+    state,
+    setBudgetMin,
+    setBudgetMax,
+    toggleBudgetOther,
+    setBudgetOtherText,
+  } = useBooking();
 
   return (
     <div>
-      <div className="font-bold text-[15px] mb-1">ご予算はどのくらいですか？</div>
+      <div className="font-bold text-[15px] mb-1">
+        ご予算はどのくらいですか？
+      </div>
       <div className="text-xs text-[#79726a] mb-3.5">
         選択した予算感をもとに、候補店舗を絞り込みます。
       </div>
