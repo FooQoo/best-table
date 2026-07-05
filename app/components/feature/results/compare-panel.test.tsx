@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { STORES } from "~/mocks/data";
+import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { ComparePanel } from "./compare-panel";
 
 const stores = STORES.slice(0, 2);
@@ -60,5 +61,15 @@ describe("ComparePanel の境界状態", () => {
     expect(
       screen.queryByText("この店舗を選んだ理由"),
     ).not.toBeInTheDocument();
+  });
+
+  it("各店舗のジャンルの右にGoogle Mapのリンクを表示する", () => {
+    setup(null);
+
+    const links = screen.getAllByRole("link", { name: "Google Mapで開く" });
+    expect(links).toHaveLength(stores.length);
+    links.forEach((link, i) => {
+      expect(link).toHaveAttribute("href", buildGoogleMapsUrl(stores[i]));
+    });
   });
 });

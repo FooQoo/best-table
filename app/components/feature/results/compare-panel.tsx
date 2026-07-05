@@ -5,6 +5,7 @@ import type { Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme } from "~/styles/theme";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
+import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { getEmphasisKeys } from "~/utils/scoring";
 
 type ComparePanelProps = {
@@ -67,8 +68,18 @@ export function ComparePanel({ stores, counterpartId }: ComparePanelProps) {
               </div>
               <StorePhoto store={store} className="w-full h-20" />
               <div className="font-bold text-sm">{store.name}</div>
-              <div className="text-[11px] text-[#79726a]">
-                {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}
+              <div className="flex items-center justify-between gap-2 text-[11px] text-[#79726a]">
+                <span>
+                  {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}
+                </span>
+                <a
+                  href={buildGoogleMapsUrl(store)}
+                  target="_blank"
+                  rel="noopener"
+                  className="flex-none text-[#8a6a1f] underline underline-offset-2"
+                >
+                  Google Mapで開く
+                </a>
               </div>
             </div>
           ))}
