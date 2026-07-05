@@ -1,4 +1,5 @@
 import type { Restaurant } from "~/domain/models/restaurant";
+import { GENRE_LABELS } from "~/utils/evidence-labels";
 
 // docs/ARCHITECTURE.md「オンデマンド型（店舗詳細の質問応答）」のプロンプト組み立て。
 // 回答は取得済みの店舗データ（Restaurant）にのみ基づかせ、根拠のない事実を作らせない。
@@ -6,7 +7,7 @@ export function buildStoreAskPrompt(store: Restaurant, question: string): string
   const facts = [
     `店舗名: ${store.name}`,
     `エリア: ${store.area}`,
-    `ジャンル: ${store.genre ?? "情報なし"}`,
+    `ジャンル: ${store.genre ? GENRE_LABELS[store.genre] : "情報なし"}`,
     `個室: ${store.room ?? "情報なし"}`,
     `静かさ評価: ${store.quiet ?? "情報なし"}`,
     `格式評価: ${store.prestige ?? "情報なし"}`,

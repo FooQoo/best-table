@@ -20,6 +20,20 @@ export type RoomAvailability =
 
 export type Confidence = "high" | "medium" | "low";
 
+// 地図ピンのジャンル別アイコン（app/utils/genre-icon.ts）に対応する固定語彙。
+// AI 評価がここに無いジャンルだと判断した場合は "other" にし、自由文を作らせない。
+export type Genre =
+  | "japanese"
+  | "sushi"
+  | "yakiniku"
+  | "noodles"
+  | "chinese"
+  | "western"
+  | "bar"
+  | "cafe"
+  | "bakery"
+  | "other";
+
 export type ConcernItem = {
   text: string;
   evidence: EvidenceCategory[];
@@ -32,7 +46,6 @@ export type Restaurant = {
   id: string;
   placeId: string | null;
   name: string;
-  genre: string | null;
   area: string;
   address: string | null;
   location: { lat: number; lng: number } | null;
@@ -40,6 +53,7 @@ export type Restaurant = {
   photoUrl: string | null;
 
   // AI 生成部分。未生成・生成失敗時は null。
+  genre: Genre | null;
   score: number | null;
   room: RoomAvailability | null;
   quiet: RatingSymbol | null;
@@ -69,6 +83,19 @@ const EVIDENCE_CATEGORIES: readonly EvidenceCategory[] = [
 ];
 
 const CONFIDENCE_LEVELS: readonly Confidence[] = ["high", "medium", "low"];
+
+export const GENRES: readonly Genre[] = [
+  "japanese",
+  "sushi",
+  "yakiniku",
+  "noodles",
+  "chinese",
+  "western",
+  "bar",
+  "cafe",
+  "bakery",
+  "other",
+];
 
 function isEvidenceCategory(value: unknown): value is EvidenceCategory {
   return (
@@ -105,6 +132,10 @@ export function isRestaurant(value: unknown): value is Restaurant {
     r.confidence !== null &&
     !(CONFIDENCE_LEVELS as readonly string[]).includes(r.confidence as string)
   ) {
+    return false;
+  }
+
+  if (r.genre !== null && !(GENRES as readonly string[]).includes(r.genre as string)) {
     return false;
   }
 

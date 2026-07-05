@@ -21,7 +21,7 @@ export function getInitialMapCamera(
   restaurants: MappableRestaurant[],
 ): MapCamera {
   if (restaurants.length === 0) {
-    return { center: { lat: 35.672176, lng: 139.765022 }, zoom: 13 };
+    return { center: { lat: 35.672176, lng: 139.765022 }, zoom: 15 };
   }
 
   const lats = restaurants.map((restaurant) => restaurant.location.lat);
@@ -39,6 +39,6 @@ export function getInitialMapCamera(
       lat: (minLat + maxLat) / 2,
       lng: (minLng + maxLng) / 2,
     },
-    zoom: span < 0.01 ? 15 : span < 0.04 ? 13 : 12,
+    zoom: span < 0.01 ? 17 : span < 0.04 ? 15 : 14,
   };
 }

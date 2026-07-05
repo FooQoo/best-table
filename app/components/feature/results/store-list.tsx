@@ -1,13 +1,14 @@
-import { Link } from "react-router";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
-import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
+import { StorePhoto } from "~/components/ui/store-photo";
 import { MAX_COMPARE_COUNT, type Restaurant } from "~/domain/models/restaurant";
 import { GOLD } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
-import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
+import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
+
+export type StoreListScrollTarget = { storeId: string };
 
 type StoreListProps = {
   stores: Restaurant[];
@@ -16,6 +17,10 @@ type StoreListProps = {
   counterpartId: string | null;
   activeStoreId?: string | null;
   onActivateStore?: (id: string) => void;
+  onSelectStore?: (id: string) => void;
+  // マップのピンをクリックしたときだけ設定する。hover による activeStoreId 変更では
+  // スクロールしない（一覧を眺めているだけのユーザーの視点を勝手に動かさないため）。
+  scrollTarget?: StoreListScrollTarget | null;
   footer?: ReactNode;
 };
 
@@ -26,11 +31,20 @@ export function StoreList({
   counterpartId,
   activeStoreId,
   onActivateStore,
+  onSelectStore,
+  scrollTarget,
   footer,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
   const emphasisKeys = getEmphasisKeys(counterpartId);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const card = cardRefs.current[scrollTarget.storeId];
+    card?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  }, [scrollTarget]);
 
   return (
     <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
@@ -46,10 +60,23 @@ export function StoreList({
         return (
           <div
             key={store.id}
+            ref={(el) => {
+              cardRefs.current[store.id] = el;
+            }}
             data-active={active ? "true" : "false"}
+            role="button"
+            tabIndex={0}
+            aria-label={`${store.name}の詳細を表示`}
+            onClick={() => onSelectStore?.(store.id)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelectStore?.(store.id);
+              }
+            }}
             onMouseEnter={() => onActivateStore?.(store.id)}
             onFocus={() => onActivateStore?.(store.id)}
-            className="bg-white border-[1.5px] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5 transition-colors"
+            className="bg-white border-[1.5px] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b08424]"
             style={{
               borderColor: active ? GOLD : "#e4ded0",
               boxShadow: active
@@ -58,17 +85,14 @@ export function StoreList({
             }}
           >
             <div className="flex gap-3">
-              <StorePhotoPlaceholder
-                label={resolvePhotoPlaceholderLabel(store)}
-                className="w-20 h-20 flex-none"
-              />
+              <StorePhoto store={store} className="w-20 h-20 flex-none" />
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <div className="font-bold text-[15px]">{store.name}</div>
                   <ScoreBadge score={store.score} />
                 </div>
                 <div className="text-xs text-[#79726a] mt-1">
-                  {store.genre ?? "ジャンル情報なし"}・{store.area}
+                  {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}
                 </div>
                 <div className="text-xs text-[#79726a] mt-0.5">
                   個室：{store.room}・予算目安：{store.budgetLabel ?? "情報なし"}
@@ -91,16 +115,19 @@ export function StoreList({
             )}
             <ConcernTags storeId={store.id} concerns={store.concerns} />
             <div className="flex items-center justify-between gap-2">
-              <Link
-                to={`/stores/${store.id}`}
-                className="text-[13px] text-[#8a6a1a] underline"
-              >
-                詳細を見る
-              </Link>
+              <div className="text-[13px] text-[#8a6a1a] underline">
+                クリックで詳細を表示
+              </div>
               <button
                 type="button"
                 disabled={disabled}
-                onClick={() => onToggleCompare(store.id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleCompare(store.id);
+                }}
+                onKeyDown={(event) => {
+                  event.stopPropagation();
+                }}
                 className="flex items-center gap-2 px-4 py-2 border-[1.5px] rounded-md text-[13px] cursor-pointer transition-colors disabled:cursor-not-allowed"
                 style={{
                   borderColor: s.btnBorder,

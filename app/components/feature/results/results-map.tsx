@@ -13,8 +13,8 @@ export function ResultsMap({
   onMarkerClick,
 }: ResultsMapProps) {
   return (
-    <div className="flex-1 relative overflow-hidden bg-[#e9e4d6]">
-      <div className="absolute top-4 left-4 z-10 text-[11px] font-mono text-[#8a8474] bg-[#f7f4ee]/90 border border-[#ddd4c2] rounded px-2 py-1">
+    <div className="h-full flex-1 relative overflow-hidden bg-[#e9e4d6]">
+      <div className="absolute top-4 right-4 z-10 text-[11px] font-mono text-[#8a8474] bg-[#f7f4ee]/90 border border-[#ddd4c2] rounded px-2 py-1">
         地図エリア
       </div>
       <RestaurantMap

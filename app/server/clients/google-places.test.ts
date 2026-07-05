@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   GOOGLE_PLACES_DETAILS_FIELD_MASK,
-  buildPlacePhotoMediaUrl,
+  buildStorePhotoProxyPath,
   fetchPlaceDetails,
+  fetchPlacePhotoMedia,
   toPlaceDetailsResult,
 } from "./google-places";
 
@@ -66,11 +67,52 @@ describe("toPlaceDetailsResult", () => {
   });
 });
 
-describe("buildPlacePhotoMediaUrl", () => {
-  it("builds a Place Photos media URL from a photo resource name", () => {
-    expect(buildPlacePhotoMediaUrl("places/abc/photos/photo-1", 640)).toBe(
-      "https://places.googleapis.com/v1/places/abc/photos/photo-1/media?maxHeightPx=640&skipHttpRedirect=true",
+describe("buildStorePhotoProxyPath", () => {
+  it("builds a same-origin proxy path so the server API key is never sent to the client", () => {
+    expect(buildStorePhotoProxyPath("places/abc/photos/photo-1")).toBe(
+      "/api/photos/places/abc/photos/photo-1",
     );
+  });
+});
+
+describe("fetchPlacePhotoMedia", () => {
+  it("fetches the photo media with the server API key and returns the response", async () => {
+    const imageResponse = new Response("binary", {
+      status: 200,
+      headers: { "content-type": "image/jpeg" },
+    });
+    const fetchFn = vi.fn(async () => imageResponse);
+
+    const result = await fetchPlacePhotoMedia("places/abc/photos/photo-1", {
+      apiKey: "server-key",
+      fetchFn,
+    });
+
+    expect(result).toBe(imageResponse);
+    expect(fetchFn).toHaveBeenCalledWith(
+      "https://places.googleapis.com/v1/places/abc/photos/photo-1/media?maxHeightPx=640",
+      { headers: { "X-Goog-Api-Key": "server-key" } },
+    );
+  });
+
+  it("returns null instead of throwing for missing key, malformed photo names, and HTTP failures", async () => {
+    const fetchFn = vi.fn(async () => new Response("", { status: 500 }));
+
+    await expect(
+      fetchPlacePhotoMedia("places/abc/photos/photo-1", { apiKey: "", fetchFn }),
+    ).resolves.toBeNull();
+    await expect(
+      fetchPlacePhotoMedia("not-a-photo-name", { apiKey: "server-key", fetchFn }),
+    ).resolves.toBeNull();
+    await expect(
+      fetchPlacePhotoMedia("places/../../etc/passwd/photos/x", {
+        apiKey: "server-key",
+        fetchFn,
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      fetchPlacePhotoMedia("places/abc/photos/photo-1", { apiKey: "server-key", fetchFn }),
+    ).resolves.toBeNull();
   });
 });
 

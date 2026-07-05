@@ -12,7 +12,7 @@ function buildValidRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
     id: "s1",
     placeId: null,
     name: "テスト店舗",
-    genre: "和食",
+    genre: "japanese",
     area: "銀座",
     address: null,
     location: null,
@@ -88,6 +88,16 @@ describe("isRestaurant", () => {
   it("confidence が固定語彙にない値の場合は false", () => {
     const invalid = buildValidRestaurant({ confidence: "very-high" as never });
     expect(isRestaurant(invalid)).toBe(false);
+  });
+
+  it("genre が固定語彙にない値の場合は false", () => {
+    const invalid = buildValidRestaurant({ genre: "フレンチ" as never });
+    expect(isRestaurant(invalid)).toBe(false);
+  });
+
+  it("genre が null の場合は true", () => {
+    const unresolved = buildValidRestaurant({ genre: null });
+    expect(isRestaurant(unresolved)).toBe(true);
   });
 
   it("generatedAt が ISO日時としてパースできない場合は false", () => {

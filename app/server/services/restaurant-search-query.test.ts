@@ -62,4 +62,9 @@ describe("buildGroundingPrompt", () => {
     const prompt = buildGroundingPrompt(baseCondition);
     expect(prompt).toContain("30");
   });
+
+  it("asks for restaurant names in Japanese, not English or translated", () => {
+    const prompt = buildGroundingPrompt(baseCondition);
+    expect(prompt).toContain("日本語の正式名称");
+  });
 });

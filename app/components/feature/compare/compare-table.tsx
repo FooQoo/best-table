@@ -1,10 +1,10 @@
 import { Fragment } from "react";
 import { ScoreBadge } from "~/components/ui/score-badge";
-import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
+import { StorePhoto } from "~/components/ui/store-photo";
 import type { Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
-import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
+import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { getEmphasisKeys } from "~/utils/scoring";
 
 type CompareTableProps = {
@@ -62,13 +62,10 @@ export function CompareTable({
             >
               おすすめ 1位
             </div>
-            <StorePhotoPlaceholder
-              label={resolvePhotoPlaceholderLabel(store)}
-              className="w-full h-20"
-            />
+            <StorePhoto store={store} className="w-full h-20" />
             <div className="font-bold text-sm">{store.name}</div>
             <div className="text-[11px] text-[#79726a]">
-              {store.genre ?? "ジャンル情報なし"}
+              {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}
             </div>
           </div>
         ))}

@@ -18,12 +18,38 @@ const concernItemSchema = z.object({
   evidence: z.array(evidenceCategorySchema),
 });
 
+// app/domain/models/restaurant.ts の Genre と対応させる固定語彙。
+// 地図ピンのアイコン選択（app/utils/genre-icon.ts）に使うため、自由文にせず
+// 判断が付かない場合は "other" にする（存在しないジャンルを捏造させない）。
+const genreSchema = z
+  .enum([
+    "japanese",
+    "sushi",
+    "yakiniku",
+    "noodles",
+    "chinese",
+    "western",
+    "bar",
+    "cafe",
+    "bakery",
+    "other",
+  ])
+  .nullable()
+  .describe(
+    "料理ジャンル。japanese: 和食・会席・懐石・割烹・京料理、sushi: 鮨・寿司、" +
+      "yakiniku: 焼肉・焼鳥・鉄板焼・炭火焼、noodles: 蕎麦・うどん・ラーメン、" +
+      "chinese: 中華、western: イタリアン・フレンチ・洋食・ステーキ、bar: バー・居酒屋、" +
+      "cafe: カフェ・喫茶、bakery: パン・ベーカリー。" +
+      "上記のどれにも当てはまらない、または判断できない場合は other。根拠がなければ null。",
+  );
+
 export const restaurantEvaluationSchema = z.object({
   evaluations: z.array(
     z.object({
       candidateName: z
         .string()
         .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
+      genre: genreSchema,
       score: z
         .number()
         .nullable()

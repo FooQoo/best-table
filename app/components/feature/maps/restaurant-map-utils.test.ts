@@ -47,13 +47,13 @@ describe("getInitialMapCamera", () => {
     ]);
 
     expect(camera.center).toEqual({ lat: 35.67, lng: 139.75 });
-    expect(camera.zoom).toBe(12);
+    expect(camera.zoom).toBe(14);
   });
 
   it("uses a default camera when there are no mappable restaurants", () => {
     expect(getInitialMapCamera([])).toEqual({
       center: { lat: 35.672176, lng: 139.765022 },
-      zoom: 13,
+      zoom: 15,
     });
   });
 });

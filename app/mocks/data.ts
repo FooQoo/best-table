@@ -98,93 +98,23 @@ export const HISTORY: HistoryItem[] = [
 
 // app/mocks/ 専用の拡張。`Restaurant`（docs/MODEL.md 準拠のドメイン型）に、通常モック表示で使う
 // 相対位置の MAP マーカー座標・写真プレースホルダーラベルを足したもの。
-// `STORES` は従来画面の静的モック、`MAP_RENDERING_MOCK_RESTAURANTS` は地図実装検証用の
-// 座標・住所・代表写真付きモックとして分ける。
+// `MODE=mock` の検索結果（地図実装検証用の座標・住所・代表写真付きデータ）は、
+// 実際の API 応答を記録した `app/mocks/fixtures/restaurants-search.json` を
+// `app/server/repositories/restaurant-search-repository.ts` がファイル読み込みで返す
+// （API モック）。ビルド時に import しない・git 管理しないため、ここには置かない。
 export type Store = Restaurant & {
   pos: { top: string; left: string };
   photoPlaceholderLabel: string;
 };
 
 export const STORES: Store[] = [
-  { id: "s1", placeId: null, name: "日本料理 花明かり", genre: "会席・日本料理", area: "銀座", address: null, location: null, phone: "03-1234-5601", photoUrl: null, score: 94, room: "個室あり", quiet: "◎", prestige: "◎", service: "◎", access: "銀座駅 徒歩3分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "完全個室と口コミ評価の高さが揃っており、重要顧客との会食でも格式面の不安が少ない。写真からも落ち着いた内装がうかがえる。", evidence: ["review", "photo", "description"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "20%", left: "32%" } },
-  { id: "s2", placeId: null, name: "鉄板焼 円", genre: "鉄板焼", area: "六本木", address: null, location: null, phone: "03-1234-5602", photoUrl: null, score: 85, room: "半個室あり", quiet: "○", prestige: "○", service: "◎", access: "六本木駅 徒歩5分", budgetLabel: "¥20,000", concerns: [{ text: "カウンター越しの接客になる場合がある", evidence: ["seat"] }], matchingSummary: "口コミでは接客の評価が特に高い。半個室のため完全な個室ではなく、着席位置によってはカウンター越しの接客になる点は事前に共有しておきたい。", evidence: ["review", "seat"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "48%", left: "60%" } },
-  { id: "s3", placeId: null, name: "鮨 一凛", genre: "鮨", area: "新橋", address: null, location: null, phone: "03-1234-5603", photoUrl: null, score: 78, room: "カウンターのみ", quiet: "○", prestige: "○", service: "○", access: "新橋駅 徒歩2分", budgetLabel: "¥15,000", concerns: [{ text: "個室がなく会話距離が近い", evidence: ["seat"] }], matchingSummary: "駅からのアクセスが良く、少人数の会食向き。個室はなくカウンター中心のため、商談の込み入った話には向かない可能性がある。", evidence: ["review", "access"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "66%", left: "20%" } },
-  { id: "s4", placeId: null, name: "京料理 和心", genre: "京料理", area: "丸の内", address: null, location: null, phone: "03-1234-5604", photoUrl: null, score: 90, room: "個室あり", quiet: "◎", prestige: "◎", service: "○", access: "東京駅 徒歩4分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "個室ありで静かさ・格式感の評価も高く、役員クラスの会食に適した候補。接客面の口コミはやや分かれており、当日の混雑状況によって差が出る可能性がある。", evidence: ["review", "photo"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "28%", left: "76%" } },
-  { id: "s5", placeId: null, name: "創作和食 灯", genre: "創作和食", area: "赤坂", address: null, location: null, phone: "03-1234-5605", photoUrl: null, score: 66, room: "半個室あり", quiet: "△", prestige: "○", service: "○", access: "赤坂駅 徒歩6分", budgetLabel: "¥15,000", concerns: [{ text: "口コミに「賑やか」との声がある", evidence: ["review"] }], matchingSummary: "料理やコース内容への口コミ評価は高い一方、時間帯によっては賑やかになるとの声があり、静かに話したい会食には向き不向きがある。", evidence: ["review"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "58%", left: "40%" } },
-  { id: "s6", placeId: null, name: "炭火焼 楽", genre: "焼鳥・炭火焼", area: "虎ノ門", address: null, location: null, phone: "03-1234-5606", photoUrl: null, score: 72, room: "半個室あり", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", budgetLabel: "¥10,000", concerns: [{ text: "煙や匂いが気になる場合がある", evidence: ["review", "description"] }], matchingSummary: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", evidence: ["review", "description"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "78%", left: "66%" } },
+  { id: "s1", placeId: null, name: "日本料理 花明かり", genre: "japanese", area: "銀座", address: null, location: null, phone: "03-1234-5601", photoUrl: null, score: 94, room: "個室あり", quiet: "◎", prestige: "◎", service: "◎", access: "銀座駅 徒歩3分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "完全個室と口コミ評価の高さが揃っており、重要顧客との会食でも格式面の不安が少ない。写真からも落ち着いた内装がうかがえる。", evidence: ["review", "photo", "description"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "20%", left: "32%" } },
+  { id: "s2", placeId: null, name: "鉄板焼 円", genre: "yakiniku", area: "六本木", address: null, location: null, phone: "03-1234-5602", photoUrl: null, score: 85, room: "半個室あり", quiet: "○", prestige: "○", service: "◎", access: "六本木駅 徒歩5分", budgetLabel: "¥20,000", concerns: [{ text: "カウンター越しの接客になる場合がある", evidence: ["seat"] }], matchingSummary: "口コミでは接客の評価が特に高い。半個室のため完全な個室ではなく、着席位置によってはカウンター越しの接客になる点は事前に共有しておきたい。", evidence: ["review", "seat"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "48%", left: "60%" } },
+  { id: "s3", placeId: null, name: "鮨 一凛", genre: "sushi", area: "新橋", address: null, location: null, phone: "03-1234-5603", photoUrl: null, score: 78, room: "カウンターのみ", quiet: "○", prestige: "○", service: "○", access: "新橋駅 徒歩2分", budgetLabel: "¥15,000", concerns: [{ text: "個室がなく会話距離が近い", evidence: ["seat"] }], matchingSummary: "駅からのアクセスが良く、少人数の会食向き。個室はなくカウンター中心のため、商談の込み入った話には向かない可能性がある。", evidence: ["review", "access"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "カウンター写真", pos: { top: "66%", left: "20%" } },
+  { id: "s4", placeId: null, name: "京料理 和心", genre: "japanese", area: "丸の内", address: null, location: null, phone: "03-1234-5604", photoUrl: null, score: 90, room: "個室あり", quiet: "◎", prestige: "◎", service: "○", access: "東京駅 徒歩4分", budgetLabel: "¥30,000", concerns: [], matchingSummary: "個室ありで静かさ・格式感の評価も高く、役員クラスの会食に適した候補。接客面の口コミはやや分かれており、当日の混雑状況によって差が出る可能性がある。", evidence: ["review", "photo"], confidence: "high", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "個室 写真", pos: { top: "28%", left: "76%" } },
+  { id: "s5", placeId: null, name: "創作和食 灯", genre: "japanese", area: "赤坂", address: null, location: null, phone: "03-1234-5605", photoUrl: null, score: 66, room: "半個室あり", quiet: "△", prestige: "○", service: "○", access: "赤坂駅 徒歩6分", budgetLabel: "¥15,000", concerns: [{ text: "口コミに「賑やか」との声がある", evidence: ["review"] }], matchingSummary: "料理やコース内容への口コミ評価は高い一方、時間帯によっては賑やかになるとの声があり、静かに話したい会食には向き不向きがある。", evidence: ["review"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "58%", left: "40%" } },
+  { id: "s6", placeId: null, name: "炭火焼 楽", genre: "yakiniku", area: "虎ノ門", address: null, location: null, phone: "03-1234-5606", photoUrl: null, score: 72, room: "半個室あり", quiet: "○", prestige: "△", service: "○", access: "虎ノ門駅 徒歩3分", budgetLabel: "¥10,000", concerns: [{ text: "煙や匂いが気になる場合がある", evidence: ["review", "description"] }], matchingSummary: "アクセスが良く半個室で会話はしやすいが、焼き物中心のため煙や匂いが気になるとの口コミがあり、スーツでの利用時は事前案内が安心。", evidence: ["review", "description"], confidence: "medium", generatedAt: "2026-07-04T09:00:00.000Z", photoPlaceholderLabel: "店内写真", pos: { top: "78%", left: "66%" } },
 ];
-
-const MAP_MOCK_LOCATIONS = [
-  { lat: 35.672176, lng: 139.765022 },
-  { lat: 35.661991, lng: 139.730278 },
-  { lat: 35.666195, lng: 139.758587 },
-  { lat: 35.681382, lng: 139.767209 },
-  { lat: 35.674511, lng: 139.736125 },
-  { lat: 35.668119, lng: 139.749591 },
-  { lat: 35.670297, lng: 139.771146 },
-  { lat: 35.665498, lng: 139.759642 },
-  { lat: 35.676424, lng: 139.764963 },
-  { lat: 35.658581, lng: 139.745433 },
-  { lat: 35.669785, lng: 139.761925 },
-  { lat: 35.680921, lng: 139.737204 },
-  { lat: 35.664112, lng: 139.733576 },
-  { lat: 35.673821, lng: 139.751654 },
-  { lat: 35.671405, lng: 139.746238 },
-  { lat: 35.667021, lng: 139.753481 },
-  { lat: 35.678242, lng: 139.769032 },
-  { lat: 35.662814, lng: 139.756143 },
-  { lat: 35.675936, lng: 139.741965 },
-  { lat: 35.669118, lng: 139.767854 },
-];
-
-const MAP_MOCK_ADDRESSES = [
-  "東京都中央区銀座4-6-16",
-  "東京都港区六本木6-10-1",
-  "東京都港区新橋2-16-1",
-  "東京都千代田区丸の内1-9-1",
-  "東京都港区赤坂5-3-1",
-  "東京都港区虎ノ門1-23-1",
-  "東京都中央区銀座2-8-5",
-  "東京都港区新橋3-11-8",
-  "東京都千代田区有楽町1-6-6",
-  "東京都港区芝公園4-2-8",
-  "東京都中央区銀座7-2-20",
-  "東京都千代田区紀尾井町1-2",
-  "東京都港区六本木7-14-10",
-  "東京都港区虎ノ門2-10-4",
-  "東京都港区赤坂3-12-13",
-  "東京都港区西新橋1-5-8",
-  "東京都中央区京橋3-1-1",
-  "東京都港区東新橋1-8-2",
-  "東京都港区赤坂9-7-4",
-  "東京都中央区銀座8-8-8",
-];
-
-const MAP_MOCK_PHOTO_URLS = [
-  "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1559329007-40df8a9345d8?auto=format&fit=crop&w=800&q=80",
-  "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
-];
-
-export const MAP_RENDERING_MOCK_RESTAURANTS: Restaurant[] =
-  MAP_MOCK_LOCATIONS.map((location, index) => {
-    const store = STORES[index % STORES.length];
-    const page = Math.floor(index / STORES.length) + 1;
-    const suffix = page > 1 ? ` ${page}` : "";
-
-    return {
-      ...store,
-      id: `mock-${index + 1}`,
-      name: `${store.name}${suffix}`,
-      address: MAP_MOCK_ADDRESSES[index] ?? store.address,
-      location,
-      photoUrl: MAP_MOCK_PHOTO_URLS[index % MAP_MOCK_PHOTO_URLS.length],
-      placeId: `mock-place-${index + 1}`,
-    };
-  });
 
 export function shade(hex: string, pct: number): string {
   const clean = hex.replace("#", "");

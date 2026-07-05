@@ -1,5 +1,6 @@
 import type { Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
+import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { buildFinalStoreMessage } from "~/utils/final-candidate-message";
 import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { RestaurantMap } from "~/components/feature/maps/restaurant-map";
@@ -25,7 +26,7 @@ export function FinalStorePanel({
     <div className="mt-7 bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] px-8 py-7">
       <div className="font-serif font-bold text-lg mb-1">{store.name}</div>
       <div className="text-[13px] text-[#79726a] mb-5">
-        {store.genre ?? "ジャンル情報なし"}・{store.area}・個室：
+        {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}・個室：
         {store.room ?? "情報なし"}
       </div>
 

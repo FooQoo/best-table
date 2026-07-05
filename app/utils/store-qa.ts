@@ -1,4 +1,5 @@
 import type { Restaurant } from "~/domain/models/restaurant";
+import { GENRE_LABELS } from "~/utils/evidence-labels";
 
 export type StoreQAItem = {
   question: string;
@@ -12,7 +13,7 @@ export function buildStoreQA(store: Restaurant): StoreQAItem[] {
   const service = store.service ?? UNKNOWN;
   const quiet = store.quiet ?? UNKNOWN;
   const prestige = store.prestige ?? UNKNOWN;
-  const genre = store.genre ?? "こちらの店舗";
+  const genre = store.genre ? GENRE_LABELS[store.genre] : "こちらの店舗";
 
   const concernNote =
     store.concerns.length > 0

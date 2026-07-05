@@ -67,6 +67,7 @@ describe("searchRestaurants", () => {
       evaluateCandidates: vi.fn(async () => [
         {
           candidateName: "桂",
+          genre: "japanese" as const,
           score: 90,
           room: "個室あり" as const,
           quiet: "◎" as const,
@@ -88,6 +89,7 @@ describe("searchRestaurants", () => {
     expect(result.restaurants[0]).toMatchObject({
       placeId: "places/abc",
       name: "桂",
+      genre: "japanese",
       address: "東京都中央区銀座5-5-11",
       location: null,
       photoUrl: null,
@@ -204,8 +206,7 @@ describe("searchRestaurants", () => {
     expect(result.restaurants[0]).toMatchObject({
       address: "東京都中央区銀座1-1-1",
       location: { lat: 35.6717, lng: 139.7639 },
-      photoUrl:
-        "https://places.googleapis.com/v1/places/place-1/photos/photo-1/media?maxHeightPx=640&skipHttpRedirect=true",
+      photoUrl: "/api/photos/places/place-1/photos/photo-1",
     });
     expect(result.restaurants[1]).toMatchObject({
       name: "候補2",

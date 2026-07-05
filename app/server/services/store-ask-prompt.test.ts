@@ -6,7 +6,7 @@ const baseStore: Restaurant = {
   id: "s1",
   placeId: null,
   name: "日本料理 花明かり",
-  genre: "会席・日本料理",
+  genre: "japanese",
   area: "銀座",
   address: null,
   location: null,

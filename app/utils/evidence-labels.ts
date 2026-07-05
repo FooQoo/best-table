@@ -1,4 +1,4 @@
-import type { Confidence, EvidenceCategory } from "~/domain/models/restaurant";
+import type { Confidence, EvidenceCategory, Genre } from "~/domain/models/restaurant";
 
 export const EVIDENCE_LABELS: Record<EvidenceCategory, string> = {
   review: "口コミ",
@@ -13,4 +13,17 @@ export const CONFIDENCE_LABELS: Record<Confidence, string> = {
   high: "高",
   medium: "中",
   low: "低",
+};
+
+export const GENRE_LABELS: Record<Genre, string> = {
+  japanese: "和食",
+  sushi: "鮨",
+  yakiniku: "焼肉・焼鳥",
+  noodles: "麺類",
+  chinese: "中華",
+  western: "洋食",
+  bar: "バー・居酒屋",
+  cafe: "カフェ",
+  bakery: "ベーカリー",
+  other: "その他",
 };

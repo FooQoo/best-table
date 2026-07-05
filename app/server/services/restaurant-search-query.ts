@@ -85,6 +85,9 @@ export function buildGroundingPrompt(
   lines.push(
     `候補は最大${TARGET_CANDIDATE_COUNT}件まで、実在する店舗のみを挙げてください。該当が少ない場合は無理に${TARGET_CANDIDATE_COUNT}件に満たなくても構いません。`,
   );
+  lines.push(
+    "店舗名は英語表記や翻訳をせず、日本語の正式名称（現地表記）でそのまま出力してください。",
+  );
 
   return lines.join("\n");
 }

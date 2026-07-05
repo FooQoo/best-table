@@ -7,7 +7,7 @@ import {
 } from "~/server/clients/gemini-grounding";
 import { evaluateRestaurantCandidates } from "~/server/clients/gemini-evaluation";
 import {
-  buildPlacePhotoMediaUrl,
+  buildStorePhotoProxyPath,
   fetchPlaceDetails,
 } from "~/server/clients/google-places";
 import {
@@ -69,6 +69,7 @@ function buildEvaluationPrompt(
     buildGroundingPrompt(condition),
     "",
     `以下の候補について、上記の会食条件への適性を評価してください。候補: ${names}`,
+    "genre は指定された分類から選び、当てはまらない・判断できない場合は other にしてください。",
     "根拠が不足する項目は null または空配列にし、確認できない事実を作らないでください。",
   ].join("\n");
 }
@@ -126,12 +127,12 @@ export async function searchRestaurants(
       id: buildRestaurantId(candidate.placeId, cacheKey, absoluteIndex),
       placeId: candidate.placeId,
       name: candidate.name,
-      genre: null,
+      genre: evaluation?.genre ?? null,
       area: condition.selectedAreas[0] ?? "",
       address: detail?.address ?? candidate.address,
       location: detail?.location ?? null,
       phone: null,
-      photoUrl: detail?.photoName ? buildPlacePhotoMediaUrl(detail.photoName) : null,
+      photoUrl: detail?.photoName ? buildStorePhotoProxyPath(detail.photoName) : null,
       score: evaluation?.score ?? null,
       room: evaluation?.room ?? null,
       quiet: evaluation?.quiet ?? null,

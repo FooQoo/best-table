@@ -8,7 +8,11 @@ import type { RestaurantSearchQueryCondition } from "~/server/services/restauran
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
 import { ResultsSummaryBar } from "~/components/feature/results/results-summary-bar";
-import { StoreList } from "~/components/feature/results/store-list";
+import { StoreDetailPanel } from "~/components/feature/results/store-detail-panel";
+import {
+  StoreList,
+  type StoreListScrollTarget,
+} from "~/components/feature/results/store-list";
 import {
   StoreListSkeleton,
   StoreListSkeletonItems,
@@ -50,6 +54,21 @@ export function ResultsScreen() {
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<StoreListScrollTarget | null>(
+    null,
+  );
+
+  const handleMarkerClick = useCallback((storeId: string) => {
+    setActiveStoreId(storeId);
+    setSelectedStoreId(storeId);
+    setScrollTarget({ storeId });
+  }, []);
+
+  const handleSelectStore = useCallback((storeId: string) => {
+    setActiveStoreId(storeId);
+    setSelectedStoreId(storeId);
+  }, []);
 
   const buildCondition = useCallback(
     (): RestaurantSearchQueryCondition => ({
@@ -178,6 +197,8 @@ export function ResultsScreen() {
   const sortedStores = [...state.restaurants].sort(
     (a, b) => (b.score ?? -1) - (a.score ?? -1),
   );
+  const selectedStore =
+    sortedStores.find((store) => store.id === selectedStoreId) ?? null;
   const compareCount = state.compareIds.length;
   const canCompare = compareCount >= MIN_COMPARE_COUNT;
 
@@ -223,6 +244,8 @@ export function ResultsScreen() {
               counterpartId={state.counterpart}
               activeStoreId={activeStoreId}
               onActivateStore={setActiveStoreId}
+              onSelectStore={handleSelectStore}
+              scrollTarget={scrollTarget}
               footer={
                 <>
                   {isLoadingMore && <StoreListSkeletonItems count={3} />}
@@ -242,11 +265,19 @@ export function ResultsScreen() {
                 </>
               }
             />
-            <ResultsMap
-              stores={sortedStores}
-              activeStoreId={activeStoreId}
-              onMarkerClick={setActiveStoreId}
-            />
+            <div className="relative min-w-0 flex-1">
+              <ResultsMap
+                stores={sortedStores}
+                activeStoreId={activeStoreId}
+                onMarkerClick={handleMarkerClick}
+              />
+              {selectedStore && (
+                <StoreDetailPanel
+                  store={selectedStore}
+                  onClose={() => setSelectedStoreId(null)}
+                />
+              )}
+            </div>
           </>
         )}
       </div>

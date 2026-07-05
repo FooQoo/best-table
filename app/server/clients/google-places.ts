@@ -85,14 +85,36 @@ export function toPlaceDetailsResult(
   };
 }
 
-export function buildPlacePhotoMediaUrl(
+// Places Photo media は API キーでの認証が必須で、ブラウザに直接そのURLを
+// 渡すとサーバー専用キーが漏洩する。そのためクライアントには自前の
+// プロキシ route（/api/photos/*）のパスだけを渡し、実際の画像取得は
+// fetchPlacePhotoMedia がサーバー側で行う。
+const PHOTO_NAME_PATTERN = /^places\/[^/]+\/photos\/[^/]+$/;
+
+export function buildStorePhotoProxyPath(photoName: string): string {
+  return `/api/photos/${photoName}`;
+}
+
+export async function fetchPlacePhotoMedia(
   photoName: string,
+  options: FetchPlaceDetailsOptions = {},
   maxHeightPx = DEFAULT_PHOTO_MAX_HEIGHT_PX,
-): string {
+): Promise<Response | null> {
+  const apiKey = options.apiKey ?? readServerApiKey();
+  if (!apiKey || !PHOTO_NAME_PATTERN.test(photoName)) return null;
+
+  const fetchFn = options.fetchFn ?? fetch;
   const url = new URL(`${PLACES_API_BASE_URL}/${photoName}/media`);
   url.searchParams.set("maxHeightPx", String(maxHeightPx));
-  url.searchParams.set("skipHttpRedirect", "true");
-  return url.toString();
+
+  try {
+    const response = await fetchFn(url.toString(), {
+      headers: { "X-Goog-Api-Key": apiKey },
+    });
+    return response.ok ? response : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchPlaceDetails(

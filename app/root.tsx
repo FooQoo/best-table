@@ -22,6 +22,11 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap",
   },
+  {
+    rel: "stylesheet",
+    // 地図ピンのジャンル別アイコン表示に使う（app/utils/genre-icon.ts のアイコン名と対応）。
+    href: "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,1,0&display=block",
+  },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

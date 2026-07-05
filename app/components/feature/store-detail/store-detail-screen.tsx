@@ -1,12 +1,11 @@
 import { Link, useParams } from "react-router";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { ScoreBadge } from "~/components/ui/score-badge";
-import { StorePhotoPlaceholder } from "~/components/ui/store-photo-placeholder";
+import { StorePhoto } from "~/components/ui/store-photo";
 import { StoreAskPanel } from "~/components/feature/store-detail/store-ask-panel";
 import { useBooking } from "~/state/booking-context";
 import { getAvailabilityMessage } from "~/utils/availability-message";
-import { CONFIDENCE_LABELS, EVIDENCE_LABELS } from "~/utils/evidence-labels";
-import { resolvePhotoPlaceholderLabel } from "~/utils/photo-placeholder-label";
+import { CONFIDENCE_LABELS, EVIDENCE_LABELS, GENRE_LABELS } from "~/utils/evidence-labels";
 import { buildStoreQA } from "~/utils/store-qa";
 
 export function StoreDetailScreen() {
@@ -41,11 +40,11 @@ export function StoreDetailScreen() {
         </div>
 
         <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-6 flex gap-5">
-          <StorePhotoPlaceholder label={resolvePhotoPlaceholderLabel(store)} className="w-32 h-32 flex-none" />
+          <StorePhoto store={store} className="w-32 h-32 flex-none" />
           <div className="flex-1 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
               <div className="text-[13px] text-[#79726a]">
-                {store.genre ?? "ジャンル情報なし"}・{store.area}
+                {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}
               </div>
               <ScoreBadge score={store.score} />
             </div>

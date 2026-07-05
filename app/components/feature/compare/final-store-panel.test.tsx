@@ -6,7 +6,7 @@ const store: Restaurant = {
   id: "r1",
   placeId: "places/ChIJ123",
   name: "日本料理 花明かり",
-  genre: "会席・日本料理",
+  genre: "japanese",
   area: "銀座",
   address: "東京都中央区銀座4-6-16",
   location: { lat: 35.672176, lng: 139.765022 },

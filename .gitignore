@@ -7,3 +7,6 @@
 /build/
 
 .playwright-mcp
+
+# mock mode の API モック（実際の API 応答を記録したフィクスチャ。生成は各自の環境で行う）
+/app/mocks/fixtures/*.json

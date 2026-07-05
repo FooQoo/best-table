@@ -1,0 +1,100 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { isRestaurant, type Restaurant } from "~/domain/models/restaurant";
+import {
+  searchRestaurants,
+  type RestaurantSearchPagination,
+  type RestaurantSearchResult,
+} from "~/server/services/restaurant-search";
+import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
+
+// docs/ARCHITECTURE.md「mock mode の API モック」: `/api/restaurants/search` の
+// resource route は MODE を意識せず、この repository を呼ぶだけにする。
+// mock/real の切り替えは getRestaurantSearchRepository に閉じ込める。
+export type RestaurantSearchRepository = {
+  search(
+    condition: RestaurantSearchQueryCondition,
+    pagination: RestaurantSearchPagination,
+  ): Promise<RestaurantSearchResult>;
+};
+
+export const realRestaurantSearchRepository: RestaurantSearchRepository = {
+  search: searchRestaurants,
+};
+
+// 実際に `/api/restaurants/search` を1回叩いた結果をディスク上の JSON として保存し、
+// mock mode はそれをビルド時に import せずファイル読み込みで返す（API モック）。
+// この JSON は .gitignore 対象のため、生成前のクローンではファイルが存在しない。
+// その場合は例外を投げずに空配列へフォールバックする。
+export const MOCK_RESTAURANTS_FIXTURE_PATH = join(
+  process.cwd(),
+  "app/mocks/fixtures/restaurants-search.json",
+);
+
+export type ReadFixtureFile = (path: string) => string;
+
+const defaultReadFile: ReadFixtureFile = (path) => readFileSync(path, "utf-8");
+
+export function loadMockRestaurants(
+  readFile: ReadFixtureFile = defaultReadFile,
+): Restaurant[] {
+  let raw: string;
+  try {
+    raw = readFile(MOCK_RESTAURANTS_FIXTURE_PATH);
+  } catch {
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(isRestaurant);
+}
+
+type MockRestaurantSearchRepositoryOptions = {
+  loadRestaurants?: () => Restaurant[];
+  // 実 API の待ち時間を模した遅延。テストでは 0 を渡して待たない。
+  delayMs?: number;
+};
+
+export function createMockRestaurantSearchRepository(
+  options: MockRestaurantSearchRepositoryOptions = {},
+): RestaurantSearchRepository {
+  const loadRestaurants = options.loadRestaurants ?? loadMockRestaurants;
+  const delayMs = options.delayMs ?? 1000;
+
+  return {
+    async search(_condition, pagination) {
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+
+      const limit = pagination.limit ?? 10;
+      const offset = pagination.offset ?? 0;
+      const all = loadRestaurants();
+      const restaurants = all.slice(offset, offset + limit);
+      const hasMore = offset + restaurants.length < all.length;
+
+      return {
+        restaurants,
+        fromCache: false,
+        hasMore,
+        nextOffset: hasMore ? offset + restaurants.length : null,
+      };
+    },
+  };
+}
+
+export const mockRestaurantSearchRepository: RestaurantSearchRepository =
+  createMockRestaurantSearchRepository();
+
+export function getRestaurantSearchRepository(): RestaurantSearchRepository {
+  return process.env.MODE === "mock"
+    ? mockRestaurantSearchRepository
+    : realRestaurantSearchRepository;
+}

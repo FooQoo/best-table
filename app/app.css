@@ -15,6 +15,22 @@ body {
   @apply bg-[#f7f4ee];
 }
 
+/* 地図ピンのジャンルアイコン用（app/utils/genre-icon.ts）。テキストは
+   アイコン名のリガチャで、フォントが読み込まれるとグリフに置き換わる。 */
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
 @theme inline {
   --font-heading: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
