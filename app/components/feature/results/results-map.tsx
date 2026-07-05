@@ -1,14 +1,18 @@
 import type { Restaurant } from "~/domain/models/restaurant";
+import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import { RestaurantMap } from "~/components/feature/maps/restaurant-map";
+import { ResultsAiChat } from "~/components/feature/results/results-ai-chat";
 
 type ResultsMapProps = {
   stores: Restaurant[];
+  bookingSummary: ResultsChatBookingSummary;
   activeStoreId?: string | null;
   onMarkerClick?: (storeId: string) => void;
 };
 
 export function ResultsMap({
   stores,
+  bookingSummary,
   activeStoreId,
   onMarkerClick,
 }: ResultsMapProps) {
@@ -22,6 +26,7 @@ export function ResultsMap({
         activeRestaurantId={activeStoreId}
         onMarkerClick={onMarkerClick}
       />
+      <ResultsAiChat stores={stores} bookingSummary={bookingSummary} />
     </div>
   );
 }

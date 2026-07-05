@@ -100,7 +100,7 @@ describe("searchRestaurants", () => {
     expect(result.restaurants[0].generatedAt).not.toBeNull();
   });
 
-  it("builds an id without '/' from a placeId, so /stores/:storeId routing isn't broken", async () => {
+  it("builds an id without '/' from a placeId, so it is safe to use in URL state", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         { name: "桂", placeId: "places/ChIJabc123", mapsUri: null, address: null },

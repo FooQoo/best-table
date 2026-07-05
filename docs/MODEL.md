@@ -38,6 +38,7 @@
 - ヒアリング/検索条件 → 店舗探索・評価: `BookingRequest` の内容（エリア座標・日時・人数・予算・重視条件・会食文脈）が `Restaurant[]` 生成の入力になる（上流・下流の関係。ヒアリング側の型を変えると評価生成の入力契約が変わる）。
 - 店舗探索・評価 → 比較: `ComparisonSelection` は `Restaurant.id` の集合を参照するだけで、店舗データ自体は複製しない。
 - 比較 → 予約導線受け渡し: `finalStoreId` が確定した時点で、`HandoffRequest` が `Restaurant` と `BookingRequest` の要約を参照する。
+- 店舗探索・評価 → 地図コンテキスト AI 相談: `/results` に読み込まれている `Restaurant[]` と `BookingRequest` の要約を参照し、表示中店舗群に対する横断的な質問応答を行う。相談は `Restaurant` を更新せず、比較候補や最終候補の選択も直接変更しない。
 
 ## コンテキスト1: ヒアリング/検索条件（Hearing）
 
@@ -163,7 +164,59 @@ Place Details Essentials で `location` と同じ SKU に収まる `formattedAdd
 
 - `RestaurantRepository`（実装は `app/server/repositories/`）: 正規化したヒアリング条件（エリア座標・日時・人数・予算・重視条件・相手種別）をキーに、生成済み `Restaurant[]` をキャッシュ・取得する。外部 API は呼ばない。
 
-## コンテキスト3: 比較（Comparison）
+## コンテキスト3: 地図コンテキスト AI 相談（Map Consultation）
+
+### 値オブジェクト: `MapConsultationRequest`
+
+`MapConsultationRequest` は、`/results` に表示されている店舗群に対する質問応答の入力である。単一店舗の詳細ページではなく、表示中店舗群を横断して比較・懸念・次アクションを相談するために使う。
+
+```ts
+type MapConsultationRequest = {
+  restaurants: Restaurant[]; // 現在 /results に読み込まれている店舗群
+  bookingSummary: ResultsChatBookingSummary;
+  question: string; // 短い自由入力、FAQ、またはおすすめ質問
+};
+
+type ResultsChatBookingSummary = {
+  selectedAreas: string[];
+  date: string;
+  time: string;
+  people: number;
+  budgetMin: string;
+  budgetMax: string;
+  budgetOtherOn: boolean;
+  budgetOtherText: string;
+  priorities: string[];
+  priorityOtherOn: boolean;
+  priorityOtherText: string;
+  counterpart: string | null;
+  counterpartOtherText: string;
+};
+```
+
+不変条件:
+
+- `restaurants` は空配列の場合、AI 相談を送信しない。
+- `restaurants` の各要素は `isRestaurant` を満たす。
+- `question` は空文字を許可せず、長さ上限を設ける。
+- 回答は `restaurants` と `bookingSummary` の範囲に基づき、未取得の口コミ本文、メニュー詳細、現在空席を根拠として扱わない。
+- 相談結果は `ComparisonSelection` を直接変更しない。比較追加や最終候補選択はユーザー操作として残す。
+
+### 値オブジェクト: `SuggestedQuestion`
+
+```ts
+type SuggestedQuestion = {
+  text: string;
+};
+```
+
+不変条件:
+
+- 回答後に提示する `SuggestedQuestion` は4件。
+- 質問文は表示中店舗群を前提にした比較・懸念・次アクションに寄せる。
+- 空席確定、予約成立、未取得情報を断定させる質問は候補にしない。
+
+## コンテキスト4: 比較（Comparison）
 
 ### 集約: `ComparisonSelection`（集約ルート）
 
@@ -183,7 +236,7 @@ type ComparisonSelection = {
 
 `ComparisonSelection` は `Restaurant` を複製せず ID 参照のみを持つ。表示時は `RestaurantRepository`（またはキャッシュ済み検索結果）から実体を解決する。
 
-## コンテキスト4: 予約導線受け渡し（Reservation Handoff）
+## コンテキスト5: 予約導線受け渡し（Reservation Handoff）
 
 ### 集約: `HandoffRequest`（集約ルート、プロトタイプでは未実装）
 

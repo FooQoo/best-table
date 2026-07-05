@@ -49,8 +49,8 @@ const defaultDeps: RestaurantSearchDeps = {
   setCached: setCachedRestaurants,
 };
 
-// placeId（例: "places/ChIJ..."）をそのまま id にすると "/" が `/stores/:storeId` の
-// URL 区切りと衝突するため、URL に安全な形へ変換する。
+// placeId（例: "places/ChIJ..."）をそのまま id にすると "/" が URL 区切りと
+// 衝突するため、URL や画面状態で扱いやすい形へ変換する。
 export function buildRestaurantId(
   placeId: string | null,
   cacheKey: string,
@@ -122,8 +122,8 @@ export async function searchRestaurants(
     const absoluteIndex = offset + index;
     const detail = placeDetails[index] ?? null;
     return {
-      // placeId は "places/ChIJ..." のように "/" を含むことがあり、そのまま id に使うと
-      // `/stores/:storeId` のルーティングが崩れるため、URL に使える形に変換する。
+      // placeId は "places/ChIJ..." のように "/" を含むことがあるため、
+      // URL や画面状態で扱いやすい形に変換する。
       id: buildRestaurantId(candidate.placeId, cacheKey, absoluteIndex),
       placeId: candidate.placeId,
       name: candidate.name,

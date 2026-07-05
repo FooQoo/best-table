@@ -4,6 +4,7 @@ import type { Restaurant } from "~/domain/models/restaurant";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
 import { PRIORITIES } from "~/mocks/data";
+import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
@@ -102,6 +103,22 @@ export function ResultsScreen() {
       state.counterpartOtherText,
     ],
   );
+
+  const chatBookingSummary: ResultsChatBookingSummary = {
+    selectedAreas: state.selectedAreas,
+    date: state.date,
+    time: state.time,
+    people: state.people,
+    budgetMin: state.budgetMin,
+    budgetMax: state.budgetMax,
+    budgetOtherOn: state.budgetOtherOn,
+    budgetOtherText: state.budgetOtherText,
+    priorities: state.priorities,
+    priorityOtherOn: state.priorityOtherOn,
+    priorityOtherText: state.priorityOtherText,
+    counterpart: state.counterpart,
+    counterpartOtherText: state.counterpartOtherText,
+  };
 
   const submitSearch = useCallback(
     (mode: FetchMode, offset: number) => {
@@ -222,7 +239,7 @@ export function ResultsScreen() {
         {isInitialSearching ? (
           <>
             <StoreListSkeleton />
-            <ResultsMap stores={[]} />
+            <ResultsMap stores={[]} bookingSummary={chatBookingSummary} />
           </>
         ) : hasSearched && sortedStores.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
@@ -268,6 +285,7 @@ export function ResultsScreen() {
             <div className="relative min-w-0 flex-1">
               <ResultsMap
                 stores={sortedStores}
+                bookingSummary={chatBookingSummary}
                 activeStoreId={activeStoreId}
                 onMarkerClick={handleMarkerClick}
               />

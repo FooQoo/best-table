@@ -5,8 +5,8 @@
 
 ## 現在地
 
-- **現行サイクル**: `docs/plans/mvp-cycle-2/`
-- **着手中の UoW**: なし（mvp-cycle-2 完了）
+- **現行サイクル**: `docs/plans/mvp-cycle-3/`
+- **着手中の UoW**: なし（mvp-cycle-3 完了）
 - **次のアクション**: 次サイクルを開始する場合は `docs/plans/` 配下に新しいサイクル計画を作成する。
 
 ## ステータス一覧
@@ -32,3 +32,15 @@
 | mvp-cycle-2 | UoW-2 | 10件単位の取得・追加読み込み・スケルトン | 完了 | 2-3 | [docs/plans/mvp-cycle-2/uow-2-plan.md](plans/mvp-cycle-2/uow-2-plan.md) | API 契約を `limit` / `offset` / `hasMore` / `nextOffset` に拡張し、初回10件・追加10件を追記。初回/追加スケルトン、再試行導線、IntersectionObserver sentinel、重複取得防止を実装 |
 | mvp-cycle-2 | UoW-3 | 検索結果地図 | 完了 | 3-3 | [docs/plans/mvp-cycle-2/uow-3-plan.md](plans/mvp-cycle-2/uow-3-plan.md) | `@vis.gl/react-google-maps` の共通地図部品を追加し、`/results` の右側 MAP を実地図へ置き換え。座標あり店舗のみマーカー表示、key 未設定/座標なし時のフォールバック、カード hover/focus とマーカー click の active 連動を実装 |
 | mvp-cycle-2 | UoW-4 | 最終候補地図と Google Maps 導線 | 完了 | 4-3 | [docs/plans/mvp-cycle-2/uow-4-plan.md](plans/mvp-cycle-2/uow-4-plan.md) | 最終候補パネルの地図を共通 `RestaurantMap` に差し替え。座標なし時は「地図情報なし」とし、Google Map URL 生成を `buildGoogleMapsUrl` に切り出して `placeId` 優先・住所/エリア検索フォールバックを実装 |
+| mvp-cycle-3 | UoW-1 | 地図内 AI チャット UI | 完了 | 1-3 | [docs/plans/mvp-cycle-3/uow-1-plan.md](plans/mvp-cycle-3/uow-1-plan.md) | `ResultsAiChat` を `/results` の地図右下に追加。右スライドパネル、初回 FAQ、長文入力、Enter 送信 / Shift+Enter 改行、店舗詳細パネルを閉じないクリック判定を実装 |
+| mvp-cycle-3 | UoW-2 | 地図コンテキスト AI 相談 API | 完了 | 2-3 | [docs/plans/mvp-cycle-3/uow-2-plan.md](plans/mvp-cycle-3/uow-2-plan.md) | `/api/results/chat`、`results-chat-prompt.ts`、`gemini-results-chat.ts` を追加。表示中 `Restaurant[]` とヒアリング条件を検証し、text stream で回答。失敗はチャット内だけに表示 |
+| mvp-cycle-3 | UoW-3 | 次のおすすめ質問 | 完了 | 3-3 | [docs/plans/mvp-cycle-3/uow-3-plan.md](plans/mvp-cycle-3/uow-3-plan.md) | `results-chat-suggestions.ts` で回答後4件のおすすめ質問を deterministic に生成。相手種別・重視条件・直前質問を反映し、空席確定・予約成立へ誘導しない文言をテストで固定 |
+| mvp-cycle-3 | UoW-4 | 単一店舗詳細ページ・質問 API の廃止 | 完了 | 4-3 | [docs/plans/mvp-cycle-3/uow-4-plan.md](plans/mvp-cycle-3/uow-4-plan.md) | `/stores/:storeId`、`/api/stores/:storeId/ask`、`StoreDetailScreen`、`StoreAskPanel`、単一店舗 Q&A 専用 client/service を削除。詳細は `/results` 内パネル、AI 相談は地図チャットへ集約 |
+
+## 更新履歴
+
+| 日付 | 内容 |
+|---|---|
+| 2026-07-05 | 新サイクル `mvp-cycle-3`（地図コンテキスト AI チャット、単一店舗詳細ページ・質問 API の廃止）を計画。mock UI レビューで右スライドパネル方針を採用し、`docs/plans/mvp-cycle-3/PLANS.md` と `UNIT_OF_WORK.md` を作成、UoW-1〜4 を「計画済み」として追加。 |
+| 2026-07-05 | mvp-cycle-3 UoW-1〜4 の実装計画書（`uow-1-plan.md` / `uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |
+| 2026-07-05 | mvp-cycle-3 UoW-1〜4 を実装完了。地図内 AI チャット UI、`/api/results/chat`、回答後おすすめ質問、旧単一店舗詳細ページ・質問 API 廃止を反映し、`pnpm test` / `pnpm run typecheck` / `pnpm build` を確認。 |

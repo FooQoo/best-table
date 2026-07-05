@@ -28,7 +28,7 @@ export type BookingState = {
   finalStoreId: string | null;
 
   // UoW-7: /results が実検索(app/server/services/restaurant-search.ts)から取得した結果。
-  // /compare・/stores/:storeId は再検索せず、この一覧から id で参照する。
+  // /compare と /results 内の詳細パネルは再検索せず、この一覧から id で参照する。
   restaurants: Restaurant[];
 };
 

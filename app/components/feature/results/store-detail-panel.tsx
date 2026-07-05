@@ -26,6 +26,9 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (panelRef.current?.contains(target)) return;
+      const element =
+        target instanceof Element ? target : target.parentElement;
+      if (element?.closest("[data-results-ai-chat]")) return;
       onClose();
     };
 
