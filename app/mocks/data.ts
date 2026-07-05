@@ -96,9 +96,10 @@ export const HISTORY: HistoryItem[] = [
   { title: "赤坂・お礼の会食", date: "6/20" },
 ];
 
-// app/mocks/ 専用の拡張。`Restaurant`（docs/MODEL.md 準拠のドメイン型）に、実データ未接続な間だけ
-// 使うプロトタイプ表示用フィールド（相対位置の MAP マーカー座標・写真プレースホルダーラベル）を足したもの。
-// `location` / `photoUrl` は実接続（UoW-7）まで null のままにし、架空の値で埋め合わせない。
+// app/mocks/ 専用の拡張。`Restaurant`（docs/MODEL.md 準拠のドメイン型）に、通常モック表示で使う
+// 相対位置の MAP マーカー座標・写真プレースホルダーラベルを足したもの。
+// `STORES` は従来画面の静的モック、`MAP_RENDERING_MOCK_RESTAURANTS` は地図実装検証用の
+// 座標・住所・代表写真付きモックとして分ける。
 export type Store = Restaurant & {
   pos: { top: string; left: string };
   photoPlaceholderLabel: string;
@@ -123,10 +124,28 @@ export const MAP_RENDERING_MOCK_RESTAURANTS: Restaurant[] = STORES.map(
       { lat: 35.674511, lng: 139.736125 },
       { lat: 35.668119, lng: 139.749591 },
     ];
+    const addresses = [
+      "東京都中央区銀座4-6-16",
+      "東京都港区六本木6-10-1",
+      "東京都港区新橋2-16-1",
+      "東京都千代田区丸の内1-9-1",
+      "東京都港区赤坂5-3-1",
+      "東京都港区虎ノ門1-23-1",
+    ];
+    const photoUrls = [
+      "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1559329007-40df8a9345d8?auto=format&fit=crop&w=800&q=80",
+      "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
+    ];
 
     return {
       ...store,
+      address: addresses[index] ?? store.address,
       location: locations[index] ?? null,
+      photoUrl: photoUrls[index] ?? store.photoUrl,
       placeId: `mock-place-${index + 1}`,
     };
   },

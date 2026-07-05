@@ -1,33 +1,37 @@
 # 開発状況
 
-`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` で定義した Unit of Work（UoW）ごとの進捗を管理する。
+現行サイクルの `UNIT_OF_WORK.md` で定義した Unit of Work（UoW）ごとの進捗を管理する。
 実装を進めるたびに、このファイルの該当行と「現在地」を更新する。
 
 ## 現在地
 
-- **現行サイクル**: `docs/plans/mvp-cycle-1/`
-- **着手中の UoW**: なし（UoW-0〜UoW-7 完了）
-- **次のアクション**: 現時点で計画済みの追加 UoW はなし。次に着手する作業は改めて洗い出す。
+- **現行サイクル**: `docs/plans/mvp-cycle-2/`
+- **着手中の UoW**: UoW-1（Places 店舗データ解決と mock mode）
+- **次のアクション**: 実装着手前に、UoW-1 Bolt 1-2 へ進むか、計画書全体の見直しを行うかを確認する。
 
 ## ステータス一覧
 
 状態は次のいずれかで管理する。
 
-- `未着手`: 実装計画（`docs/plans/mvp-cycle-1/uow-N-plan.md`）のみ、または計画すら未作成
-- `計画済み`: 実装計画は作成済みだが Bolt に未着手
+- `未着手`: `UNIT_OF_WORK.md` に未登録、または対象サイクルでまだ扱わない
+- `計画済み`: `UNIT_OF_WORK.md` に登録済み。実装計画（`docs/plans/<cycle>/uow-N-plan.md`）は着手直前に作成する
 - `進行中`: いずれかの Bolt が Red/Green/Verify の途中
-- `完了`: すべての Bolt が Verify まで通過、`docs/plans/mvp-cycle-1/UNIT_OF_WORK.md` の完了条件を満たした
+- `完了`: すべての Bolt が Verify まで通過、対象サイクルの `UNIT_OF_WORK.md` の完了条件を満たした
 
-| UoW | タイトル | 状態 | 直近の Bolt | 実装計画 | 備考 |
-|---|---|---|---|---|---|
-| UoW-0 | テスト基盤の導入 | 完了 | - | [docs/plans/mvp-cycle-1/uow-0-plan.md](plans/mvp-cycle-1/uow-0-plan.md) | Vitest + Testing Library 導入、`pnpm test` green、typecheck/build 確認済み |
-| UoW-1 | プロダクト言葉遣い・状態の一貫性 | 完了 | 1-2 | [docs/plans/mvp-cycle-1/uow-1-plan.md](plans/mvp-cycle-1/uow-1-plan.md) | Bolt 1-1: 状態受け渡しテスト追加（既存実装で green）。Bolt 1-2: `docs/DESIGN.md` に用語対応表を追加、4画面を実機確認し表記ゆれなしを確認済み |
-| UoW-2 | 比較フローの分かりやすさ・可逆性 | 完了 | 2-2 | [docs/plans/mvp-cycle-1/uow-2-plan.md](plans/mvp-cycle-1/uow-2-plan.md) | Bolt 2-1: `toggleCompare` のトグル挙動（追加・削除）テストを追加。Bolt 2-2: 0/1/5件の境界状態テストを追加し、実機確認で5件表示時に狭い画面幅で比較表がはみ出し列が見えなくなる崩れを発見・修正（`overflow-hidden`→`overflow-x-auto`、列に`minmax(150px,1fr)`を指定） |
-| UoW-3 | 相手種別に応じた評価の重み付け | 完了 | 3-2 | [docs/plans/mvp-cycle-1/uow-3-plan.md](plans/mvp-cycle-1/uow-3-plan.md) | Bolt 3-1: `app/utils/scoring.ts` に `getEmphasisKeys` を実装（exec→room/prestige/service、partner・boss→quiet/access、thanks/bond は partner 相当を暫定流用）。Bolt 3-2: `store-list.tsx`・`compare-table.tsx` に強調表示（バッジ）を反映し実機確認済み |
-| UoW-4 | 懸念タグ・推奨理由・AI 質問応答例 | 完了 | 4-2 | [docs/plans/mvp-cycle-1/uow-4-plan.md](plans/mvp-cycle-1/uow-4-plan.md) | Bolt 4-1: `Store` 型を `concernTags: string[]` / `recommendationReason: string` に移行し、スキーマテストを追加。Bolt 4-2: `ConcernTags` コンポーネント（ホバー不要で常時表示）を新設し `store-list.tsx`・新規 `/stores/:storeId` 詳細画面に反映、`buildStoreQA` で断定表現を避けたAI質問応答例を実装 |
-| UoW-5 | 最終候補の説明文面 | 完了 | 5-1 | [docs/plans/mvp-cycle-1/uow-5-plan.md](plans/mvp-cycle-1/uow-5-plan.md) | Bolt 5-1: `app/utils/final-candidate-message.ts` に `buildFinalStoreMessage` を実装（`{ reason, checksBeforeBooking }` を返す構造化データ）。相手種別の重視観点（`getEmphasisKeys`）を推薦理由の冒頭に加え、懸念タグと「空席・予約成立を断定しない」定型確認事項を `checksBeforeBooking` に含める。`final-store-panel.tsx` に「この店舗を選んだ理由」「予約前の確認事項」セクションを追加し、`compare-screen.tsx` から `counterpartId`・`priorities` を渡すよう変更 |
-| UoW-6 | ドメインデータモデルの再構成 | 完了 | 6-3 | [docs/plans/mvp-cycle-1/uow-6-plan.md](plans/mvp-cycle-1/uow-6-plan.md) | `app/domain/models/restaurant.ts` に `docs/MODEL.md` 準拠の単一 `Restaurant` 型を実装（生データとAI評価は分離しない設計に合わせ本計画を修正）。`concern` は UoW-4 の複数懸念表示を維持するため `concerns: ConcernItem[]` に変更し `docs/MODEL.md`/`docs/ARCHITECTURE.md` を更新。`budgetLabel` を追加し boss の「予算」強調を解消。`app/mocks/data.ts` の `STORES` を全フィールド移行、`app/domain/services/restaurant-cache-policy.ts` にキャッシュキー生成・鮮度判定を実装 |
-| UoW-7 | 検索・空席・AI 生成の実接続 | 完了 | 7-3 | [docs/plans/mvp-cycle-1/uow-7-plan.md](plans/mvp-cycle-1/uow-7-plan.md) | Bolt 7-1: `@ai-sdk/google`・`ai`・zod・`@vis.gl/react-google-maps` を導入し、`app/server/clients/gemini-grounding.ts`（Google マップによるグラウンディング）・`gemini-evaluation.ts`（構造化評価）・`app/server/services/restaurant-search.ts`（オーケストレーション＋キャッシュ）・resource route `api.restaurants.search.tsx` を新規実装。`/results` を `useFetcher` によるモック→実検索差し替えに変更。Bolt 7-2: 実予約 API には接続しない（`docs/MODEL.md` の既存方針）ため、`app/utils/availability-message.ts` で空席状況の留保表現を一本化し店舗詳細に常時表示。Bolt 7-3: `app/server/clients/gemini-ask.ts`（`streamText`）・`app/server/services/store-ask-prompt.ts`・resource route `api.stores.$storeId.ask.tsx`・`StoreAskPanel` で店舗詳細のオンデマンド質問応答を実装 |
+| サイクル | UoW | タイトル | 状態 | 直近の Bolt | 実装計画 | 備考 |
+|---|---|---|---|---|---|---|
+| mvp-cycle-1 | UoW-0 | テスト基盤の導入 | 完了 | - | [docs/plans/mvp-cycle-1/uow-0-plan.md](plans/mvp-cycle-1/uow-0-plan.md) | Vitest + Testing Library 導入、`pnpm test` green、typecheck/build 確認済み |
+| mvp-cycle-1 | UoW-1 | プロダクト言葉遣い・状態の一貫性 | 完了 | 1-2 | [docs/plans/mvp-cycle-1/uow-1-plan.md](plans/mvp-cycle-1/uow-1-plan.md) | Bolt 1-1: 状態受け渡しテスト追加（既存実装で green）。Bolt 1-2: `docs/DESIGN.md` に用語対応表を追加、4画面を実機確認し表記ゆれなしを確認済み |
+| mvp-cycle-1 | UoW-2 | 比較フローの分かりやすさ・可逆性 | 完了 | 2-2 | [docs/plans/mvp-cycle-1/uow-2-plan.md](plans/mvp-cycle-1/uow-2-plan.md) | Bolt 2-1: `toggleCompare` のトグル挙動（追加・削除）テストを追加。Bolt 2-2: 0/1/5件の境界状態テストを追加し、実機確認で5件表示時に狭い画面幅で比較表がはみ出し列が見えなくなる崩れを発見・修正（`overflow-hidden`→`overflow-x-auto`、列に`minmax(150px,1fr)`を指定） |
+| mvp-cycle-1 | UoW-3 | 相手種別に応じた評価の重み付け | 完了 | 3-2 | [docs/plans/mvp-cycle-1/uow-3-plan.md](plans/mvp-cycle-1/uow-3-plan.md) | Bolt 3-1: `app/utils/scoring.ts` に `getEmphasisKeys` を実装（exec→room/prestige/service、partner・boss→quiet/access、thanks/bond は partner 相当を暫定流用）。Bolt 3-2: `store-list.tsx`・`compare-table.tsx` に強調表示（バッジ）を反映し実機確認済み |
+| mvp-cycle-1 | UoW-4 | 懸念タグ・推奨理由・AI 質問応答例 | 完了 | 4-2 | [docs/plans/mvp-cycle-1/uow-4-plan.md](plans/mvp-cycle-1/uow-4-plan.md) | Bolt 4-1: `Store` 型を `concernTags: string[]` / `recommendationReason: string` に移行し、スキーマテストを追加。Bolt 4-2: `ConcernTags` コンポーネント（ホバー不要で常時表示）を新設し `store-list.tsx`・新規 `/stores/:storeId` 詳細画面に反映、`buildStoreQA` で断定表現を避けたAI質問応答例を実装 |
+| mvp-cycle-1 | UoW-5 | 最終候補の説明文面 | 完了 | 5-1 | [docs/plans/mvp-cycle-1/uow-5-plan.md](plans/mvp-cycle-1/uow-5-plan.md) | Bolt 5-1: `app/utils/final-candidate-message.ts` に `buildFinalStoreMessage` を実装（`{ reason, checksBeforeBooking }` を返す構造化データ）。相手種別の重視観点（`getEmphasisKeys`）を推薦理由の冒頭に加え、懸念タグと「空席・予約成立を断定しない」定型確認事項を `checksBeforeBooking` に含める。`final-store-panel.tsx` に「この店舗を選んだ理由」「予約前の確認事項」セクションを追加し、`compare-screen.tsx` から `counterpartId`・`priorities` を渡すよう変更 |
+| mvp-cycle-1 | UoW-6 | ドメインデータモデルの再構成 | 完了 | 6-3 | [docs/plans/mvp-cycle-1/uow-6-plan.md](plans/mvp-cycle-1/uow-6-plan.md) | `app/domain/models/restaurant.ts` に `docs/MODEL.md` 準拠の単一 `Restaurant` 型を実装（生データとAI評価は分離しない設計に合わせ本計画を修正）。`concern` は UoW-4 の複数懸念表示を維持するため `concerns: ConcernItem[]` に変更し `docs/MODEL.md`/`docs/ARCHITECTURE.md` を更新。`budgetLabel` を追加し boss の「予算」強調を解消。`app/mocks/data.ts` の `STORES` を全フィールド移行、`app/domain/services/restaurant-cache-policy.ts` にキャッシュキー生成・鮮度判定を実装 |
+| mvp-cycle-1 | UoW-7 | 検索・空席・AI 生成の実接続 | 完了 | 7-3 | [docs/plans/mvp-cycle-1/uow-7-plan.md](plans/mvp-cycle-1/uow-7-plan.md) | Bolt 7-1: `@ai-sdk/google`・`ai`・zod・`@vis.gl/react-google-maps` を導入し、Google マップによるグラウンディング、構造化評価、検索オーケストレーション、resource route を実装。Bolt 7-2: 実予約 API には接続せず、空席状況の留保表現を一本化。Bolt 7-3: 店舗詳細のオンデマンド質問応答を実装 |
+| mvp-cycle-2 | UoW-1 | Places 店舗データ解決と mock mode | 進行中 | 1-1 | [docs/plans/mvp-cycle-2/uow-1-plan.md](plans/mvp-cycle-2/uow-1-plan.md) | Bolt 1-1: `MODE=mock` で返す地図用モックに座標・住所・代表写真・mock placeId を付与し、テストで固定。次は Places Details の FieldMask と変換境界 |
+| mvp-cycle-2 | UoW-2 | 10件単位の取得・追加読み込み・スケルトン | 計画済み | - | [docs/plans/mvp-cycle-2/uow-2-plan.md](plans/mvp-cycle-2/uow-2-plan.md) | 初回10件、最下部スクロールで追加10件。初回・追加取得中は店舗カード形状のスケルトンを表示 |
+| mvp-cycle-2 | UoW-3 | 検索結果地図 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-3-plan.md](plans/mvp-cycle-2/uow-3-plan.md) | `/results` の右側 MAP を実地図へ置き換え、マーカーと店舗カードを連動 |
+| mvp-cycle-2 | UoW-4 | 最終候補地図と Google Maps 導線 | 計画済み | - | [docs/plans/mvp-cycle-2/uow-4-plan.md](plans/mvp-cycle-2/uow-4-plan.md) | `/compare` の最終候補パネルに地図を表示し、予約ではなく Google Maps で開く導線を提供 |
 
 ## 更新履歴
 
@@ -43,3 +47,6 @@
 | 2026-07-05 | UoW-7（検索・空席・AI 生成の実接続）を完了。ユーザーが Gemini／Google Places の API キーを用意し、フル接続で実装する方針を選択。`pnpm add ai @ai-sdk/google zod @vis.gl/react-google-maps` を実行し、`node_modules/@ai-sdk/google/docs/15-google.mdx` を確認のうえ実装。**Bolt 7-1**: `app/constants/area-coordinates.ts`（エリア→緯度経度の静的対応表）、`app/server/services/restaurant-search-query.ts`（検索条件→グラウンディング用プロンプト生成、純粋関数）、`app/domain/models/restaurant-evaluation-schema.ts`（構造化評価用 zod スキーマ）、`app/server/clients/gemini-grounding.ts`（`google.tools.googleMaps` によるグラウンディング呼び出し、実際の Gemini 応答を確認したところ `groundingMetadata.groundingChunks[].maps` には `uri`/`title`/`placeId` のみで住所・写真参照が含まれないことが判明したため、住所は応答本文からのベストエフォート抽出に変更し、写真は `photoUrl: null` のまま——`app/server/clients/google-places.ts` の実装は不要と判断）、`app/server/clients/gemini-evaluation.ts`（`generateObject` による構造化評価）、`app/server/repositories/restaurant-cache.ts`（プロセス内メモリキャッシュ）を実装し、`app/server/services/restaurant-search.ts` で直列オーケストレーション。resource route `api.restaurants.search.tsx` を新設し、`/results`（`ResultsScreen`）を `useFetcher` によるモック→実検索の差し替えに変更（検索中は「条件に合う店舗をAIが探しています…」を表示し、比較トレイ等のナビゲーションはブロックしない）。実装中に発見・修正したバグ: Gemini の `placeId` は `"places/ChIJ..."` のように `/` を含み、そのまま `Restaurant.id` に使うと `/stores/:storeId` のルーティングが壊れる（`/stores/places/ChIJ...` は2セグメントになり404）ため、`buildRestaurantId` で `/` を `_` に置換する変換を追加しテストで固定。`StoreList`/`ResultsMap`/`CompareTable`/`FinalStorePanel`/`StoreDetailScreen`/`CompareScreen` をモック `Store[]` 専用実装から `Restaurant[]`（`booking-context` に追加した `state.restaurants`）に対応させ、`genre`/`room`/`access`/`phone` 等が `null` の場合に `"情報なし"` 等へ確実にフォールバックするよう修正（対応漏れがあると `null` という文字列がそのまま表示される問題があった）。**Bolt 7-2**: `docs/MODEL.md` に「実予約 API を呼ばない」という既存の明示的方針があるため、実際の空席情報ソースとの接続は行わず、`app/utils/availability-message.ts` に断定しない留保表現を一本化し `StoreDetailScreen`・`buildFinalStoreMessage` の両方から参照するようにして、空席・予約成立を断定しないというガードレールをテストで固定。**Bolt 7-3**: `app/server/clients/gemini-ask.ts`（`streamText`）・`app/server/services/store-ask-prompt.ts`（店舗データのみに基づく回答・断定しない指示を含むプロンプト生成）・resource route `api.stores.$storeId.ask.tsx`（自由入力は100文字までに制限）・`StoreAskPanel`（定型質問ボタン＋短い自由入力、`ReadableStream` を逐次表示）を実装し、`StoreDetailScreen` に追加。実機確認で、実際の Gemini 検索結果（銀座・20件）から `/results`→`/stores/:storeId`（推奨理由・Q&A・空席状況の留保表現）→`/compare`（2件比較、`情報なし` フォールバック確認）→最終候補選択（`FinalStorePanel` の理由・確認事項）までの一気通貫、および `StoreAskPanel` でのオンデマンド質問（実際の店舗データに基づく回答、予約困難性への言及はしつつ断定を避ける応答）をすべて確認。`pnpm test`（99件）/ `pnpm run typecheck` / `pnpm build` すべて green。 |
 | 2026-07-05 | サイクル体制を整備。UoW-0〜7 を1つのサイクル「`mvp-cycle-1`」として扱うことにし、`docs/PLANS.md` / `docs/UNIT_OF_WORK.md` / `docs/plans/uow-N-plan.md` を `docs/plans/mvp-cycle-1/` へ移動、相互参照リンクをすべて更新。`docs/plans/TEMPLATE.md` はサイクル横断で使い回すため `docs/plans/` 直下に残し、`AGENTS.md` / `README.md` / `docs/ARCHITECTURE.md` は現行サイクル名を書かず `docs/plans/<cycle>/...` という汎用表記にして、現行サイクルの参照先は `docs/STATUS.md` に一本化。次サイクルを始める際の手順を自動化する Claude Code project skill `dev-cycle`（`.claude/skills/dev-cycle/SKILL.md`）も作成（計画開始・仕様ヒアリング・仕様書更新・Unit of Work 生成の4フェーズ）。 |
 | 2026-07-05 | UoW-7 実装後、仕様書と実装の同期を実施。`docs/ARCHITECTURE.md` / `docs/MODEL.md` / `docs/DESIGN.md` / `docs/SECURITY.md` を実装時に判明した事実に合わせて更新。主な修正: (1) Gemini のグラウンディング応答には住所・座標・写真参照が含まれないと確認済みのため、`docs/ARCHITECTURE.md`「店舗写真の取得」「地図表示の実装」を実装計画から「現状未実装・理由あり」の記述に書き換え、`google-places.ts` は実装しない判断を明記。(2) `docs/MODEL.md` の `Restaurant` 型スニペットが実装（`area` / `budgetLabel` は `string`、`AREA_REGIONS`/`BUDGET_STEPS` の `app/constants/` 移設は未実施で `app/mocks/data.ts` に residing）と食い違っていたため型定義・定数一覧を実装に合わせて修正。(3) `docs/ARCHITECTURE.md` の実装配置（`app/components/feature/stores/` → 実際は `store-detail/`、`_layout.results.tsx` の loader 経由 → 実際は resource route への `useFetcher` POST など）を実際のファイル名・ルーティング方式に修正し、実装済みの resource route（`/api/restaurants/search`、`/api/stores/:storeId/ask`）を一覧に追加。(4) `docs/DESIGN.md`「現在の実装対象外」の「本番 AI 推論基盤」は UoW-7 で実接続済みのため対象外から外し、対象外なのは店舗DB・在庫連携・予約であることを明記。(5) `docs/SECURITY.md` 冒頭の「プロトタイプではモックデータ」という記述を、実際に本番 Gemini API を呼んでいる現状に合わせて修正。 |
+| 2026-07-05 | 新サイクル `mvp-cycle-2`（地図表示・Places データ解決・10件単位追加取得）を計画。`docs/plans/mvp-cycle-2/PLANS.md` と `UNIT_OF_WORK.md` を作成し、UoW-1〜4 を「計画済み」として追加。 |
+| 2026-07-05 | mvp-cycle-2 UoW-1 に着手。`docs/plans/mvp-cycle-2/uow-1-plan.md` を作成し、Bolt 1-1 として `MAP_RENDERING_MOCK_RESTAURANTS` に座標・住所・代表写真・mock placeId を付与、テストを追加。`pnpm test` / `pnpm run typecheck` green。 |
+| 2026-07-05 | mvp-cycle-2 UoW-2〜4 の実装計画書（`uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |

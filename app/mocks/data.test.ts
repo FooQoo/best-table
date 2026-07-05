@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isRestaurant } from "~/domain/models/restaurant";
-import { STORES } from "./data";
+import { MAP_RENDERING_MOCK_RESTAURANTS, STORES } from "./data";
 
 describe("STORES がドメインモデル Restaurant の形状を満たす", () => {
   it("すべての店舗が isRestaurant を満たす", () => {
@@ -32,6 +32,21 @@ describe("STORES がドメインモデル Restaurant の形状を満たす", () 
       expect(store.evidence.length).toBeGreaterThan(0);
       expect(["high", "medium", "low"]).toContain(store.confidence);
       expect(store.generatedAt).not.toBeNull();
+    });
+  });
+});
+
+describe("MAP_RENDERING_MOCK_RESTAURANTS", () => {
+  it("地図表示に必要な座標・住所・代表写真・mock placeId を持つ", () => {
+    MAP_RENDERING_MOCK_RESTAURANTS.forEach((restaurant, index) => {
+      expect(isRestaurant(restaurant)).toBe(true);
+      expect(restaurant.location).toEqual({
+        lat: expect.any(Number),
+        lng: expect.any(Number),
+      });
+      expect(restaurant.address).toEqual(expect.any(String));
+      expect(restaurant.photoUrl).toMatch(/^https:\/\/images\.unsplash\.com\//);
+      expect(restaurant.placeId).toBe(`mock-place-${index + 1}`);
     });
   });
 });
