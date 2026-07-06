@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { useBooking } from "~/state/booking-context";
+import { useLocation, useNavigate } from "react-router";
+import { useBookingQuery } from "~/state/booking-query-state";
 import { GOLD } from "~/mocks/data";
 import { BudgetStep } from "~/components/feature/hearing/budget-step";
 import { CounterpartStep } from "~/components/feature/hearing/counterpart-step";
@@ -11,16 +11,17 @@ type HearingStep = 0 | 1 | 2;
 
 export function HearingScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState<HearingStep>(0);
-  const { state } = useBooking();
+  const query = useBookingQuery();
 
   const canNextStep0 =
-    !!state.counterpart &&
-    !(state.counterpart === "other" && !state.counterpartOtherText.trim());
-  const canNextStep1 = !(state.budgetOtherOn && !state.budgetOtherText.trim());
+    !!query.counterpart &&
+    !(query.counterpart === "other" && !query.counterpartOtherText.trim());
+  const canNextStep1 = !(query.budgetOtherOn && !query.budgetOtherText.trim());
   const canSubmit =
-    state.priorities.length > 0 ||
-    (state.priorityOtherOn && !!state.priorityOtherText.trim());
+    query.priorities.length > 0 ||
+    (query.priorityOtherOn && !!query.priorityOtherText.trim());
   const enabledByStep = [canNextStep0, canNextStep1, canSubmit];
   const primaryEnabled = enabledByStep[step];
   const primaryLabel = step < 2 ? "次へ" : "この条件で検索する";
@@ -31,13 +32,13 @@ export function HearingScreen() {
     if (step < 2) {
       setStep((step + 1) as HearingStep);
     } else {
-      navigate("/results");
+      navigate({ pathname: "/results", search: location.search });
     }
   };
 
   const handleBack = () => {
     if (step === 0) {
-      navigate("/");
+      navigate({ pathname: "/", search: location.search });
     } else {
       setStep((step - 1) as HearingStep);
     }

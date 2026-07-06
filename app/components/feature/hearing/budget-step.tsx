@@ -6,17 +6,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { useBooking } from "~/state/booking-context";
+import { useBookingQuery } from "~/state/booking-query-state";
 import { BUDGET_STEPS, GOLD } from "~/mocks/data";
 
 export function BudgetStep() {
-  const {
-    state,
-    setBudgetMin,
-    setBudgetMax,
-    toggleBudgetOther,
-    setBudgetOtherText,
-  } = useBooking();
+  const query = useBookingQuery();
 
   return (
     <div>
@@ -27,7 +21,7 @@ export function BudgetStep() {
         選択した予算感をもとに、候補店舗を絞り込みます。
       </div>
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={state.budgetMin} onValueChange={setBudgetMin}>
+        <Select value={query.budgetMin} onValueChange={query.setBudgetMin}>
           <SelectTrigger className="flex-1 min-w-[160px] h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-3 py-2.5 text-[15px]">
             <SelectValue />
           </SelectTrigger>
@@ -40,7 +34,7 @@ export function BudgetStep() {
           </SelectContent>
         </Select>
         <span className="text-[#79726a]">〜</span>
-        <Select value={state.budgetMax} onValueChange={setBudgetMax}>
+        <Select value={query.budgetMax} onValueChange={query.setBudgetMax}>
           <SelectTrigger className="flex-1 min-w-[160px] h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-3 py-2.5 text-[15px]">
             <SelectValue />
           </SelectTrigger>
@@ -56,10 +50,10 @@ export function BudgetStep() {
       <div className="mt-3">
         <button
           type="button"
-          onClick={toggleBudgetOther}
+          onClick={query.toggleBudgetOther}
           className="flex items-center gap-2 px-[18px] py-2.5 border-2 rounded-full text-sm cursor-pointer transition-colors"
           style={
-            state.budgetOtherOn
+            query.budgetOtherOn
               ? { borderColor: GOLD, background: "#12202f", color: "#f7f4ee" }
               : { borderColor: "#d8d2c0", background: "#fff", color: "#20201c" }
           }
@@ -67,22 +61,22 @@ export function BudgetStep() {
           <span
             className="w-[13px] h-[13px] flex-none rounded-[3px] border-[1.5px] flex items-center justify-center text-[9px]"
             style={{
-              borderColor: state.budgetOtherOn ? GOLD : "#b8b09a",
-              background: state.budgetOtherOn ? GOLD : "transparent",
+              borderColor: query.budgetOtherOn ? GOLD : "#b8b09a",
+              background: query.budgetOtherOn ? GOLD : "transparent",
               color: "#20201c",
             }}
           >
-            {state.budgetOtherOn ? "✓" : ""}
+            {query.budgetOtherOn ? "✓" : ""}
           </span>
           その他（自由記述）
         </button>
       </div>
-      {state.budgetOtherOn && (
+      {query.budgetOtherOn && (
         <Input
           type="text"
           placeholder="自由にご記入ください（例：1人2万円くらいまで）"
-          value={state.budgetOtherText}
-          onChange={(e) => setBudgetOtherText(e.target.value)}
+          value={query.budgetOtherText}
+          onChange={(e) => query.setBudgetOtherText(e.target.value)}
           className="w-full h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px] mt-3.5"
         />
       )}

@@ -1,12 +1,11 @@
 import { Input } from "~/components/ui/input";
 import { SelectTile } from "~/components/ui/select-tile";
-import { useBooking } from "~/state/booking-context";
+import { useBookingQuery } from "~/state/booking-query-state";
 import { PRIORITIES } from "~/mocks/data";
 
 export function PriorityStep() {
-  const { state, togglePriority, togglePriorityOther, setPriorityOtherText } =
-    useBooking();
-  const priorityLimitReached = state.priorities.length >= 3;
+  const query = useBookingQuery();
+  const priorityLimitReached = query.priorities.length >= 3;
 
   return (
     <div>
@@ -18,7 +17,7 @@ export function PriorityStep() {
       </div>
       <div className="grid grid-cols-2 gap-2">
         {PRIORITIES.map((p) => {
-          const selected = state.priorities.includes(p.key);
+          const selected = query.priorities.includes(p.key);
           const disabled = !selected && priorityLimitReached;
           return (
             <SelectTile
@@ -27,7 +26,7 @@ export function PriorityStep() {
               desc={p.desc}
               selected={selected}
               disabled={disabled}
-              onClick={() => togglePriority(p.key)}
+              onClick={() => query.togglePriority(p.key)}
             />
           );
         })}
@@ -36,16 +35,16 @@ export function PriorityStep() {
         <SelectTile
           label="苦手・避けたい条件がある"
           desc="避けたい席・雰囲気などを自由にご記入いただけます"
-          selected={state.priorityOtherOn}
-          onClick={togglePriorityOther}
+          selected={query.priorityOtherOn}
+          onClick={query.togglePriorityOther}
         />
       </div>
-      {state.priorityOtherOn && (
+      {query.priorityOtherOn && (
         <Input
           type="text"
           placeholder="自由にご記入ください（例：完全個室以外は避けたい）"
-          value={state.priorityOtherText}
-          onChange={(e) => setPriorityOtherText(e.target.value)}
+          value={query.priorityOtherText}
+          onChange={(e) => query.setPriorityOtherText(e.target.value)}
           className="w-full h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px] mt-2.5"
         />
       )}

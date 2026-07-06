@@ -77,6 +77,8 @@ type BookingActions = {
   setRestaurants: (restaurants: Restaurant[]) => void;
   appendRestaurants: (restaurants: Restaurant[]) => void;
   updateRestaurant: (restaurant: Restaurant) => void;
+  clearCompareIds: () => void;
+  clearTransientResultsState: () => void;
   resetForNewChat: () => void;
 };
 
@@ -224,6 +226,16 @@ export function useBooking(): BookingValue {
     [setState],
   );
 
+  const clearCompareIds = useCallback(
+    () => setState((s) => ({ ...s, compareIds: [] })),
+    [setState],
+  );
+
+  const clearTransientResultsState = useCallback(
+    () => setState((s) => ({ ...s, compareIds: [], restaurants: [] })),
+    [setState],
+  );
+
   const resetForNewChat = useCallback(
     () =>
       setState((s) => ({
@@ -265,6 +277,8 @@ export function useBooking(): BookingValue {
       setRestaurants,
       appendRestaurants,
       updateRestaurant,
+      clearCompareIds,
+      clearTransientResultsState,
       resetForNewChat,
     }),
     [
@@ -288,6 +302,8 @@ export function useBooking(): BookingValue {
       setRestaurants,
       appendRestaurants,
       updateRestaurant,
+      clearCompareIds,
+      clearTransientResultsState,
       resetForNewChat,
     ],
   );

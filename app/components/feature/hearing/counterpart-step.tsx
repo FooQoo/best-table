@@ -1,10 +1,10 @@
 import { SelectTile } from "~/components/ui/select-tile";
 import { Input } from "~/components/ui/input";
-import { useBooking } from "~/state/booking-context";
+import { useBookingQuery } from "~/state/booking-query-state";
 import { COUNTERPARTS } from "~/mocks/data";
 
 export function CounterpartStep() {
-  const { state, setCounterpart, setCounterpartOtherText } = useBooking();
+  const query = useBookingQuery();
 
   return (
     <div>
@@ -21,23 +21,23 @@ export function CounterpartStep() {
             label={c.label}
             desc={c.desc}
             round
-            selected={state.counterpart === c.id}
-            onClick={() => setCounterpart(c.id)}
+            selected={query.counterpart === c.id}
+            onClick={() => query.setCounterpart(c.id)}
           />
         ))}
         <SelectTile
           label="その他"
           desc="自由に入力する"
           round
-          selected={state.counterpart === "other"}
-          onClick={() => setCounterpart("other")}
+          selected={query.counterpart === "other"}
+          onClick={() => query.setCounterpart("other")}
         />
-        {state.counterpart === "other" && (
+        {query.counterpart === "other" && (
           <Input
             type="text"
             placeholder="自由にご記入ください"
-            value={state.counterpartOtherText}
-            onChange={(e) => setCounterpartOtherText(e.target.value)}
+            value={query.counterpartOtherText}
+            onChange={(e) => query.setCounterpartOtherText(e.target.value)}
             className="w-full h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px]"
           />
         )}

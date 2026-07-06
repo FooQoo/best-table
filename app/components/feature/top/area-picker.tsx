@@ -5,10 +5,10 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { AREA_REGIONS, GOLD, type Prefecture } from "~/mocks/data";
-import { useBooking } from "~/state/booking-context";
+import { useBookingQuery } from "~/state/booking-query-state";
 
 export function AreaPicker() {
-  const { state, toggleCity, removeArea } = useBooking();
+  const query = useBookingQuery();
   const [open, setOpen] = useState(false);
   const [level, setLevel] = useState<0 | 1>(0);
   const [activePrefecture, setActivePrefecture] = useState<Prefecture | null>(
@@ -31,8 +31,8 @@ export function AreaPicker() {
           className="flex-[2] min-w-[260px] box-border flex items-center flex-wrap gap-2 px-3 py-2 border-[1.5px] border-[#d8d2c0] rounded-md bg-white cursor-pointer text-[15px] text-[#20201c] min-h-6 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] focus-visible:border-[#c8a24a]"
         >
           <span style={{ color: GOLD }}>📍</span>
-          {state.selectedAreas.length > 0 ? (
-            state.selectedAreas.map((city) => (
+          {query.selectedAreas.length > 0 ? (
+            query.selectedAreas.map((city) => (
               <span
                 key={city}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#fdf6e3] border border-[#e6d3a0] text-[13px]"
@@ -43,7 +43,7 @@ export function AreaPicker() {
                   tabIndex={-1}
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeArea(city);
+                    query.removeArea(city);
                   }}
                   className="text-[#8a6a1a] cursor-pointer"
                 >
@@ -106,12 +106,12 @@ export function AreaPicker() {
               </div>
               <div className="flex flex-col">
                 {activePrefecture?.cities.map((city) => {
-                  const checked = state.selectedAreas.includes(city);
+                  const checked = query.selectedAreas.includes(city);
                   return (
                     <button
                       key={city}
                       type="button"
-                      onClick={() => toggleCity(city)}
+                      onClick={() => query.toggleCity(city)}
                       className="flex items-center gap-3 px-1.5 py-3.5 border-none border-b border-[#f0ece0] bg-transparent cursor-pointer text-[15px] text-[#20201c] text-left hover:bg-[#fdf9ef] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
                     >
                       <span

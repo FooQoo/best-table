@@ -5,8 +5,8 @@
 
 ## 現在地
 
-- **現行サイクル**: `docs/plans/mvp-cycle-4/`
-- **着手中の UoW**: なし（mvp-cycle-4 は UoW 分解なしで一括実装・完了）
+- **現行サイクル**: `docs/plans/mvp-cycle-5/`
+- **着手中の UoW**: なし（mvp-cycle-5 は完了）
 - **次のアクション**: 次サイクルを開始する場合は `docs/plans/` 配下に新しいサイクル計画を作成する。
 
 ## ステータス一覧
@@ -37,6 +37,9 @@
 | mvp-cycle-3 | UoW-3 | 次のおすすめ質問 | 完了 | 3-3 | [docs/plans/mvp-cycle-3/uow-3-plan.md](plans/mvp-cycle-3/uow-3-plan.md) | `results-chat-suggestions.ts` で回答後4件のおすすめ質問を deterministic に生成。相手種別・重視条件・直前質問を反映し、空席確定・予約成立へ誘導しない文言をテストで固定 |
 | mvp-cycle-3 | UoW-4 | 単一店舗詳細ページ・質問 API の廃止 | 完了 | 4-3 | [docs/plans/mvp-cycle-3/uow-4-plan.md](plans/mvp-cycle-3/uow-4-plan.md) | `/stores/:storeId`、`/api/stores/:storeId/ask`、`StoreDetailScreen`、`StoreAskPanel`、単一店舗 Q&A 専用 client/service を削除。詳細は `/results` 内パネル、AI 相談は地図チャットへ集約 |
 | mvp-cycle-4 | - | 比較のサイドパネル化・最終候補選択の廃止 | 完了 | - | [docs/plans/mvp-cycle-4/PLANS.md](plans/mvp-cycle-4/PLANS.md) | 単一マイルストーンの小規模 UI 変更のため UoW 分解せず一括実装。`/compare` ルートと `CompareScreen`・`CompareTable`・`EmptyCompareState`・`FinalStorePanel`・`finalStoreId`／`selectFinalStore`・`buildFinalStoreMessage`・`buildGoogleMapsUrl` を削除し、`/results` 内 `ComparePanel`（地図エリアを隙間なく上書き、比較トレイの「比較する」ボタンをトグル化）に統合。将来ロードマップの「予約導線受け渡し」も docs から撤回。`pnpm test` / `pnpm run typecheck` / `pnpm build` 確認済み |
+| mvp-cycle-5 | UoW-1 | URL query state のモデル化 | 完了 | 1-2 | [docs/plans/mvp-cycle-5/uow-1-plan.md](plans/mvp-cycle-5/uow-1-plan.md) | `nuqs` を導入し、`booking-query-state.ts` に parser / serializer / normalize / condition 変換を実装。URL 更新は React Router の `useSearchParams` を使用。不正 query 値、固定語彙、上限、初期値復元をテストで固定 |
+| mvp-cycle-5 | UoW-2 | トップ・ヒアリングの query 同期 | 完了 | 2-3 | [docs/plans/mvp-cycle-5/uow-2-plan.md](plans/mvp-cycle-5/uow-2-plan.md) | `/` と `/hearing` の入力を `useBookingQuery()` に接続し、遷移時に query を維持。hook テストで URL 更新・復元を確認 |
+| mvp-cycle-5 | UoW-3 | 検索結果の query 復元と再検索 | 完了 | 3-3 | [docs/plans/mvp-cycle-5/uow-3-plan.md](plans/mvp-cycle-5/uow-3-plan.md) | `/results` の検索条件・サマリー・AIチャット summary を query 由来に変更。検索条件 key 変更時に取得済み店舗・比較候補をクリアして再検索し、「条件を変更」は query を維持して戻る |
 
 ## 更新履歴
 
@@ -54,3 +57,6 @@
 | 2026-07-06 | 検索結果地図を移動した後、地図上部中央に「このエリアを検索」ボタンを表示するように変更。押下時は既存の構造化条件を維持しつつ地図中心座標を優先して `/api/restaurants/search/stream` で再検索する。`pnpm test` / `pnpm run typecheck` / `pnpm build` 確認済み。 |
 | 2026-07-07 | 「このエリアを検索」は既存店舗の置き換えではなく追加検索に変更。表示済み店舗は残し、追加結果は `placeId` 優先、`placeId` がない場合は店名・住所で重複除外して末尾へ追加する。追加検索時は既存店舗キーを `/api/restaurants/search/stream` に渡し、Gemini の AI 評価対象も新規追加候補だけに限定する。 |
 | 2026-07-07 | 地図のマッチ度凡例で非表示にした tier は、地図ピンを隠すだけでなく店舗一覧カードもグレー表示にするよう変更。店舗カード自体は一覧に残し、詳細表示・比較操作は維持する。 |
+| 2026-07-07 | 新サイクル `mvp-cycle-5`（`nuqs` による検索・会食条件の URL query state 化）を計画。`docs/plans/mvp-cycle-5/PLANS.md` と `UNIT_OF_WORK.md` を作成し、UoW-1〜3 を「計画済み」として追加。トップ・ヒアリング・検索結果で指定した条件は URL query から復元し、比較候補・取得済み店舗などは画面内一時状態として扱う方針を `docs/DESIGN.md`・`docs/MODEL.md`・`docs/ARCHITECTURE.md`・`docs/RELIABILITY.md`・`docs/SECURITY.md` に反映。 |
+| 2026-07-07 | mvp-cycle-5 UoW-1〜3 の実装計画書（`uow-1-plan.md` / `uow-2-plan.md` / `uow-3-plan.md`）を作成。実装には入らず、各 UoW の現状分析、変更ファイル、Bolt 順序、リスク、完了条件を整理。 |
+| 2026-07-07 | mvp-cycle-5 UoW-1〜3 を実装完了。`nuqs` の parser / serializer と React Router `useSearchParams` により、トップ・ヒアリング・検索結果の検索・会食条件を URL query state から復元するよう変更。比較候補・取得済み店舗は画面内一時状態のまま維持し、query 条件変更時はクリアして再検索する。`pnpm test` / `pnpm run typecheck` / `pnpm build` と主要ルート（`/`, `/hearing?...`, `/results?...`）の HTTP 200 を確認済み。 |

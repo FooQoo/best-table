@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
+import {
+  getSearchConditionKey,
+  toRestaurantSearchCondition,
+  toResultsChatBookingSummary,
+  useBookingQuery,
+} from "~/state/booking-query-state";
 import { getPriorityLabel } from "~/domain/services/booking-summary-format";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
-import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
 import { ComparePanel } from "~/components/feature/results/compare-panel";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
@@ -88,15 +93,18 @@ function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
 
 export function ResultsScreen() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     state,
     toggleCompare,
-    resetForNewChat,
+    clearCompareIds,
+    clearTransientResultsState,
     setRestaurants,
     appendRestaurants,
     updateRestaurant,
   } = useBooking();
-  const hasSubmittedRef = useRef(false);
+  const query = useBookingQuery();
+  const submittedSearchKeyRef = useRef<string | null>(null);
   const hasReceivedInitialMapCenterRef = useRef(false);
   const committedMapCenterRef = useRef<MapSearchCenter | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -149,57 +157,10 @@ export function ResultsScreen() {
     );
   }, []);
 
-  const buildCondition = useCallback(
-    (searchCenter: MapSearchCenter | null): RestaurantSearchQueryCondition => ({
-      selectedAreas: state.selectedAreas,
-      searchLatLng: searchCenter
-        ? { latitude: searchCenter.lat, longitude: searchCenter.lng }
-        : null,
-      date: state.date,
-      time: state.time,
-      people: state.people,
-      budgetMin: state.budgetMin,
-      budgetMax: state.budgetMax,
-      budgetOtherOn: state.budgetOtherOn,
-      budgetOtherText: state.budgetOtherText,
-      priorities: state.priorities,
-      priorityOtherOn: state.priorityOtherOn,
-      priorityOtherText: state.priorityOtherText,
-      counterpart: state.counterpart,
-      counterpartOtherText: state.counterpartOtherText,
-    }),
-    [
-      state.selectedAreas,
-      state.date,
-      state.time,
-      state.people,
-      state.budgetMin,
-      state.budgetMax,
-      state.budgetOtherOn,
-      state.budgetOtherText,
-      state.priorities,
-      state.priorityOtherOn,
-      state.priorityOtherText,
-      state.counterpart,
-      state.counterpartOtherText,
-    ],
-  );
+  const searchConditionKey = getSearchConditionKey(query);
 
-  const chatBookingSummary: ResultsChatBookingSummary = {
-    selectedAreas: state.selectedAreas,
-    date: state.date,
-    time: state.time,
-    people: state.people,
-    budgetMin: state.budgetMin,
-    budgetMax: state.budgetMax,
-    budgetOtherOn: state.budgetOtherOn,
-    budgetOtherText: state.budgetOtherText,
-    priorities: state.priorities,
-    priorityOtherOn: state.priorityOtherOn,
-    priorityOtherText: state.priorityOtherText,
-    counterpart: state.counterpart,
-    counterpartOtherText: state.counterpartOtherText,
-  };
+  const chatBookingSummary: ResultsChatBookingSummary =
+    toResultsChatBookingSummary(query);
 
   // 施設検索（Places API）が返した順のまま表示する。AI評価（マッチ度）は非同期に
   // 後から届くため、評価到着ごとに並べ替えるとカードが飛び跳ねてしまう。
@@ -237,7 +198,12 @@ export function ResultsScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            ...buildCondition(searchCenter),
+            ...toRestaurantSearchCondition(
+              query,
+              searchCenter
+                ? { latitude: searchCenter.lat, longitude: searchCenter.lng }
+                : null,
+            ),
             limit: PAGE_SIZE,
             offset,
             existingRestaurantKeys: options.excludeExistingRestaurants
@@ -325,7 +291,7 @@ export function ResultsScreen() {
     [
       activeSearchCenter,
       appendRestaurants,
-      buildCondition,
+      query,
       restaurants,
       setRestaurants,
       updateRestaurant,
@@ -333,17 +299,24 @@ export function ResultsScreen() {
   );
 
   useEffect(() => {
-    if (hasSubmittedRef.current) return;
-    hasSubmittedRef.current = true;
+    if (submittedSearchKeyRef.current === searchConditionKey) return;
+    submittedSearchKeyRef.current = searchConditionKey;
+    clearTransientResultsState();
+    setActiveSearchCenter(null);
+    setLatestMapCenter(null);
+    setShowSearchThisArea(false);
+    setHiddenTiers(new Set());
+    hasReceivedInitialMapCenterRef.current = false;
+    committedMapCenterRef.current = null;
     submitSearch("initial", 0);
-    // 検索条件は /hearing 経由でのみ変わり、この画面滞在中は変わらないため初回のみ実行する。
+    // 検索条件は URL query state を正とし、正規化済み condition key が変わったときだけ再検索する。
     // StrictMode の開発時二重実行では mount→cleanup→mountが同一インスタンスに対して起こり、
-    // ここで abort すると2回目の mount は hasSubmittedRef により再実行されず、
+    // ここで abort すると2回目の mount は key 記録により再実行されず、
     // 検索が永久に完了しなくなる（実際にAbortErrorで検索が止まる不具合を確認済み）。
     // submitSearch 自身が次回呼び出し時に前回のコントローラーを abort するため、
     // ここでの明示的な cleanup abort は行わない。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchConditionKey]);
 
   const loadMore = useCallback(() => {
     if (!canRequestMoreResults({ isLoadingMore, hasMore, nextOffset })) return;
@@ -393,19 +366,19 @@ export function ResultsScreen() {
 
   const recapKeyword = activeSearchCenter
     ? "地図の表示エリア"
-    : state.selectedAreas.length
-      ? state.selectedAreas.join("・")
+    : query.selectedAreas.length
+      ? query.selectedAreas.join("・")
       : "エリア未指定";
-  const recapDateTime = `${state.date} ${state.time}`;
+  const recapDateTime = `${query.date} ${query.time}`;
   const recapBudget =
-    state.budgetMin !== "指定なし" || state.budgetMax !== "指定なし"
-      ? `${state.budgetMin} 〜 ${state.budgetMax}`
-      : state.budgetOtherOn && state.budgetOtherText.trim()
-        ? state.budgetOtherText
+    query.budgetMin !== "指定なし" || query.budgetMax !== "指定なし"
+      ? `${query.budgetMin} 〜 ${query.budgetMax}`
+      : query.budgetOtherOn && query.budgetOtherText.trim()
+        ? query.budgetOtherText
         : "指定なし";
-  const recapPriorities = state.priorities.length
-    ? state.priorities.map((k) => getPriorityLabel(k)).join("・")
-    : state.counterpart
+  const recapPriorities = query.priorities.length
+    ? query.priorities.map((k) => getPriorityLabel(k)).join("・")
+    : query.counterpart
       ? "指定なし"
       : "未ヒアリング";
 
@@ -421,8 +394,8 @@ export function ResultsScreen() {
   );
 
   const changeConditions = () => {
-    resetForNewChat();
-    navigate("/");
+    clearCompareIds();
+    navigate({ pathname: "/", search: location.search });
   };
 
   return (
@@ -430,7 +403,7 @@ export function ResultsScreen() {
       <ResultsSummaryBar
         recapKeyword={recapKeyword}
         recapDateTime={recapDateTime}
-        people={state.people}
+        people={query.people}
         recapBudget={recapBudget}
         recapPriorities={recapPriorities}
         onChangeConditions={changeConditions}

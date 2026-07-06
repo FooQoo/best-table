@@ -1,13 +1,14 @@
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { AreaPicker } from "~/components/feature/top/area-picker";
 import { Input } from "~/components/ui/input";
 import { QuantityStepper } from "~/components/ui/quantity-stepper";
-import { useBooking } from "~/state/booking-context";
+import { useBookingQuery } from "~/state/booking-query-state";
 import { GOLD } from "~/mocks/data";
 
 export function TopScreen() {
   const navigate = useNavigate();
-  const { state, setDate, setTime, incPeople, decPeople } = useBooking();
+  const location = useLocation();
+  const query = useBookingQuery();
 
   return (
     <div>
@@ -19,29 +20,31 @@ export function TopScreen() {
 
           <Input
             type="date"
-            value={state.date}
-            onChange={(e) => setDate(e.target.value)}
+            value={query.date}
+            onChange={(e) => query.setDate(e.target.value)}
             className="flex-none w-auto h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px]"
           />
           <Input
             type="time"
-            value={state.time}
-            onChange={(e) => setTime(e.target.value)}
+            value={query.time}
+            onChange={(e) => query.setTime(e.target.value)}
             className="flex-none w-auto h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px]"
           />
 
           <QuantityStepper
-            value={state.people}
+            value={query.people}
             labelSuffix="名"
-            onIncrement={incPeople}
-            onDecrement={decPeople}
+            onIncrement={query.incPeople}
+            onDecrement={query.decPeople}
           />
         </div>
 
         <div className="border-t border-[#eee6d6] mt-6 pt-5 flex justify-end">
           <button
             type="button"
-            onClick={() => navigate("/hearing")}
+            onClick={() =>
+              navigate({ pathname: "/hearing", search: location.search })
+            }
             className="flex-none px-[30px] py-[15px] border-none rounded-md shadow-[0_1px_3px_rgba(20,20,20,.2)] font-bold text-[15px] text-[#20201c] cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.65)]"
             style={{ background: GOLD }}
           >
