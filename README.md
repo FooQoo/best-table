@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.png" height="72" alt="Best Table logo">
+  <img src="public/logo.png" height="140" alt="Best Table logo">
 
   <h1>Best Table</h1>
 
