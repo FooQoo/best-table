@@ -1,6 +1,5 @@
 import type { Restaurant } from "~/domain/models/restaurant";
 import { resolveAreaLatLng } from "~/constants/area-coordinates";
-import { buildRestaurantSearchCacheKey } from "~/domain/services/restaurant-cache-policy";
 import {
   searchRestaurantCandidates,
   type GroundingCandidate,
@@ -16,14 +15,6 @@ import {
   type PlaceDetailsResult,
 } from "~/server/clients/google-places";
 import {
-  getCachedRestaurants,
-  setCachedRestaurants,
-} from "~/server/repositories/restaurant-cache";
-import {
-  getCachedCandidates,
-  setCachedCandidates,
-} from "~/server/repositories/restaurant-candidate-cache";
-import {
   buildGroundingPrompt,
   summarizeRestaurantSearchCondition,
   type RestaurantSearchQueryCondition,
@@ -31,7 +22,7 @@ import {
 import { summarizeError } from "~/server/utils/summarize-error";
 
 // docs/ARCHITECTURE.md「検索・評価型」のユースケース単位のオーケストレーション。
-// キャッシュ確認 → グラウンディング → 構造化評価の順に直列実行し、結果をまとめて返す。
+// グラウンディング → 構造化評価の順に直列実行し、結果をまとめて返す。
 export type RestaurantSearchResult = {
   restaurants: Restaurant[];
   fromCache: boolean;
@@ -59,13 +50,6 @@ export type RestaurantSearchDeps = {
   evaluateCandidates: typeof evaluateRestaurantCandidates;
   streamEvaluations: typeof streamRestaurantEvaluations;
   resolvePlaceDetails: typeof fetchPlaceDetails;
-  getCached: typeof getCachedRestaurants;
-  setCached: typeof setCachedRestaurants;
-  // 候補一覧（グラウンディング結果）専用のキャッシュ。limit/offset を含まないキーで
-  // 保存し、「もっと読み込む」の度にグラウンディングを再実行しないようにする
-  // （Gemini の応答は非決定的で、ページごとに再実行すると候補の重複・欠落が起きるため）。
-  getCachedCandidates?: typeof getCachedCandidates;
-  setCachedCandidates?: typeof setCachedCandidates;
   logger?: Pick<Console, "info" | "warn" | "error">;
 };
 
@@ -74,21 +58,27 @@ const defaultDeps: RestaurantSearchDeps = {
   evaluateCandidates: evaluateRestaurantCandidates,
   streamEvaluations: streamRestaurantEvaluations,
   resolvePlaceDetails: fetchPlaceDetails,
-  getCached: getCachedRestaurants,
-  setCached: setCachedRestaurants,
-  getCachedCandidates,
-  setCachedCandidates,
   logger: console,
 };
 
-// 候補一覧キャッシュのキーは limit/offset を含めない（同一検索条件ならページを跨いで
-// 使い回すため）。評価済み結果キャッシュ（cacheKey）とは別物。
-function buildCandidateCacheKey(condition: RestaurantSearchQueryCondition): string {
-  return buildRestaurantSearchCacheKey(condition);
+// 店舗 id のフォールバック生成にのみ使う条件キー（キャッシュキーではない）。
+// 選択順序に意味を持たせないよう、配列項目はソートしてから結合する。
+function buildSearchConditionKey(condition: RestaurantSearchQueryCondition): string {
+  const areas = [...condition.selectedAreas].sort().join(",");
+  const priorities = [...condition.priorities].sort().join(",");
+  return [
+    areas,
+    condition.date,
+    condition.time,
+    String(condition.people),
+    condition.budgetMin,
+    condition.budgetMax,
+    priorities,
+    condition.counterpart ?? "none",
+  ].join("|");
 }
 
-// 候補一覧をキャッシュ優先で取得する。両関数（searchRestaurants / streamRestaurants）で
-// 共通のグラウンディング取得ロジック。
+// グラウンディング呼び出し。両関数（searchRestaurants / streamRestaurants）で共通。
 async function resolveGroundingCandidates(input: {
   condition: RestaurantSearchQueryCondition;
   latLng: { latitude: number; longitude: number };
@@ -99,16 +89,6 @@ async function resolveGroundingCandidates(input: {
 }): Promise<GroundingCandidate[]> {
   const { condition, latLng, deps, logId, startedAt, logPrefix } = input;
   const logger = deps.logger;
-  const candidateCacheKey = buildCandidateCacheKey(condition);
-
-  const cachedCandidates = deps.getCachedCandidates?.(candidateCacheKey);
-  if (cachedCandidates) {
-    logger?.info(`[${logPrefix}] candidate-cache-hit`, {
-      logId,
-      count: cachedCandidates.length,
-    });
-    return cachedCandidates;
-  }
 
   const candidates = await deps.searchCandidates({
     prompt: buildGroundingPrompt(condition),
@@ -120,9 +100,6 @@ async function resolveGroundingCandidates(input: {
     sampleNames: candidates.slice(0, 5).map((candidate) => candidate.name),
     elapsedMs: elapsedMs(startedAt),
   });
-  if (candidates.length > 0) {
-    deps.setCachedCandidates?.(candidateCacheKey, candidates);
-  }
   return candidates;
 }
 
@@ -130,10 +107,10 @@ async function resolveGroundingCandidates(input: {
 // 衝突するため、URL や画面状態で扱いやすい形へ変換する。
 export function buildRestaurantId(
   placeId: string | null,
-  cacheKey: string,
+  searchKey: string,
   index: number,
 ): string {
-  if (!placeId) return `${cacheKey}-${index}`;
+  if (!placeId) return `${searchKey}-${index}`;
   return placeId.replace(/\//g, "_");
 }
 
@@ -190,15 +167,15 @@ function buildRestaurant(input: {
   evaluation: RestaurantEvaluationResult | null;
   detail: PlaceDetailsResult | null;
   condition: RestaurantSearchQueryCondition;
-  cacheKey: string;
+  searchKey: string;
   absoluteIndex: number;
   generatedAt: string;
 }): Restaurant {
-  const { candidate, evaluation, detail, condition, cacheKey, absoluteIndex } = input;
+  const { candidate, evaluation, detail, condition, searchKey, absoluteIndex } = input;
   return {
     // placeId は "places/ChIJ..." のように "/" を含むことがあるため、
     // URL や画面状態で扱いやすい形に変換する。
-    id: buildRestaurantId(candidate.placeId, cacheKey, absoluteIndex),
+    id: buildRestaurantId(candidate.placeId, searchKey, absoluteIndex),
     placeId: candidate.placeId,
     name: candidate.name,
     genre: evaluation?.genre ?? null,
@@ -232,37 +209,13 @@ export async function searchRestaurants(
   const logger = deps.logger;
   const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
   const offset = Math.max(0, pagination.offset ?? 0);
-  const cacheKey = `${buildRestaurantSearchCacheKey(condition)}|limit=${limit}|offset=${offset}`;
+  const searchKey = `${buildSearchConditionKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search] start", {
     logId,
     condition: summarizeRestaurantSearchCondition(condition),
     limit,
     offset,
   });
-
-  const cached = deps.getCached(cacheKey);
-  if (cached) {
-    // 総候補数が分かればそこから正確な hasMore を出せる。候補キャッシュが無い
-    // （TTL切れ等）場合のみ、ページがちょうど埋まっていたら次があると仮定する
-    // 従来のヒューリスティックにフォールバックする。
-    const cachedCandidates = deps.getCachedCandidates?.(
-      buildCandidateCacheKey(condition),
-    );
-    const hasMore = cachedCandidates
-      ? offset + cached.length < cachedCandidates.length
-      : cached.length === limit;
-    logger?.info("[restaurant-search] cache-hit", {
-      logId,
-      count: cached.length,
-      elapsedMs: elapsedMs(startedAt),
-    });
-    return {
-      restaurants: cached,
-      fromCache: true,
-      hasMore,
-      nextOffset: hasMore ? offset + cached.length : null,
-    };
-  }
 
   const latLng = resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
@@ -360,28 +313,12 @@ export async function searchRestaurants(
       evaluation,
       detail,
       condition,
-      cacheKey,
+      searchKey,
       absoluteIndex,
       generatedAt,
     });
   });
 
-  // 候補名がAI評価結果と一致せず evaluation: null のまま残った候補が1件でもあれば、
-  // スコア無しの不完全な結果を鮮度切れまで固定してしまわないようキャッシュしない
-  // （streamRestaurants と同様の理由）。
-  const hasUnevaluatedRestaurant = pageCandidates.some(
-    (candidate) => !evaluationByName.has(candidate.name),
-  );
-  if (!hasUnevaluatedRestaurant) {
-    deps.setCached(cacheKey, restaurants);
-  } else {
-    logger?.warn("[restaurant-search] skip-cache-incomplete-evaluation", {
-      logId,
-      unevaluatedCount: pageCandidates.filter(
-        (candidate) => !evaluationByName.has(candidate.name),
-      ).length,
-    });
-  }
   const hasMore = offset + restaurants.length < candidates.length;
   logger?.info("[restaurant-search] complete", {
     logId,
@@ -410,33 +347,13 @@ export async function* streamRestaurants(
   const logger = deps.logger;
   const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
   const offset = Math.max(0, pagination.offset ?? 0);
-  const cacheKey = `${buildRestaurantSearchCacheKey(condition)}|limit=${limit}|offset=${offset}`;
+  const searchKey = `${buildSearchConditionKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search-stream] start", {
     logId,
     condition: summarizeRestaurantSearchCondition(condition),
     limit,
     offset,
   });
-
-  const cached = deps.getCached(cacheKey);
-  if (cached) {
-    const cachedCandidates = deps.getCachedCandidates?.(
-      buildCandidateCacheKey(condition),
-    );
-    const hasMore = cachedCandidates
-      ? offset + cached.length < cachedCandidates.length
-      : cached.length === limit;
-    for (const restaurant of cached) {
-      yield { type: "restaurant", restaurant };
-    }
-    yield {
-      type: "done",
-      fromCache: true,
-      hasMore,
-      nextOffset: hasMore ? offset + cached.length : null,
-    };
-    return;
-  }
 
   yield { type: "phase", phase: "grounding" };
 
@@ -486,7 +403,6 @@ export async function* streamRestaurants(
     ]),
   );
 
-  let evaluationStreamFailed = false;
   try {
     for await (const evaluation of deps.streamEvaluations({
       prompt: buildEvaluationPrompt(condition, pageCandidates),
@@ -511,7 +427,7 @@ export async function* streamRestaurants(
         evaluation,
         detail,
         condition,
-        cacheKey,
+        searchKey,
         absoluteIndex: offset + candidateIndex,
         generatedAt,
       });
@@ -520,7 +436,6 @@ export async function* streamRestaurants(
       yield { type: "restaurant", restaurant };
     }
   } catch (error) {
-    evaluationStreamFailed = true;
     logger?.error("[restaurant-search-stream] evaluation-stream-failed", {
       logId,
       error: summarizeError(error),
@@ -536,7 +451,7 @@ export async function* streamRestaurants(
       evaluation: null,
       detail,
       condition,
-      cacheKey,
+      searchKey,
       absoluteIndex: offset + index,
       generatedAt,
     });
@@ -544,23 +459,6 @@ export async function* streamRestaurants(
     yield { type: "restaurant", restaurant };
   }
 
-  // 評価ストリームが失敗した、または一部候補が未評価（evaluation: null）のまま残った場合、
-  // スコア無しの不完全な結果を RESTAURANT_CACHE_TTL_MS の間再検索させないようにするため
-  // キャッシュに保存しない（一時的な評価失敗を鮮度切れまで固定してしまうバグの回避）。
-  const hasUnevaluatedRestaurant = pageCandidates.some(
-    (candidate) => !yielded.has(candidate.name),
-  );
-  if (!evaluationStreamFailed && !hasUnevaluatedRestaurant) {
-    deps.setCached(cacheKey, restaurants);
-  } else {
-    logger?.warn("[restaurant-search-stream] skip-cache-incomplete-evaluation", {
-      logId,
-      evaluationStreamFailed,
-      unevaluatedCount: pageCandidates.filter(
-        (candidate) => !yielded.has(candidate.name),
-      ).length,
-    });
-  }
   const hasMore = offset + restaurants.length < candidates.length;
   logger?.info("[restaurant-search-stream] complete", {
     logId,

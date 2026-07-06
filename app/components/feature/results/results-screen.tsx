@@ -308,6 +308,8 @@ export function ResultsScreen() {
   const sortedStores = [...restaurants].sort(
     (a, b) => (b.score ?? -1) - (a.score ?? -1),
   );
+  const hasVisibleStores = sortedStores.length > 0;
+  const shouldShowInitialSkeleton = isInitialSearching && !hasVisibleStores;
   const selectedStore =
     sortedStores.find((store) => store.id === selectedStoreId) ?? null;
   const compareCount = state.compareIds.length;
@@ -337,12 +339,12 @@ export function ResultsScreen() {
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {isInitialSearching ? (
+        {shouldShowInitialSkeleton ? (
           <>
             <StoreListSkeleton />
             <ResultsMap stores={[]} bookingSummary={chatBookingSummary} />
           </>
-        ) : searchError ? (
+        ) : searchError && !hasVisibleStores ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>{searchError}</div>
             <button
@@ -353,7 +355,7 @@ export function ResultsScreen() {
               条件を変更する
             </button>
           </div>
-	        ) : hasSearched && sortedStores.length === 0 ? (
+	        ) : hasSearched && !isInitialSearching && sortedStores.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>条件に合う店舗が見つかりませんでした。</div>
             <button
@@ -378,7 +380,9 @@ export function ResultsScreen() {
               scrollTarget={scrollTarget}
               footer={
                 <>
-                  {isLoadingMore && <StoreListSkeletonItems count={3} />}
+                  {(isInitialSearching || isLoadingMore) && (
+                    <StoreListSkeletonItems count={3} />
+                  )}
                   {loadMoreError && (
                     <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
                       <div>{loadMoreError}</div>
