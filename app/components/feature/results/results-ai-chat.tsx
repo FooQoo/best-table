@@ -420,7 +420,7 @@ function SuggestionsSkeleton() {
           key={index}
           className="flex items-center rounded-md border border-[#e4ded0] bg-[#f7f4ee] px-3 py-2"
         >
-          <div className="h-3 w-full max-w-56 animate-pulse rounded bg-[#e4ded0]" />
+          <div className="h-3 w-[88%] animate-pulse rounded bg-[#e4ded0]" />
         </div>
       ))}
     </div>
