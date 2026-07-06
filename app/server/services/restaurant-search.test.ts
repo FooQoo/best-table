@@ -395,7 +395,9 @@ describe("searchRestaurants", () => {
       events.push(event);
     }
 
-    expect(events[0]).toMatchObject({
+    expect(events[0]).toEqual({ type: "phase", phase: "grounding" });
+    expect(events[1]).toEqual({ type: "phase", phase: "evaluating" });
+    expect(events[2]).toMatchObject({
       type: "restaurant",
       restaurant: {
         name: "逐次返却の店",
@@ -409,5 +411,46 @@ describe("searchRestaurants", () => {
       hasMore: false,
       nextOffset: null,
     });
+  });
+
+  it("emits no phase events when the result comes from cache", async () => {
+    const deps = buildDeps();
+    deps.setCached(
+      "銀座|2026-07-15|19:00|4|指定なし|指定なし|room|exec|limit=10|offset=0",
+      [],
+    );
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    expect(events.filter((event) => event.type === "phase")).toHaveLength(0);
+  });
+
+  it("emits the grounding phase but not the evaluating phase when the area cannot be resolved", async () => {
+    const events = [];
+    for await (const event of streamRestaurants(unknownAreaCondition, {}, buildDeps())) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
+      { type: "phase", phase: "grounding" },
+      { type: "done", fromCache: false, hasMore: false, nextOffset: null },
+    ]);
+  });
+
+  it("emits the grounding phase but not the evaluating phase when there are no candidates", async () => {
+    const deps = buildDeps({ searchCandidates: vi.fn(async () => []) });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    expect(events).toEqual([
+      { type: "phase", phase: "grounding" },
+      { type: "done", fromCache: false, hasMore: false, nextOffset: null },
+    ]);
   });
 });

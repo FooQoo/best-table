@@ -1,3 +1,6 @@
+import { SearchPhaseStatus } from "~/components/feature/results/search-phase-status";
+import type { SearchPhase } from "~/utils/search-phase-message";
+
 type ResultsSummaryBarProps = {
   recapKeyword: string;
   recapDateTime: string;
@@ -5,6 +8,8 @@ type ResultsSummaryBarProps = {
   recapBudget: string;
   recapPriorities: string;
   onChangeConditions: () => void;
+  searchPhase?: SearchPhase | null;
+  phaseRestaurantCount?: number;
 };
 
 export function ResultsSummaryBar({
@@ -14,12 +19,22 @@ export function ResultsSummaryBar({
   recapBudget,
   recapPriorities,
   onChangeConditions,
+  searchPhase,
+  phaseRestaurantCount = 0,
 }: ResultsSummaryBarProps) {
   return (
     <div className="px-8 py-4 bg-white border-b-[1.5px] border-[#e4ded0] flex flex-col gap-2">
       <div className="flex justify-between items-center">
-        <div className="text-sm text-[#20201c]">
-          <b>{recapKeyword}</b>・{recapDateTime}・{people}名・ご予算：{recapBudget}・重視：{recapPriorities}
+        <div className="flex items-center gap-3 min-w-0 text-sm text-[#20201c]">
+          <span className="whitespace-nowrap">
+            <b>{recapKeyword}</b>・{recapDateTime}・{people}名・ご予算：{recapBudget}・重視：{recapPriorities}
+          </span>
+          {searchPhase && (
+            <SearchPhaseStatus
+              phase={searchPhase}
+              restaurantCount={phaseRestaurantCount}
+            />
+          )}
         </div>
         <button
           type="button"

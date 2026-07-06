@@ -19,6 +19,7 @@ import {
   StoreListSkeleton,
   StoreListSkeletonItems,
 } from "~/components/feature/results/store-list-skeleton";
+import type { SearchPhase } from "~/utils/search-phase-message";
 
 const PAGE_SIZE = 10;
 
@@ -32,6 +33,7 @@ type SearchResponse = {
 type FetchMode = "initial" | "more";
 
 type SearchStreamEvent =
+  | { type: "phase"; phase: Exclude<SearchPhase, "condition"> }
   | { type: "restaurant"; restaurant: Restaurant }
   | {
       type: "done";
@@ -70,6 +72,9 @@ export function toggleSelectedStoreId(
 function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
   if (typeof value !== "object" || value === null) return false;
   const event = value as Record<string, unknown>;
+  if (event.type === "phase") {
+    return event.phase === "grounding" || event.phase === "evaluating";
+  }
   if (event.type === "restaurant") return typeof event.restaurant === "object";
   if (event.type === "error") return typeof event.message === "string";
   return (
@@ -106,6 +111,8 @@ export function ResultsScreen() {
     null,
   );
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [searchPhase, setSearchPhase] = useState<SearchPhase | null>(null);
+  const [phaseRestaurantCount, setPhaseRestaurantCount] = useState(0);
 
   const handleMarkerClick = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -184,6 +191,8 @@ export function ResultsScreen() {
         setIsLoadingMore(true);
       }
       setLoadMoreError(null);
+      setSearchPhase("condition");
+      setPhaseRestaurantCount(0);
 
       try {
         const response = await fetch("/api/restaurants/search/stream", {
@@ -214,9 +223,13 @@ export function ResultsScreen() {
             const parsed = JSON.parse(trimmed) as unknown;
             if (!isSearchStreamEvent(parsed)) continue;
 
+            if (parsed.type === "phase") {
+              setSearchPhase(parsed.phase);
+            }
             if (parsed.type === "restaurant") {
               appendRestaurants([parsed.restaurant]);
               setHasSearched(true);
+              setPhaseRestaurantCount((count) => count + 1);
             }
             if (parsed.type === "error") {
               if (mode === "initial") {
@@ -250,6 +263,7 @@ export function ResultsScreen() {
         } else {
           setIsLoadingMore(false);
         }
+        setSearchPhase(null);
       }
     },
     [appendRestaurants, buildCondition, setRestaurants],
@@ -329,6 +343,10 @@ export function ResultsScreen() {
         recapBudget={recapBudget}
         recapPriorities={recapPriorities}
         onChangeConditions={changeConditions}
+        searchPhase={
+          isInitialSearching || isLoadingMore ? searchPhase : null
+        }
+        phaseRestaurantCount={phaseRestaurantCount}
       />
 
       <div className="flex-1 flex overflow-hidden min-h-0">

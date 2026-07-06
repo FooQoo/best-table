@@ -39,6 +39,7 @@ export type RestaurantSearchPagination = {
 };
 
 export type RestaurantSearchStreamEvent =
+  | { type: "phase"; phase: "grounding" | "evaluating" }
   | { type: "restaurant"; restaurant: Restaurant }
   | {
       type: "done";
@@ -382,6 +383,8 @@ export async function* streamRestaurants(
     return;
   }
 
+  yield { type: "phase", phase: "grounding" };
+
   const latLng = resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
     logger?.warn("[restaurant-search-stream] area-not-resolved", {
@@ -408,6 +411,8 @@ export async function* streamRestaurants(
     yield { type: "done", fromCache: false, hasMore: false, nextOffset: null };
     return;
   }
+
+  yield { type: "phase", phase: "evaluating" };
 
   const pageCandidates = candidates.slice(offset, offset + limit);
   const generatedAt = new Date().toISOString();
