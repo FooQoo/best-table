@@ -1,14 +1,25 @@
 import { useLocation, useNavigate } from "react-router";
+import { useEffect } from "react";
 import { AreaPicker } from "~/components/feature/top/area-picker";
 import { Input } from "~/components/ui/input";
 import { QuantityStepper } from "~/components/ui/quantity-stepper";
-import { useBookingQuery } from "~/state/booking-query-state";
+import {
+  useBookingQuery,
+  DEFAULT_BOOKING_QUERY,
+} from "~/state/booking-query-state";
 import { GOLD } from "~/mocks/data";
 
 export function TopScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const query = useBookingQuery();
+
+  useEffect(() => {
+    // URLに何も指定がない場合、初期値をURLに明示的に書き込む（上書き）
+    if (location.search === "" || location.search === "?") {
+      query.setQueryState(DEFAULT_BOOKING_QUERY);
+    }
+  }, []);
 
   return (
     <div>

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
-import { initialBookingState } from "./booking-context";
 import {
   BOOKING_QUERY_TEXT_MAX_LENGTH,
+  DEFAULT_BOOKING_QUERY,
   bookingQuerySerializer,
   getSearchConditionKey,
   normalizeBookingQuery,
@@ -16,21 +16,9 @@ import {
 
 describe("booking query state", () => {
   it("空 query は検索・会食条件の初期値へ復元する", () => {
-    expect(parseBookingQueryFromSearchParams(new URLSearchParams())).toEqual({
-      selectedAreas: initialBookingState.selectedAreas,
-      date: initialBookingState.date,
-      time: initialBookingState.time,
-      people: initialBookingState.people,
-      counterpart: initialBookingState.counterpart,
-      counterpartOtherText: initialBookingState.counterpartOtherText,
-      budgetMin: initialBookingState.budgetMin,
-      budgetMax: initialBookingState.budgetMax,
-      budgetOtherOn: initialBookingState.budgetOtherOn,
-      budgetOtherText: initialBookingState.budgetOtherText,
-      priorities: initialBookingState.priorities,
-      priorityOtherOn: initialBookingState.priorityOtherOn,
-      priorityOtherText: initialBookingState.priorityOtherText,
-    });
+    expect(parseBookingQueryFromSearchParams(new URLSearchParams())).toEqual(
+      DEFAULT_BOOKING_QUERY,
+    );
   });
 
   it("配列・number・boolean を query から復元する", () => {
@@ -69,7 +57,7 @@ describe("booking query state", () => {
       people: 1,
       counterpart: null,
       counterpartOtherText: "重要な相手",
-      budgetMin: initialBookingState.budgetMin,
+      budgetMin: DEFAULT_BOOKING_QUERY.budgetMin,
       budgetMax: "¥30,000",
       priorities: ["calm", "room", "prestige"],
       priorityOtherText: "静かな席",
@@ -80,7 +68,7 @@ describe("booking query state", () => {
     const longText = ` ${"あ".repeat(BOOKING_QUERY_TEXT_MAX_LENGTH + 10)} `;
 
     const normalized = normalizeBookingQuery({
-      ...initialBookingState,
+      ...DEFAULT_BOOKING_QUERY,
       counterpartOtherText: longText,
       budgetOtherText: longText,
       priorityOtherText: longText,
@@ -99,7 +87,7 @@ describe("booking query state", () => {
 
   it("検索 API 条件と AI チャット summary を同じ query state から作る", () => {
     const query = normalizeBookingQuery({
-      ...initialBookingState,
+      ...DEFAULT_BOOKING_QUERY,
       selectedAreas: ["六本木"],
       people: 3,
       counterpart: "exec",
@@ -148,7 +136,7 @@ describe("booking query state", () => {
 
   it("検索条件 key は同じ条件なら安定し条件変更で変わる", () => {
     const base = normalizeBookingQuery({
-      ...initialBookingState,
+      ...DEFAULT_BOOKING_QUERY,
       selectedAreas: ["銀座", "六本木"],
       priorities: ["calm", "room"],
     });
@@ -171,7 +159,9 @@ describe("booking query state", () => {
     await act(async () => {
       await result.current.toggleCity("六本木");
     });
-    await waitFor(() => expect(result.current.selectedAreas).toContain("六本木"));
+    await waitFor(() =>
+      expect(result.current.selectedAreas).toContain("六本木"),
+    );
     await act(async () => {
       await result.current.setDate("2026-07-20");
     });
@@ -188,7 +178,7 @@ describe("booking query state", () => {
       expect(result.current.selectedAreas).toContain("六本木");
       expect(result.current.date).toBe("2026-07-20");
       expect(result.current.time).toBe("20:00");
-      expect(result.current.people).toBe(initialBookingState.people + 1);
+      expect(result.current.people).toBe(DEFAULT_BOOKING_QUERY.people + 1);
     });
     expect(result.current.people).toBe(5);
   });
@@ -198,7 +188,7 @@ describe("booking query state", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <MemoryRouter
           initialEntries={[
-            "/hearing?counterpart=exec&budgetMin=%C2%A510%2C000&priorities=room,service",
+            "/?counterpart=exec&budgetMin=%C2%A510%2C000&priorities=room,service",
           ]}
         >
           {children}
@@ -206,9 +196,11 @@ describe("booking query state", () => {
       ),
     });
 
-    expect(result.current.counterpart).toBe("exec");
-    expect(result.current.budgetMin).toBe("¥10,000");
-    expect(result.current.priorities).toEqual(["room", "service"]);
+    await waitFor(() => {
+      expect(result.current.counterpart).toBe("exec");
+      expect(result.current.budgetMin).toBe("¥10,000");
+      expect(result.current.priorities).toEqual(["room", "service"]);
+    });
 
     await act(async () => {
       await result.current.setCounterpart("boss");

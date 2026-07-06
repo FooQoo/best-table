@@ -16,9 +16,24 @@ import {
   COUNTERPARTS,
   PRIORITIES,
 } from "~/mocks/data";
-import { initialBookingState } from "./booking-context";
 
 export const BOOKING_QUERY_TEXT_MAX_LENGTH = 120;
+
+export const DEFAULT_BOOKING_QUERY: BookingQueryState = {
+  selectedAreas: ["銀座"],
+  date: "2026-07-15",
+  time: "19:00",
+  people: 4,
+  counterpart: null,
+  counterpartOtherText: "",
+  budgetMin: "指定なし",
+  budgetMax: "指定なし",
+  budgetOtherOn: false,
+  budgetOtherText: "",
+  priorities: [],
+  priorityOtherOn: false,
+  priorityOtherText: "",
+};
 
 export type BookingQueryState = {
   selectedAreas: string[];
@@ -77,24 +92,26 @@ const booleanParser = createParser({
 });
 
 export const bookingQueryParsers = {
-  selectedAreas: arrayParser.withDefault(initialBookingState.selectedAreas),
-  date: parseAsString.withDefault(initialBookingState.date),
-  time: parseAsString.withDefault(initialBookingState.time),
-  people: parseAsInteger.withDefault(initialBookingState.people),
+  selectedAreas: arrayParser,
+  date: parseAsString,
+  time: parseAsString,
+  people: parseAsInteger,
   counterpart: parseAsString,
   counterpartOtherText: parseAsString.withDefault(
-    initialBookingState.counterpartOtherText,
+    DEFAULT_BOOKING_QUERY.counterpartOtherText,
   ),
-  budgetMin: parseAsString.withDefault(initialBookingState.budgetMin),
-  budgetMax: parseAsString.withDefault(initialBookingState.budgetMax),
-  budgetOtherOn: booleanParser.withDefault(initialBookingState.budgetOtherOn),
-  budgetOtherText: parseAsString.withDefault(initialBookingState.budgetOtherText),
-  priorities: arrayParser.withDefault(initialBookingState.priorities),
+  budgetMin: parseAsString.withDefault(DEFAULT_BOOKING_QUERY.budgetMin),
+  budgetMax: parseAsString.withDefault(DEFAULT_BOOKING_QUERY.budgetMax),
+  budgetOtherOn: booleanParser.withDefault(DEFAULT_BOOKING_QUERY.budgetOtherOn),
+  budgetOtherText: parseAsString.withDefault(
+    DEFAULT_BOOKING_QUERY.budgetOtherText,
+  ),
+  priorities: arrayParser.withDefault(DEFAULT_BOOKING_QUERY.priorities),
   priorityOtherOn: booleanParser.withDefault(
-    initialBookingState.priorityOtherOn,
+    DEFAULT_BOOKING_QUERY.priorityOtherOn,
   ),
   priorityOtherText: parseAsString.withDefault(
-    initialBookingState.priorityOtherText,
+    DEFAULT_BOOKING_QUERY.priorityOtherText,
   ),
 };
 
@@ -130,10 +147,9 @@ export function parseBookingQueryFromSearchParams(
   searchParams: URLSearchParams,
 ): BookingQueryState {
   const raw: RawBookingQueryState = {
-    selectedAreas:
-      bookingQueryParsers.selectedAreas.parseServerSide(
-        searchParams.get(bookingQueryUrlKeys.selectedAreas) ?? undefined,
-      ),
+    selectedAreas: bookingQueryParsers.selectedAreas.parseServerSide(
+      searchParams.get(bookingQueryUrlKeys.selectedAreas) ?? undefined,
+    ),
     date: bookingQueryParsers.date.parseServerSide(
       searchParams.get(bookingQueryUrlKeys.date) ?? undefined,
     ),
@@ -182,48 +198,49 @@ export function normalizeBookingQuery(
   const selectedAreas = normalizeUniqueStrings(
     value.selectedAreas,
     VALID_AREAS,
-    initialBookingState.selectedAreas,
+    DEFAULT_BOOKING_QUERY.selectedAreas,
   );
   const priorities = normalizeUniqueStrings(
     value.priorities,
     VALID_PRIORITIES,
-    initialBookingState.priorities,
+    DEFAULT_BOOKING_QUERY.priorities,
   ).slice(0, MAX_PRIORITY_COUNT);
   const counterpart =
-    typeof value.counterpart === "string" && VALID_COUNTERPARTS.has(value.counterpart)
+    typeof value.counterpart === "string" &&
+    VALID_COUNTERPARTS.has(value.counterpart)
       ? value.counterpart
       : null;
 
   return {
     selectedAreas,
-    date: normalizeText(value.date, initialBookingState.date),
-    time: normalizeText(value.time, initialBookingState.time),
+    date: normalizeText(value.date, DEFAULT_BOOKING_QUERY.date),
+    time: normalizeText(value.time, DEFAULT_BOOKING_QUERY.time),
     people: normalizePeople(value.people),
     counterpart,
     counterpartOtherText: normalizeText(
       value.counterpartOtherText,
-      initialBookingState.counterpartOtherText,
+      DEFAULT_BOOKING_QUERY.counterpartOtherText,
     ),
     budgetMin: normalizeSetValue(
       value.budgetMin,
       VALID_BUDGETS,
-      initialBookingState.budgetMin,
+      DEFAULT_BOOKING_QUERY.budgetMin,
     ),
     budgetMax: normalizeSetValue(
       value.budgetMax,
       VALID_BUDGETS,
-      initialBookingState.budgetMax,
+      DEFAULT_BOOKING_QUERY.budgetMax,
     ),
     budgetOtherOn: value.budgetOtherOn === true,
     budgetOtherText: normalizeText(
       value.budgetOtherText,
-      initialBookingState.budgetOtherText,
+      DEFAULT_BOOKING_QUERY.budgetOtherText,
     ),
     priorities,
     priorityOtherOn: value.priorityOtherOn === true,
     priorityOtherText: normalizeText(
       value.priorityOtherText,
-      initialBookingState.priorityOtherText,
+      DEFAULT_BOOKING_QUERY.priorityOtherText,
     ),
   };
 }
@@ -233,7 +250,8 @@ export function useBookingQuery(): BookingQueryState & BookingQuerySetters {
   const state = parseBookingQueryFromSearchParams(searchParams);
 
   const setQueryState = (next: Partial<BookingQueryState>) => {
-    const normalized = normalizeBookingQuery({ ...state, ...next });
+    const nextState = { ...state, ...next };
+    const normalized = normalizeBookingQuery(nextState);
     const nextParams = serializeBookingQueryToSearchParams(normalized);
     setSearchParams(nextParams, { replace: true });
     return Promise.resolve(nextParams);
@@ -364,7 +382,7 @@ function normalizeSetValue(
 
 function normalizePeople(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return initialBookingState.people;
+    return DEFAULT_BOOKING_QUERY.people;
   }
   return Math.max(1, Math.floor(value));
 }

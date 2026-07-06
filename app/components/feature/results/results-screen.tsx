@@ -69,7 +69,9 @@ export function hasMapCenterMoved(
 ): boolean {
   const latMeters = (next.lat - previous.lat) * 111_000;
   const lngMeters =
-    (next.lng - previous.lng) * 111_000 * Math.cos((previous.lat * Math.PI) / 180);
+    (next.lng - previous.lng) *
+    111_000 *
+    Math.cos((previous.lat * Math.PI) / 180);
   return Math.hypot(latMeters, lngMeters) >= 80;
 }
 
@@ -118,15 +120,13 @@ export function ResultsScreen() {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
-  const [scrollTarget, setScrollTarget] = useState<StoreListScrollTarget | null>(
-    null,
-  );
+  const [scrollTarget, setScrollTarget] =
+    useState<StoreListScrollTarget | null>(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [searchPhase, setSearchPhase] = useState<SearchPhase | null>(null);
   const [phaseRestaurantCount, setPhaseRestaurantCount] = useState(0);
-  const [latestMapCenter, setLatestMapCenter] = useState<MapSearchCenter | null>(
-    null,
-  );
+  const [latestMapCenter, setLatestMapCenter] =
+    useState<MapSearchCenter | null>(null);
   const [activeSearchCenter, setActiveSearchCenter] =
     useState<MapSearchCenter | null>(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
@@ -268,10 +268,13 @@ export function ResultsScreen() {
           }
         }
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
         if (mode === "initial") {
           setRestaurants([]);
-          setSearchError("レストラン検索に失敗しました。条件を変えて再検索してください。");
+          setSearchError(
+            "レストラン検索に失敗しました。条件を変えて再検索してください。",
+          );
           setHasSearched(true);
         } else {
           setLoadMoreError("追加の店舗を取得できませんでした。");
@@ -384,7 +387,8 @@ export function ResultsScreen() {
 
   const hasVisibleStores = restaurants.length > 0;
   const shouldShowStoreSkeleton = searchPhase === "searching";
-  const shouldShowInitialSkeleton = shouldShowStoreSkeleton && !hasVisibleStores;
+  const shouldShowInitialSkeleton =
+    shouldShowStoreSkeleton && !hasVisibleStores;
   const selectedStore =
     restaurants.find((store) => store.id === selectedStoreId) ?? null;
   const compareCount = state.compareIds.length;
@@ -407,9 +411,7 @@ export function ResultsScreen() {
         recapBudget={recapBudget}
         recapPriorities={recapPriorities}
         onChangeConditions={changeConditions}
-        searchPhase={
-          isInitialSearching || isLoadingMore ? searchPhase : null
-        }
+        searchPhase={isInitialSearching || isLoadingMore ? searchPhase : null}
         phaseRestaurantCount={phaseRestaurantCount}
       />
 
@@ -435,7 +437,7 @@ export function ResultsScreen() {
               条件を変更する
             </button>
           </div>
-	        ) : hasSearched && !isInitialSearching && restaurants.length === 0 ? (
+        ) : hasSearched && !isInitialSearching && restaurants.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>条件に合う店舗が見つかりませんでした。</div>
             <button
@@ -452,7 +454,7 @@ export function ResultsScreen() {
               stores={restaurants}
               compareIds={state.compareIds}
               onToggleCompare={toggleCompare}
-              counterpartId={state.counterpart}
+              counterpartId={query.counterpart}
               activeStoreId={activeStoreId}
               selectedStoreId={selectedStoreId}
               onActivateStore={setActiveStoreId}
@@ -476,7 +478,10 @@ export function ResultsScreen() {
                       </button>
                     </div>
                   )}
-                  <div ref={loadMoreRef} data-testid="results-load-more-sentinel" />
+                  <div
+                    ref={loadMoreRef}
+                    data-testid="results-load-more-sentinel"
+                  />
                 </>
               }
             />
@@ -502,7 +507,7 @@ export function ResultsScreen() {
               {(canCompare || isCompareOpen) && (
                 <ComparePanel
                   stores={compareStores}
-                  counterpartId={state.counterpart}
+                  counterpartId={query.counterpart}
                   isOpen={isCompareOpen}
                 />
               )}
