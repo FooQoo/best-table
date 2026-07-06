@@ -31,6 +31,7 @@ export function buildResultsChatPrompt(input: ResultsChatPromptInput): string {
   lines.push("- 空席、予約成立、予約可否、在庫、未取得の口コミ本文、未取得のメニュー本文を断定しない。");
   lines.push("- 不明な事実は不明と明示し、予約前に確認すべき事項として表現する。");
   lines.push("- 回答は比較、懸念、次アクションが分かる形にし、長くしすぎない。");
+  lines.push("- 回答は最大6行。前置きは省き、必要なら箇条書きにする。");
   lines.push("- 店舗名は表示中店舗の名称をそのまま使う。");
   lines.push("");
   lines.push("ヒアリング条件:");

@@ -1,5 +1,9 @@
 import { google } from "@ai-sdk/google";
 import { generateText, type LanguageModel } from "ai";
+import {
+  DEFAULT_GEMINI_MODEL_ID,
+  GEMINI_GROUNDING_SETTINGS,
+} from "./gemini-models";
 
 // docs/ARCHITECTURE.md「検索・評価型 a. グラウンディング呼び出し」の薄いラッパー。
 // 自前で Google Maps Places API を呼ぶ tool は実装せず、Gemini の Google マップ
@@ -10,6 +14,8 @@ export type GroundingCandidate = {
   placeId: string | null;
   mapsUri: string | null;
   address: string | null;
+  phone: string | null;
+  mapsText: string | null;
 };
 
 export type GroundingSearchInput = {
@@ -17,8 +23,6 @@ export type GroundingSearchInput = {
   latLng: { latitude: number; longitude: number };
   model?: LanguageModel;
 };
-
-const DEFAULT_MODEL_ID = "gemini-2.5-flash";
 
 type GoogleGroundingMetadata = {
   groundingMetadata?: {
@@ -29,9 +33,10 @@ type GoogleGroundingMetadata = {
 export async function searchRestaurantCandidates(
   input: GroundingSearchInput,
 ): Promise<GroundingCandidate[]> {
-  const model = input.model ?? google(DEFAULT_MODEL_ID);
+  const model = input.model ?? google(DEFAULT_GEMINI_MODEL_ID);
   const { text, providerMetadata } = await generateText({
     model,
+    ...GEMINI_GROUNDING_SETTINGS,
     tools: { google_maps: google.tools.googleMaps({}) },
     providerOptions: {
       google: { retrievalConfig: { latLng: input.latLng } },
@@ -45,6 +50,12 @@ export async function searchRestaurantCandidates(
   const withoutAddress = chunks
     .map((chunk) => extractMapsChunk(chunk))
     .filter((c): c is Omit<GroundingCandidate, "address"> => c !== null);
+  console.info("[gemini-grounding] response", {
+    rawChunkCount: chunks.length,
+    extractedCandidateCount: withoutAddress.length,
+    textLength: text.length,
+    sampleNames: withoutAddress.slice(0, 5).map((candidate) => candidate.name),
+  });
 
   return withoutAddress.map((candidate) => ({
     ...candidate,
@@ -64,7 +75,16 @@ function extractMapsChunk(
     name: m.title,
     placeId: typeof m.placeId === "string" ? m.placeId : null,
     mapsUri: typeof m.uri === "string" ? m.uri : null,
+    phone: typeof m.text === "string" ? extractPhoneFromMapsText(m.text) : null,
+    mapsText: typeof m.text === "string" ? m.text : null,
   };
+}
+
+const PHONE_PATTERN = /^\* \*\*Phone:\*\* (.+)$/m;
+
+export function extractPhoneFromMapsText(text: string): string | null {
+  const match = text.match(PHONE_PATTERN);
+  return match?.[1]?.trim() || null;
 }
 
 // グラウンディングメタデータ自体には住所が含まれないため、応答本文の店舗名近傍から

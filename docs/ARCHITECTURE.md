@@ -139,7 +139,7 @@ app/
 
 AI 処理はすべてサーバー側で完結させ、ブラウザに API キーやプロンプト構築ロジックを渡さない。上記の Client/Server 境界に従い、以下に責務を分ける。
 
-- `app/server/clients/`: 外部サービスとの低レベル接続。AI SDK の呼び出しそのものを薄いラッパーとして置く（`gemini-grounding.ts`: `generateText` + Google マップによるグラウンディング、`gemini-evaluation.ts`: `generateObject` による構造化評価、`gemini-results-chat.ts`: `streamText` による地図コンテキスト相談）。Google Places の写真関連 REST 呼び出しは、詳細は「店舗写真の取得」のとおり現状不要と判明したため実装していない。プロバイダー設定・モデル ID・API キー参照はここに閉じ込める。
+- `app/server/clients/`: 外部サービスとの低レベル接続。AI SDK の呼び出しそのものを薄いラッパーとして置く（`gemini-grounding.ts`: `generateText` + Google マップによるグラウンディング、`gemini-evaluation.ts`: `generateObject` による構造化評価、`gemini-results-chat.ts`: `streamText` による地図コンテキスト相談）。Google Places の写真関連 REST 呼び出しは、詳細は「店舗写真の取得」のとおり現状不要と判明したため実装していない。プロバイダー設定・モデル ID・API キー参照はここに閉じ込める。デフォルトの Gemini モデル ID と生成設定は `gemini-models.ts` に集約し、現行は `gemini-3-flash-preview` を使う。
 - `app/server/services/`: ユースケース単位の処理（検索・評価、質問応答など）。プロンプトの組み立てや、グラウンディングの入力（緯度経度など）の用意はここで行い、`clients` の関数を呼ぶ。
 - `app/server/repositories/`: 完成済みの `Restaurant` データ、AI 評価キャッシュ、検索候補キャッシュの取得・保存。外部 API は呼ばず、保存・取得だけを担当する。
 

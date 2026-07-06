@@ -23,12 +23,14 @@ describe("evaluateRestaurantCandidates", () => {
     const model = mockModelReturning([
       {
         candidateName: "桂",
+        displayNameJa: null,
         genre: "japanese",
         score: 90,
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",
         service: "◎",
+        access: "銀座駅周辺",
         budgetLabel: "¥20,000",
         concerns: [],
         matchingSummary: "接待に適した候補です。",
@@ -42,12 +44,14 @@ describe("evaluateRestaurantCandidates", () => {
     expect(result).toEqual([
       {
         candidateName: "桂",
+        displayNameJa: null,
         genre: "japanese",
         score: 90,
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",
         service: "◎",
+        access: "銀座駅周辺",
         budgetLabel: "¥20,000",
         concerns: [],
         matchingSummary: "接待に適した候補です。",

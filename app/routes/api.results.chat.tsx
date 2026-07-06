@@ -36,7 +36,10 @@ export async function action({ request }: ActionFunctionArgs) {
   const prompt = buildResultsChatPrompt(validation.value);
 
   try {
-    const result = streamResultsChatAnswer({ prompt });
+    const result = streamResultsChatAnswer({
+      prompt,
+      abortSignal: request.signal,
+    });
     return result.toTextStreamResponse({
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Restaurant } from "~/domain/models/restaurant";
-import { searchRestaurants, type RestaurantSearchDeps } from "./restaurant-search";
+import {
+  searchRestaurants,
+  streamRestaurants,
+  type RestaurantSearchDeps,
+} from "./restaurant-search";
 
 const condition = {
   selectedAreas: ["銀座"],
@@ -25,6 +29,7 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
   return {
     searchCandidates: vi.fn(async () => []),
     evaluateCandidates: vi.fn(async () => []),
+    streamEvaluations: vi.fn(async function* () {}),
     resolvePlaceDetails: vi.fn(async () => null),
     getCached: (key) => cache.get(key) ?? null,
     setCached: (key, restaurants) => {
@@ -62,17 +67,26 @@ describe("searchRestaurants", () => {
   it("merges grounding candidates with their evaluation by matching candidate name", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
-        { name: "桂", placeId: "places/abc", mapsUri: "https://maps.google.com/?cid=1", address: "東京都中央区銀座5-5-11" },
+        {
+          name: "桂",
+          placeId: "places/abc",
+          mapsUri: "https://maps.google.com/?cid=1",
+          address: "東京都中央区銀座5-5-11",
+          phone: "03-1234-5678",
+          mapsText: "* **Nearby Landmarks & Areas:**\n* Near Ginza Station",
+        },
       ]),
       evaluateCandidates: vi.fn(async () => [
         {
           candidateName: "桂",
+          displayNameJa: null,
           genre: "japanese" as const,
           score: 90,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
           service: "◎" as const,
+          access: "銀座駅周辺",
           budgetLabel: "¥20,000",
           concerns: [],
           matchingSummary: "接待に適した候補です。",
@@ -95,6 +109,8 @@ describe("searchRestaurants", () => {
       photoUrl: null,
       score: 90,
       room: "個室あり",
+      phone: "03-1234-5678",
+      access: "銀座駅周辺",
       matchingSummary: "接待に適した候補です。",
     });
     expect(result.restaurants[0].generatedAt).not.toBeNull();
@@ -103,7 +119,14 @@ describe("searchRestaurants", () => {
   it("builds an id without '/' from a placeId, so it is safe to use in URL state", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
-        { name: "桂", placeId: "places/ChIJabc123", mapsUri: null, address: null },
+        {
+          name: "桂",
+          placeId: "places/ChIJabc123",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
       ]),
     });
 
@@ -115,7 +138,14 @@ describe("searchRestaurants", () => {
   it("keeps a candidate with null AI fields when no matching evaluation is returned, instead of dropping it", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
-        { name: "評価未取得の店", placeId: "places/xyz", mapsUri: null, address: null },
+        {
+          name: "評価未取得の店",
+          placeId: "places/xyz",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
       ]),
       evaluateCandidates: vi.fn(async () => []),
     });
@@ -128,6 +158,47 @@ describe("searchRestaurants", () => {
       score: null,
       matchingSummary: null,
       concerns: [],
+    });
+  });
+
+  it("uses displayNameJa for UI while keeping candidateName for evaluation matching", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "Dominique Bouchet Tokyo",
+          placeId: "places/dbt",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
+      ]),
+      evaluateCandidates: vi.fn(async () => [
+        {
+          candidateName: "Dominique Bouchet Tokyo",
+          displayNameJa: "ドミニク・ブシェ トーキョー",
+          genre: "western" as const,
+          score: 95,
+          room: "個室あり" as const,
+          quiet: "◎" as const,
+          prestige: "◎" as const,
+          service: "◎" as const,
+          access: "銀座駅周辺",
+          budgetLabel: "¥30,000",
+          concerns: [],
+          matchingSummary: "接待向きの候補です。",
+          evidence: ["description" as const],
+          confidence: "medium" as const,
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants[0]).toMatchObject({
+      placeId: "places/dbt",
+      name: "ドミニク・ブシェ トーキョー",
+      score: 95,
     });
   });
 
@@ -179,6 +250,8 @@ describe("searchRestaurants", () => {
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
       address: null,
+      phone: null,
+      mapsText: null,
     }));
     const resolvePlaceDetails = vi.fn(async (placeId: string | null) => {
       if (placeId === "places/place-1") {
@@ -221,6 +294,8 @@ describe("searchRestaurants", () => {
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
       address: null,
+      phone: null,
+      mapsText: null,
     }));
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => candidates),
@@ -236,6 +311,32 @@ describe("searchRestaurants", () => {
     expect(result.nextOffset).toBeNull();
   });
 
+  it("evaluates only the requested candidate page to keep structured output small", async () => {
+    const candidates = Array.from({ length: 12 }, (_, index) => ({
+      name: `候補${index + 1}`,
+      placeId: `places/place-${index + 1}`,
+      mapsUri: null,
+      address: null,
+      phone: null,
+      mapsText: null,
+    }));
+    const evaluateCandidates: RestaurantSearchDeps["evaluateCandidates"] = vi.fn(
+      async () => [],
+    );
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => candidates),
+      evaluateCandidates,
+    });
+
+    await searchRestaurants(condition, { limit: 10, offset: 10 }, deps);
+
+    expect(evaluateCandidates).toHaveBeenCalledTimes(1);
+    const prompt = vi.mocked(evaluateCandidates).mock.calls[0][0].prompt;
+    expect(prompt).toContain("1. 候補11");
+    expect(prompt).toContain("2. 候補12");
+    expect(prompt).not.toContain("候補10");
+  });
+
   it("keeps the grounding address when Place Details cannot resolve a candidate", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
@@ -244,6 +345,8 @@ describe("searchRestaurants", () => {
           placeId: "places/address-only",
           mapsUri: null,
           address: "東京都中央区銀座2-2-2",
+          phone: null,
+          mapsText: null,
         },
       ]),
       resolvePlaceDetails: vi.fn(async () => null),
@@ -255,6 +358,59 @@ describe("searchRestaurants", () => {
       address: "東京都中央区銀座2-2-2",
       location: null,
       photoUrl: null,
+    });
+  });
+
+  it("streams restaurants as evaluation elements become available", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "逐次返却の店",
+          placeId: "places/stream",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {
+        yield {
+          candidateName: "逐次返却の店",
+          displayNameJa: null,
+          genre: "japanese" as const,
+          score: 88,
+          room: "個室あり" as const,
+          quiet: "◎" as const,
+          prestige: "○" as const,
+          service: "◎" as const,
+          access: "銀座駅周辺",
+          budgetLabel: "¥20,000",
+          concerns: [],
+          matchingSummary: "接待に使いやすい候補です。",
+          evidence: ["description" as const],
+          confidence: "medium" as const,
+        };
+      }),
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    expect(events[0]).toMatchObject({
+      type: "restaurant",
+      restaurant: {
+        name: "逐次返却の店",
+        score: 88,
+        matchingSummary: "接待に使いやすい候補です。",
+      },
+    });
+    expect(events.at(-1)).toMatchObject({
+      type: "done",
+      fromCache: false,
+      hasMore: false,
+      nextOffset: null,
     });
   });
 });

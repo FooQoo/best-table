@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useFetcher, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
@@ -31,6 +31,27 @@ type SearchResponse = {
 
 type FetchMode = "initial" | "more";
 
+type SearchStreamEvent =
+  | { type: "restaurant"; restaurant: Restaurant }
+  | {
+      type: "done";
+      fromCache: boolean;
+      hasMore: boolean;
+      nextOffset: number | null;
+    }
+  | { type: "error"; message: string };
+
+export function isSearchResponse(value: unknown): value is SearchResponse {
+  if (typeof value !== "object" || value === null) return false;
+  const body = value as Record<string, unknown>;
+  return (
+    Array.isArray(body.restaurants) &&
+    typeof body.fromCache === "boolean" &&
+    typeof body.hasMore === "boolean" &&
+    (typeof body.nextOffset === "number" || body.nextOffset === null)
+  );
+}
+
 export function canRequestMoreResults(input: {
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -46,6 +67,19 @@ export function toggleSelectedStoreId(
   return currentStoreId === nextStoreId ? null : nextStoreId;
 }
 
+function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as Record<string, unknown>;
+  if (event.type === "restaurant") return typeof event.restaurant === "object";
+  if (event.type === "error") return typeof event.message === "string";
+  return (
+    event.type === "done" &&
+    typeof event.fromCache === "boolean" &&
+    typeof event.hasMore === "boolean" &&
+    (typeof event.nextOffset === "number" || event.nextOffset === null)
+  );
+}
+
 export function ResultsScreen() {
   const navigate = useNavigate();
   const {
@@ -55,12 +89,16 @@ export function ResultsScreen() {
     setRestaurants,
     appendRestaurants,
   } = useBooking();
-  const fetcher = useFetcher<SearchResponse>();
   const hasSubmittedRef = useRef(false);
   const pendingModeRef = useRef<FetchMode>("initial");
+  const abortControllerRef = useRef<AbortController | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [isInitialSearching, setIsInitialSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -132,56 +170,99 @@ export function ResultsScreen() {
   };
 
   const submitSearch = useCallback(
-    (mode: FetchMode, offset: number) => {
+    async (mode: FetchMode, offset: number) => {
       pendingModeRef.current = mode;
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      if (mode === "initial") {
+        setSearchError(null);
+        setRestaurants([]);
+        setHasSearched(false);
+        setIsInitialSearching(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       setLoadMoreError(null);
-      fetcher.submit(JSON.stringify({ ...buildCondition(), limit: PAGE_SIZE, offset }), {
-        method: "post",
-        action: "/api/restaurants/search",
-        encType: "application/json",
-      });
+
+      try {
+        const response = await fetch("/api/restaurants/search/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...buildCondition(), limit: PAGE_SIZE, offset }),
+          signal: controller.signal,
+        });
+        if (!response.ok || !response.body) {
+          throw new Error("Restaurant search stream failed.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            const parsed = JSON.parse(trimmed) as unknown;
+            if (!isSearchStreamEvent(parsed)) continue;
+
+            if (parsed.type === "restaurant") {
+              appendRestaurants([parsed.restaurant]);
+              setHasSearched(true);
+            }
+            if (parsed.type === "error") {
+              if (mode === "initial") {
+                setSearchError(parsed.message);
+              } else {
+                setLoadMoreError(parsed.message);
+              }
+            }
+            if (parsed.type === "done") {
+              setHasMore(parsed.hasMore);
+              setNextOffset(parsed.nextOffset);
+              setHasSearched(true);
+            }
+          }
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        if (mode === "initial") {
+          setRestaurants([]);
+          setSearchError("レストラン検索に失敗しました。条件を変えて再検索してください。");
+          setHasSearched(true);
+        } else {
+          setLoadMoreError("追加の店舗を取得できませんでした。");
+        }
+      } finally {
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
+        if (mode === "initial") {
+          setIsInitialSearching(false);
+        } else {
+          setIsLoadingMore(false);
+        }
+      }
     },
-    [buildCondition, fetcher],
+    [appendRestaurants, buildCondition, setRestaurants],
   );
 
   useEffect(() => {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     submitSearch("initial", 0);
+    return () => abortControllerRef.current?.abort();
     // 検索条件は /hearing 経由でのみ変わり、この画面滞在中は変わらないため初回のみ実行する。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!fetcher.data) return;
-
-    if (pendingModeRef.current === "initial") {
-      setRestaurants(fetcher.data.restaurants);
-    } else {
-      appendRestaurants(fetcher.data.restaurants);
-    }
-    setHasMore(fetcher.data.hasMore);
-    setNextOffset(fetcher.data.nextOffset);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetcher.data]);
-
-  useEffect(() => {
-    if (
-      fetcher.state === "idle" &&
-      pendingModeRef.current === "more" &&
-      fetcher.data &&
-      fetcher.data.restaurants.length === 0 &&
-      fetcher.data.hasMore
-    ) {
-      setLoadMoreError("追加の店舗を取得できませんでした。");
-    }
-  }, [fetcher.data, fetcher.state]);
-
-  const isInitialSearching =
-    pendingModeRef.current === "initial" && !fetcher.data && fetcher.state !== "idle";
-  const isLoadingMore =
-    pendingModeRef.current === "more" && fetcher.state !== "idle";
-  const hasSearched = Boolean(fetcher.data);
 
   const loadMore = useCallback(() => {
     if (!canRequestMoreResults({ isLoadingMore, hasMore, nextOffset })) return;
@@ -222,7 +303,8 @@ export function ResultsScreen() {
       ? "指定なし"
       : "未ヒアリング";
 
-  const sortedStores = [...state.restaurants].sort(
+  const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
+  const sortedStores = [...restaurants].sort(
     (a, b) => (b.score ?? -1) - (a.score ?? -1),
   );
   const selectedStore =
@@ -255,7 +337,18 @@ export function ResultsScreen() {
             <StoreListSkeleton />
             <ResultsMap stores={[]} bookingSummary={chatBookingSummary} />
           </>
-        ) : hasSearched && sortedStores.length === 0 ? (
+        ) : searchError ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
+            <div>{searchError}</div>
+            <button
+              type="button"
+              onClick={changeConditions}
+              className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+            >
+              条件を変更する
+            </button>
+          </div>
+	        ) : hasSearched && sortedStores.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>条件に合う店舗が見つかりませんでした。</div>
             <button

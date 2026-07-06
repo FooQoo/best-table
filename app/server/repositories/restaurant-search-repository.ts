@@ -41,19 +41,39 @@ export function loadMockRestaurants(
   let raw: string;
   try {
     raw = readFile(MOCK_RESTAURANTS_FIXTURE_PATH);
-  } catch {
+  } catch (error) {
+    console.warn("[restaurant-search-mock] fixture-read-failed", {
+      path: MOCK_RESTAURANTS_FIXTURE_PATH,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    console.warn("[restaurant-search-mock] fixture-json-invalid", {
+      path: MOCK_RESTAURANTS_FIXTURE_PATH,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter(isRestaurant);
+  if (!Array.isArray(parsed)) {
+    console.warn("[restaurant-search-mock] fixture-not-array", {
+      path: MOCK_RESTAURANTS_FIXTURE_PATH,
+    });
+    return [];
+  }
+  const restaurants = parsed.filter(isRestaurant);
+  if (restaurants.length === 0) {
+    console.warn("[restaurant-search-mock] fixture-empty", {
+      path: MOCK_RESTAURANTS_FIXTURE_PATH,
+      rawCount: parsed.length,
+    });
+  }
+  return restaurants;
 }
 
 type MockRestaurantSearchRepositoryOptions = {
@@ -79,6 +99,13 @@ export function createMockRestaurantSearchRepository(
       const all = loadRestaurants();
       const restaurants = all.slice(offset, offset + limit);
       const hasMore = offset + restaurants.length < all.length;
+      console.info("[restaurant-search-mock] complete", {
+        total: all.length,
+        returned: restaurants.length,
+        limit,
+        offset,
+        hasMore,
+      });
 
       return {
         restaurants,

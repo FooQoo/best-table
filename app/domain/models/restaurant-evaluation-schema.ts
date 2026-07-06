@@ -43,42 +43,54 @@ const genreSchema = z
       "上記のどれにも当てはまらない、または判断できない場合は other。根拠がなければ null。",
   );
 
+export const restaurantEvaluationItemSchema = z.object({
+  candidateName: z
+    .string()
+    .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
+  displayNameJa: z
+    .string()
+    .nullable()
+    .describe(
+      "UI表示用の日本語店舗名。候補名が英語・ローマ字の場合のみ、一般に確認できる日本語表記へ補正する。確信がなければ null。",
+    ),
+  genre: genreSchema,
+  score: z
+    .number()
+    .nullable()
+    .describe(
+      "0〜100の整数スコア。接待・会食適性の総合評価。根拠が乏しい場合は null。",
+    ),
+  room: z
+    .enum(["個室あり", "半個室あり", "カウンターのみ", "個室なし", "情報なし"])
+    .nullable(),
+  quiet: z.enum(["◎", "○", "△"]).nullable().describe("静かさの評価"),
+  prestige: z.enum(["◎", "○", "△"]).nullable().describe("格式感の評価"),
+  service: z.enum(["◎", "○", "△"]).nullable().describe("接客の評価"),
+  access: z
+    .string()
+    .nullable()
+    .describe(
+      "アクセス案内。住所・近隣ランドマーク・駅名など根拠がある場合のみ、30文字程度で「銀座駅周辺」「新橋駅近く」のように短く書く。根拠がなければ null。",
+    ),
+  budgetLabel: z
+    .string()
+    .nullable()
+    .describe('例: "¥20,000"。一人あたりの想定予算。根拠がなければ null。'),
+  concerns: z
+    .array(concernItemSchema)
+    .describe("懸念点。存在しなければ空配列。捏造しない。"),
+  matchingSummary: z
+    .string()
+    .nullable()
+    .describe("この会食条件にどう合うかの短い説明。断定的な保証はしない。"),
+  evidence: z
+    .array(evidenceCategorySchema)
+    .describe("評価の根拠カテゴリ。根拠がなければ空配列。"),
+  confidence: z.enum(["high", "medium", "low"]).nullable(),
+});
+
 export const restaurantEvaluationSchema = z.object({
-  evaluations: z.array(
-    z.object({
-      candidateName: z
-        .string()
-        .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
-      genre: genreSchema,
-      score: z
-        .number()
-        .nullable()
-        .describe(
-          "0〜100の整数スコア。接待・会食適性の総合評価。根拠が乏しい場合は null。",
-        ),
-      room: z
-        .enum(["個室あり", "半個室あり", "カウンターのみ", "個室なし", "情報なし"])
-        .nullable(),
-      quiet: z.enum(["◎", "○", "△"]).nullable().describe("静かさの評価"),
-      prestige: z.enum(["◎", "○", "△"]).nullable().describe("格式感の評価"),
-      service: z.enum(["◎", "○", "△"]).nullable().describe("接客の評価"),
-      budgetLabel: z
-        .string()
-        .nullable()
-        .describe('例: "¥20,000"。一人あたりの想定予算。根拠がなければ null。'),
-      concerns: z
-        .array(concernItemSchema)
-        .describe("懸念点。存在しなければ空配列。捏造しない。"),
-      matchingSummary: z
-        .string()
-        .nullable()
-        .describe("この会食条件にどう合うかの短い説明。断定的な保証はしない。"),
-      evidence: z
-        .array(evidenceCategorySchema)
-        .describe("評価の根拠カテゴリ。根拠がなければ空配列。"),
-      confidence: z.enum(["high", "medium", "low"]).nullable(),
-    }),
-  ),
+  evaluations: z.array(restaurantEvaluationItemSchema),
 });
 
 export type RestaurantEvaluationResult = z.infer<

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import {
   extractAddressFromText,
+  extractPhoneFromMapsText,
   searchRestaurantCandidates,
 } from "./gemini-grounding";
 
@@ -23,6 +24,18 @@ describe("extractAddressFromText", () => {
 
   it("returns null when no address-like pattern follows the name", () => {
     expect(extractAddressFromText("桂はとても良い店です。", "桂")).toBeNull();
+  });
+});
+
+describe("extractPhoneFromMapsText", () => {
+  it("extracts a phone number from Google Maps grounding text", () => {
+    expect(extractPhoneFromMapsText("* **Phone:** 03-1234-5678")).toBe(
+      "03-1234-5678",
+    );
+  });
+
+  it("returns null when the phone line is missing", () => {
+    expect(extractPhoneFromMapsText("* **Address:** Tokyo")).toBeNull();
   });
 });
 
@@ -51,7 +64,14 @@ describe("searchRestaurantCandidates", () => {
       google: {
         groundingMetadata: {
           groundingChunks: [
-            { maps: { uri: "https://maps.google.com/?cid=1", title: "桂", placeId: "places/abc" } },
+            {
+              maps: {
+                uri: "https://maps.google.com/?cid=1",
+                title: "桂",
+                placeId: "places/abc",
+                text: "* **Phone:** 03-1234-5678",
+              },
+            },
             {
               maps: {
                 uri: "https://maps.google.com/?cid=2",
@@ -76,12 +96,16 @@ describe("searchRestaurantCandidates", () => {
         placeId: "places/abc",
         mapsUri: "https://maps.google.com/?cid=1",
         address: "東京都中央区銀座5-5-11 塚本不動産ビル 4Fにあります",
+        phone: "03-1234-5678",
+        mapsText: "* **Phone:** 03-1234-5678",
       },
       {
         name: "本格板前居酒屋 お魚総本家 銀座店",
         placeId: "places/def",
         mapsUri: "https://maps.google.com/?cid=2",
         address: "東京都中央区銀座8-3 西土橋ビル1階・2階に位置しています",
+        phone: null,
+        mapsText: null,
       },
     ]);
   });

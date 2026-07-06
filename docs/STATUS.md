@@ -46,3 +46,4 @@
 | 2026-07-05 | mvp-cycle-3 UoW-1〜4 の実装計画書（`uow-1-plan.md` / `uow-2-plan.md` / `uow-3-plan.md` / `uow-4-plan.md`）を作成。実装には入らず、各 UoW の現状分析・変更ファイル・Bolt 順序・リスク・完了条件を整理。 |
 | 2026-07-05 | mvp-cycle-3 UoW-1〜4 を実装完了。地図内 AI チャット UI、`/api/results/chat`、回答後おすすめ質問、旧単一店舗詳細ページ・質問 API 廃止を反映し、`pnpm test` / `pnpm run typecheck` / `pnpm build` を確認。 |
 | 2026-07-06 | 新サイクル `mvp-cycle-4`（比較のサイドパネル化、最終候補選択・予約導線ロードマップの廃止）を計画・即実装。`docs/plans/mvp-cycle-4/PLANS.md` を作成し、`docs/DESIGN.md`・`docs/MODEL.md`・`docs/ARCHITECTURE.md`・`docs/RELIABILITY.md` を更新。`/compare` ルート・`CompareScreen` 系・`finalStoreId` 系状態・`FinalStorePanel` 系ユーティリティを削除し、`/results` 内 `ComparePanel` に統合。単一マイルストーンの小規模変更のため `UNIT_OF_WORK.md` は作成せず完了とした。 |
+| 2026-07-06 | Gemini 既定モデルを `gemini-3-flash-preview` に集約し、地図コンテキスト AI チャットの生成上限・中断伝播・おすすめ質問生成の短いタイムアウト/フォールバック方針を追加。`pnpm run typecheck` / `pnpm build` / 関連 Vitest を確認済み。 |
