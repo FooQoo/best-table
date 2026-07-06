@@ -65,7 +65,6 @@ describe("searchRestaurants", () => {
           name: "桂",
           placeId: "places/abc",
           mapsUri: "https://maps.google.com/?cid=1",
-          address: "東京都中央区銀座5-5-11",
           phone: "03-1234-5678",
           mapsText: "* **Nearby Landmarks & Areas:**\n* Near Ginza Station",
         },
@@ -97,7 +96,7 @@ describe("searchRestaurants", () => {
       placeId: "places/abc",
       name: "桂",
       genre: "japanese",
-      address: "東京都中央区銀座5-5-11",
+      address: null,
       location: null,
       photoUrl: null,
       score: 90,
@@ -116,7 +115,6 @@ describe("searchRestaurants", () => {
           name: "桂",
           placeId: "places/ChIJabc123",
           mapsUri: null,
-          address: null,
           phone: null,
           mapsText: null,
         },
@@ -135,7 +133,6 @@ describe("searchRestaurants", () => {
           name: "評価未取得の店",
           placeId: "places/xyz",
           mapsUri: null,
-          address: null,
           phone: null,
           mapsText: null,
         },
@@ -161,7 +158,6 @@ describe("searchRestaurants", () => {
           name: "Dominique Bouchet Tokyo",
           placeId: "places/dbt",
           mapsUri: null,
-          address: null,
           phone: null,
           mapsText: null,
         },
@@ -199,7 +195,6 @@ describe("searchRestaurants", () => {
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
-      address: null,
       phone: null,
       mapsText: null,
     }));
@@ -243,7 +238,6 @@ describe("searchRestaurants", () => {
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
-      address: null,
       phone: null,
       mapsText: null,
     }));
@@ -266,7 +260,6 @@ describe("searchRestaurants", () => {
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
-      address: null,
       phone: null,
       mapsText: null,
     }));
@@ -287,14 +280,13 @@ describe("searchRestaurants", () => {
     expect(prompt).not.toContain("候補10");
   });
 
-  it("keeps the grounding address when Place Details cannot resolve a candidate", async () => {
+  it("leaves address null when Place Details cannot resolve a candidate", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
-          name: "住所だけ分かる店",
-          placeId: "places/address-only",
+          name: "住所未解決の店",
+          placeId: "places/address-unresolved",
           mapsUri: null,
-          address: "東京都中央区銀座2-2-2",
           phone: null,
           mapsText: null,
         },
@@ -305,7 +297,7 @@ describe("searchRestaurants", () => {
     const result = await searchRestaurants(condition, {}, deps);
 
     expect(result.restaurants[0]).toMatchObject({
-      address: "東京都中央区銀座2-2-2",
+      address: null,
       location: null,
       photoUrl: null,
     });
@@ -318,7 +310,6 @@ describe("searchRestaurants", () => {
           name: "逐次返却の店",
           placeId: "places/stream",
           mapsUri: null,
-          address: null,
           phone: null,
           mapsText: null,
         },
@@ -396,7 +387,6 @@ describe("searchRestaurants", () => {
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
       mapsUri: null,
-      address: null,
       phone: null,
       mapsText: null,
     }));

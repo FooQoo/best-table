@@ -55,6 +55,9 @@ export function buildGroundingPrompt(
   lines.push(
     "店舗名は英語表記や翻訳をせず、日本語の正式名称（現地表記）でそのまま出力してください。",
   );
+  lines.push(
+    "回答は店舗名の簡潔な列挙のみでよく、住所や説明文は不要です。",
+  );
 
   return lines.join("\n");
 }

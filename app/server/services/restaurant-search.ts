@@ -121,7 +121,6 @@ function buildEvaluationPrompt(
   const names = candidates
     .map((candidate, index) => {
       const context = [
-        candidate.address ? `住所: ${candidate.address}` : null,
         candidate.phone ? `電話: ${candidate.phone}` : null,
         candidate.mapsText ? `Maps情報: ${summarizeMapsText(candidate.mapsText)}` : null,
       ]
@@ -180,7 +179,7 @@ function buildRestaurant(input: {
     name: candidate.name,
     genre: evaluation?.genre ?? null,
     area: condition.selectedAreas[0] ?? "",
-    address: detail?.address ?? candidate.address,
+    address: detail?.address ?? null,
     location: detail?.location ?? null,
     phone: candidate.phone,
     photoUrl: detail?.photoName ? buildStorePhotoProxyPath(detail.photoName) : null,

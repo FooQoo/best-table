@@ -1,31 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
 import {
-  extractAddressFromText,
   extractPhoneFromMapsText,
   searchRestaurantCandidates,
 } from "./gemini-grounding";
 
 const SAMPLE_TEXT = `銀座エリアで接待・会食に利用できる個室のある和食レストランを5件ご紹介します。
 
-1.  **桂 (Katsura)**: 評価4.7 (60件のレビュー) の日本料理店です。東京都中央区銀座5-5-11 塚本不動産ビル 4Fにあります。上品なシーフードと伝統的な料理のセットメニューを提供しています。
-2.  **本格板前居酒屋 お魚総本家 銀座店**: 評価4.6 (76件のレビュー) の居酒屋レストランです。東京都中央区銀座8-3 西土橋ビル1階・2階に位置しています。`;
-
-describe("extractAddressFromText", () => {
-  it("extracts the address near the candidate name", () => {
-    expect(extractAddressFromText(SAMPLE_TEXT, "桂")).toBe(
-      "東京都中央区銀座5-5-11 塚本不動産ビル 4Fにあります",
-    );
-  });
-
-  it("returns null when the candidate name is not found in the text", () => {
-    expect(extractAddressFromText(SAMPLE_TEXT, "存在しない店")).toBeNull();
-  });
-
-  it("returns null when no address-like pattern follows the name", () => {
-    expect(extractAddressFromText("桂はとても良い店です。", "桂")).toBeNull();
-  });
-});
+1. 桂
+2. 本格板前居酒屋 お魚総本家 銀座店`;
 
 describe("extractPhoneFromMapsText", () => {
   it("extracts a phone number from Google Maps grounding text", () => {
@@ -95,7 +78,6 @@ describe("searchRestaurantCandidates", () => {
         name: "桂",
         placeId: "places/abc",
         mapsUri: "https://maps.google.com/?cid=1",
-        address: "東京都中央区銀座5-5-11 塚本不動産ビル 4Fにあります",
         phone: "03-1234-5678",
         mapsText: "* **Phone:** 03-1234-5678",
       },
@@ -103,7 +85,6 @@ describe("searchRestaurantCandidates", () => {
         name: "本格板前居酒屋 お魚総本家 銀座店",
         placeId: "places/def",
         mapsUri: "https://maps.google.com/?cid=2",
-        address: "東京都中央区銀座8-3 西土橋ビル1階・2階に位置しています",
         phone: null,
         mapsText: null,
       },

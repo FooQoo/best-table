@@ -13,7 +13,6 @@ export type GroundingCandidate = {
   name: string;
   placeId: string | null;
   mapsUri: string | null;
-  address: string | null;
   phone: string | null;
   mapsText: string | null;
 };
@@ -47,25 +46,20 @@ export async function searchRestaurantCandidates(
   const metadata = providerMetadata?.google as GoogleGroundingMetadata | undefined;
   const chunks = metadata?.groundingMetadata?.groundingChunks ?? [];
 
-  const withoutAddress = chunks
+  const candidates = chunks
     .map((chunk) => extractMapsChunk(chunk))
-    .filter((c): c is Omit<GroundingCandidate, "address"> => c !== null);
+    .filter((c): c is GroundingCandidate => c !== null);
   console.info("[gemini-grounding] response", {
     rawChunkCount: chunks.length,
-    extractedCandidateCount: withoutAddress.length,
+    extractedCandidateCount: candidates.length,
     textLength: text.length,
-    sampleNames: withoutAddress.slice(0, 5).map((candidate) => candidate.name),
+    sampleNames: candidates.slice(0, 5).map((candidate) => candidate.name),
   });
 
-  return withoutAddress.map((candidate) => ({
-    ...candidate,
-    address: extractAddressFromText(text, candidate.name),
-  }));
+  return candidates;
 }
 
-function extractMapsChunk(
-  chunk: unknown,
-): Omit<GroundingCandidate, "address"> | null {
+function extractMapsChunk(chunk: unknown): GroundingCandidate | null {
   if (typeof chunk !== "object" || chunk === null) return null;
   const maps = (chunk as Record<string, unknown>).maps;
   if (typeof maps !== "object" || maps === null) return null;
@@ -85,24 +79,4 @@ const PHONE_PATTERN = /^\* \*\*Phone:\*\* (.+)$/m;
 export function extractPhoneFromMapsText(text: string): string | null {
   const match = text.match(PHONE_PATTERN);
   return match?.[1]?.trim() || null;
-}
-
-// グラウンディングメタデータ自体には住所が含まれないため、応答本文の店舗名近傍から
-// 住所らしき文字列をベストエフォートで抽出する（docs/ARCHITECTURE.md 155行目）。
-// 一致しない場合は捏造せず null のままにする。
-const ADDRESS_PATTERN = /(東京都|北海道|(?:京都|大阪)府|.{2,3}県)[^\n、。]{2,60}/;
-
-export function extractAddressFromText(
-  text: string,
-  candidateName: string,
-): string | null {
-  const nameIndex = text.indexOf(candidateName);
-  if (nameIndex === -1) return null;
-  const windowEnd = text.indexOf("\n\n", nameIndex);
-  const window = text.slice(
-    nameIndex,
-    windowEnd === -1 ? nameIndex + 400 : windowEnd,
-  );
-  const match = window.match(ADDRESS_PATTERN);
-  return match ? match[0].trim() : null;
 }
