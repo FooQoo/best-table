@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { Restaurant } from "~/domain/models/restaurant";
+import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
 import { getPriorityLabel } from "~/domain/services/booking-summary-format";
@@ -20,14 +20,17 @@ import {
   StoreListSkeletonItems,
 } from "~/components/feature/results/store-list-skeleton";
 import type { SearchPhase } from "~/utils/search-phase-message";
+import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 const PAGE_SIZE = 10;
 
 type FetchMode = "initial" | "more";
+type MapSearchCenter = { lat: number; lng: number };
 
 type SearchStreamEvent =
   | { type: "phase"; phase: Exclude<SearchPhase, "condition"> }
   | { type: "restaurant"; restaurant: Restaurant }
+  | { type: "restaurant-evaluated"; restaurant: Restaurant }
   | {
       type: "done";
       fromCache: boolean;
@@ -35,6 +38,10 @@ type SearchStreamEvent =
       nextOffset: number | null;
     }
   | { type: "error"; message: string };
+
+type SubmitSearchOptions = {
+  excludeExistingRestaurants?: boolean;
+};
 
 export function canRequestMoreResults(input: {
   isLoadingMore: boolean;
@@ -51,13 +58,25 @@ export function toggleSelectedStoreId(
   return currentStoreId === nextStoreId ? null : nextStoreId;
 }
 
+export function hasMapCenterMoved(
+  previous: MapSearchCenter,
+  next: MapSearchCenter,
+): boolean {
+  const latMeters = (next.lat - previous.lat) * 111_000;
+  const lngMeters =
+    (next.lng - previous.lng) * 111_000 * Math.cos((previous.lat * Math.PI) / 180);
+  return Math.hypot(latMeters, lngMeters) >= 80;
+}
+
 function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
   if (typeof value !== "object" || value === null) return false;
   const event = value as Record<string, unknown>;
   if (event.type === "phase") {
     return event.phase === "searching" || event.phase === "evaluating";
   }
-  if (event.type === "restaurant") return typeof event.restaurant === "object";
+  if (event.type === "restaurant" || event.type === "restaurant-evaluated") {
+    return typeof event.restaurant === "object";
+  }
   if (event.type === "error") return typeof event.message === "string";
   return (
     event.type === "done" &&
@@ -75,8 +94,11 @@ export function ResultsScreen() {
     resetForNewChat,
     setRestaurants,
     appendRestaurants,
+    updateRestaurant,
   } = useBooking();
   const hasSubmittedRef = useRef(false);
+  const hasReceivedInitialMapCenterRef = useRef(false);
+  const committedMapCenterRef = useRef<MapSearchCenter | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -94,6 +116,25 @@ export function ResultsScreen() {
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [searchPhase, setSearchPhase] = useState<SearchPhase | null>(null);
   const [phaseRestaurantCount, setPhaseRestaurantCount] = useState(0);
+  const [latestMapCenter, setLatestMapCenter] = useState<MapSearchCenter | null>(
+    null,
+  );
+  const [activeSearchCenter, setActiveSearchCenter] =
+    useState<MapSearchCenter | null>(null);
+  const [showSearchThisArea, setShowSearchThisArea] = useState(false);
+  const [hiddenTiers, setHiddenTiers] = useState<Set<MatchTier>>(new Set());
+
+  const toggleHiddenTier = useCallback((tier: MatchTier) => {
+    setHiddenTiers((prev) => {
+      const next = new Set(prev);
+      if (next.has(tier)) {
+        next.delete(tier);
+      } else {
+        next.add(tier);
+      }
+      return next;
+    });
+  }, []);
 
   const handleMarkerClick = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -109,8 +150,11 @@ export function ResultsScreen() {
   }, []);
 
   const buildCondition = useCallback(
-    (): RestaurantSearchQueryCondition => ({
+    (searchCenter: MapSearchCenter | null): RestaurantSearchQueryCondition => ({
       selectedAreas: state.selectedAreas,
+      searchLatLng: searchCenter
+        ? { latitude: searchCenter.lat, longitude: searchCenter.lng }
+        : null,
       date: state.date,
       time: state.time,
       people: state.people,
@@ -157,16 +201,30 @@ export function ResultsScreen() {
     counterpartOtherText: state.counterpartOtherText,
   };
 
+  // 施設検索（Places API）が返した順のまま表示する。AI評価（マッチ度）は非同期に
+  // 後から届くため、評価到着ごとに並べ替えるとカードが飛び跳ねてしまう。
+  const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
+
   const submitSearch = useCallback(
-    async (mode: FetchMode, offset: number) => {
+    async (
+      mode: FetchMode,
+      offset: number,
+      searchCenter = activeSearchCenter,
+      options: SubmitSearchOptions = {},
+    ) => {
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
       if (mode === "initial") {
         setSearchError(null);
         setRestaurants([]);
+        setHasMore(false);
+        setNextOffset(null);
         setHasSearched(false);
         setIsInitialSearching(true);
+        setActiveStoreId(null);
+        setSelectedStoreId(null);
+        setIsCompareOpen(false);
       } else {
         setIsLoadingMore(true);
       }
@@ -178,7 +236,16 @@ export function ResultsScreen() {
         const response = await fetch("/api/restaurants/search/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...buildCondition(), limit: PAGE_SIZE, offset }),
+          body: JSON.stringify({
+            ...buildCondition(searchCenter),
+            limit: PAGE_SIZE,
+            offset,
+            existingRestaurantKeys: options.excludeExistingRestaurants
+              ? restaurants.map((restaurant) =>
+                  getRestaurantDeduplicationKey(restaurant),
+                )
+              : [],
+          }),
           signal: controller.signal,
         });
         if (!response.ok || !response.body) {
@@ -215,6 +282,9 @@ export function ResultsScreen() {
             if (parsed.type === "restaurant") {
               appendRestaurants([parsed.restaurant]);
               setHasSearched(true);
+            }
+            if (parsed.type === "restaurant-evaluated") {
+              updateRestaurant(parsed.restaurant);
               setPhaseRestaurantCount((count) => count + 1);
             }
             if (parsed.type === "error") {
@@ -252,7 +322,14 @@ export function ResultsScreen() {
         setSearchPhase(null);
       }
     },
-    [appendRestaurants, buildCondition, setRestaurants],
+    [
+      activeSearchCenter,
+      appendRestaurants,
+      buildCondition,
+      restaurants,
+      setRestaurants,
+      updateRestaurant,
+    ],
   );
 
   useEffect(() => {
@@ -274,6 +351,32 @@ export function ResultsScreen() {
     submitSearch("more", nextOffset);
   }, [hasMore, isLoadingMore, nextOffset, submitSearch]);
 
+  const handleMapCenterChanged = useCallback((center: MapSearchCenter) => {
+    setLatestMapCenter(center);
+    if (!hasReceivedInitialMapCenterRef.current) {
+      hasReceivedInitialMapCenterRef.current = true;
+      committedMapCenterRef.current = center;
+      return;
+    }
+
+    const committed = committedMapCenterRef.current;
+    if (!committed) {
+      committedMapCenterRef.current = center;
+      return;
+    }
+    setShowSearchThisArea(hasMapCenterMoved(committed, center));
+  }, []);
+
+  const searchThisArea = useCallback(() => {
+    if (!latestMapCenter) return;
+    committedMapCenterRef.current = latestMapCenter;
+    setActiveSearchCenter(latestMapCenter);
+    setShowSearchThisArea(false);
+    submitSearch("more", 0, latestMapCenter, {
+      excludeExistingRestaurants: true,
+    });
+  }, [latestMapCenter, submitSearch]);
+
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target || !hasMore || nextOffset === null) return;
@@ -288,9 +391,11 @@ export function ResultsScreen() {
     return () => observer.disconnect();
   }, [hasMore, loadMore, nextOffset]);
 
-  const recapKeyword = state.selectedAreas.length
-    ? state.selectedAreas.join("・")
-    : "エリア未指定";
+  const recapKeyword = activeSearchCenter
+    ? "地図の表示エリア"
+    : state.selectedAreas.length
+      ? state.selectedAreas.join("・")
+      : "エリア未指定";
   const recapDateTime = `${state.date} ${state.time}`;
   const recapBudget =
     state.budgetMin !== "指定なし" || state.budgetMax !== "指定なし"
@@ -304,17 +409,14 @@ export function ResultsScreen() {
       ? "指定なし"
       : "未ヒアリング";
 
-  const restaurants = Array.isArray(state.restaurants) ? state.restaurants : [];
-  const sortedStores = [...restaurants].sort(
-    (a, b) => (b.score ?? -1) - (a.score ?? -1),
-  );
-  const hasVisibleStores = sortedStores.length > 0;
-  const shouldShowInitialSkeleton = isInitialSearching && !hasVisibleStores;
+  const hasVisibleStores = restaurants.length > 0;
+  const shouldShowStoreSkeleton = searchPhase === "searching";
+  const shouldShowInitialSkeleton = shouldShowStoreSkeleton && !hasVisibleStores;
   const selectedStore =
-    sortedStores.find((store) => store.id === selectedStoreId) ?? null;
+    restaurants.find((store) => store.id === selectedStoreId) ?? null;
   const compareCount = state.compareIds.length;
   const canCompare = compareCount >= MIN_COMPARE_COUNT;
-  const compareStores = sortedStores.filter((store) =>
+  const compareStores = restaurants.filter((store) =>
     state.compareIds.includes(store.id),
   );
 
@@ -342,7 +444,12 @@ export function ResultsScreen() {
         {shouldShowInitialSkeleton ? (
           <>
             <StoreListSkeleton />
-            <ResultsMap stores={[]} bookingSummary={chatBookingSummary} />
+            <ResultsMap
+              stores={[]}
+              bookingSummary={chatBookingSummary}
+              hiddenTiers={hiddenTiers}
+              onToggleTier={toggleHiddenTier}
+            />
           </>
         ) : searchError && !hasVisibleStores ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
@@ -355,7 +462,7 @@ export function ResultsScreen() {
               条件を変更する
             </button>
           </div>
-	        ) : hasSearched && !isInitialSearching && sortedStores.length === 0 ? (
+	        ) : hasSearched && !isInitialSearching && restaurants.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>条件に合う店舗が見つかりませんでした。</div>
             <button
@@ -369,7 +476,7 @@ export function ResultsScreen() {
         ) : (
           <>
             <StoreList
-              stores={sortedStores}
+              stores={restaurants}
               compareIds={state.compareIds}
               onToggleCompare={toggleCompare}
               counterpartId={state.counterpart}
@@ -378,9 +485,10 @@ export function ResultsScreen() {
               onActivateStore={setActiveStoreId}
               onSelectStore={handleSelectStore}
               scrollTarget={scrollTarget}
+              hiddenTiers={hiddenTiers}
               footer={
                 <>
-                  {(isInitialSearching || isLoadingMore) && (
+                  {shouldShowStoreSkeleton && (
                     <StoreListSkeletonItems count={3} />
                   )}
                   {loadMoreError && (
@@ -401,10 +509,15 @@ export function ResultsScreen() {
             />
             <div className="relative min-w-0 flex-1">
               <ResultsMap
-                stores={sortedStores}
+                stores={restaurants}
                 bookingSummary={chatBookingSummary}
                 activeStoreId={activeStoreId}
                 onMarkerClick={handleMarkerClick}
+                onCenterChanged={handleMapCenterChanged}
+                showSearchThisArea={showSearchThisArea}
+                onSearchThisArea={searchThisArea}
+                hiddenTiers={hiddenTiers}
+                onToggleTier={toggleHiddenTier}
               />
               {selectedStore && (
                 <StoreDetailPanel

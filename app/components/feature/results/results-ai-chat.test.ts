@@ -22,7 +22,7 @@ const stores = [
     phone: null,
     photoUrl: null,
     genre: null,
-    score: null,
+    matchTier: null,
     room: null,
     quiet: null,
     prestige: null,

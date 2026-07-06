@@ -16,7 +16,7 @@ const baseRestaurant: Restaurant = {
   phone: null,
   photoUrl: null,
   genre: null,
-  score: 90,
+  matchTier: "high",
   room: "個室あり",
   quiet: "◎",
   prestige: "◎",

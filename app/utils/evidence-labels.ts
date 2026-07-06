@@ -1,4 +1,9 @@
-import type { Confidence, EvidenceCategory, Genre } from "~/domain/models/restaurant";
+import type {
+  Confidence,
+  EvidenceCategory,
+  Genre,
+  MatchTier,
+} from "~/domain/models/restaurant";
 
 export const EVIDENCE_LABELS: Record<EvidenceCategory, string> = {
   review: "口コミ",
@@ -10,6 +15,13 @@ export const EVIDENCE_LABELS: Record<EvidenceCategory, string> = {
 };
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+};
+
+export const MATCH_TIER_LABELS: Record<MatchTier, string> = {
+  highest: "最高",
   high: "高",
   medium: "中",
   low: "低",

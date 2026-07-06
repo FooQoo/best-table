@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
+import type { Restaurant } from "~/domain/models/restaurant";
 import { getRestaurantSearchRepository } from "~/server/repositories/restaurant-search-repository";
 import {
   streamRestaurants,
@@ -7,10 +8,37 @@ import {
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
 import { parseRestaurantSearchPagination } from "~/server/services/restaurant-search-pagination";
 import { summarizeError } from "~/server/utils/summarize-error";
+import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
+
+// mock mode のフィクスチャは既に評価済みの形なので、施設検索直後の
+// 「未評価」段階表示を目視確認できるよう、AI生成フィールドを一時的に null 化する。
+function toBaseRestaurant(restaurant: Restaurant): Restaurant {
+  return {
+    ...restaurant,
+    genre: null,
+    matchTier: null,
+    room: null,
+    quiet: null,
+    prestige: null,
+    service: null,
+    access: null,
+    budgetLabel: null,
+    concerns: [],
+    matchingSummary: null,
+    evidence: [],
+    confidence: null,
+    generatedAt: null,
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 type RestaurantSearchStreamRequest = RestaurantSearchQueryCondition & {
   limit?: number;
   offset?: number;
+  existingRestaurantKeys?: unknown;
 };
 
 type StreamEvent =
@@ -33,10 +61,18 @@ export async function action({ request }: ActionFunctionArgs) {
     return Response.json({ error: "JSON body is required" }, { status: 400 });
   }
 
-  const { limit: rawLimit, offset: rawOffset, ...condition } = body;
+  const {
+    limit: rawLimit,
+    offset: rawOffset,
+    existingRestaurantKeys: rawExistingRestaurantKeys,
+    ...condition
+  } = body;
   const pagination = parseRestaurantSearchPagination({
     limit: rawLimit,
     offset: rawOffset,
+    existingRestaurantKeys: Array.isArray(rawExistingRestaurantKeys)
+      ? rawExistingRestaurantKeys.filter((key): key is string => typeof key === "string")
+      : [],
   });
 
   const stream = new ReadableStream({
@@ -67,10 +103,20 @@ export async function action({ request }: ActionFunctionArgs) {
 
         if (process.env.MODE === "mock") {
           send({ type: "phase", phase: "searching" });
-          send({ type: "phase", phase: "evaluating" });
           const result = await repository.search(condition, pagination);
-          for (const restaurant of result.restaurants) {
-            send({ type: "restaurant", restaurant });
+          const existingRestaurantKeys = new Set(pagination.existingRestaurantKeys);
+          const restaurants = result.restaurants.filter(
+            (restaurant) =>
+              !existingRestaurantKeys.has(getRestaurantDeduplicationKey(restaurant)),
+          );
+          for (const restaurant of restaurants) {
+            send({ type: "restaurant", restaurant: toBaseRestaurant(restaurant) });
+          }
+          send({ type: "phase", phase: "evaluating" });
+          for (const restaurant of restaurants) {
+            if (closed || abortSignal.aborted) return;
+            await sleep(150); // 段階表示（先に一覧、後からマッチ度）を目視確認できるようにする
+            send({ type: "restaurant-evaluated", restaurant });
           }
           send({
             type: "done",

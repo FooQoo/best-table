@@ -12,7 +12,7 @@ const baseRestaurant: Restaurant = {
   location: null,
   phone: null,
   photoUrl: null,
-  score: null,
+  matchTier: null,
   room: null,
   quiet: null,
   prestige: null,

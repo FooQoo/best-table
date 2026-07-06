@@ -10,6 +10,7 @@ import {
   streamRestaurantEvaluations,
 } from "~/server/clients/gemini-evaluation";
 import type { RestaurantEvaluationResult } from "~/domain/models/restaurant-evaluation-schema";
+import { computeMatchTier } from "~/utils/scoring";
 import {
   buildBookingConditionSummary,
   buildPlaceSearchQuery,
@@ -17,6 +18,7 @@ import {
   type RestaurantSearchQueryCondition,
 } from "./restaurant-search-query";
 import { summarizeError } from "~/server/utils/summarize-error";
+import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 // docs/ARCHITECTURE.md「検索・評価型」のユースケース単位のオーケストレーション。
 // 施設検索（Places API Text Search） → 構造化評価（Gemini）の順に直列実行し、
@@ -32,11 +34,13 @@ export type RestaurantSearchResult = {
 export type RestaurantSearchPagination = {
   limit?: number;
   offset?: number;
+  existingRestaurantKeys?: string[];
 };
 
 export type RestaurantSearchStreamEvent =
   | { type: "phase"; phase: "searching" | "evaluating" }
   | { type: "restaurant"; restaurant: Restaurant }
+  | { type: "restaurant-evaluated"; restaurant: Restaurant }
   | {
       type: "done";
       fromCache: boolean;
@@ -63,8 +67,12 @@ const defaultDeps: RestaurantSearchDeps = {
 function buildSearchConditionKey(condition: RestaurantSearchQueryCondition): string {
   const areas = [...condition.selectedAreas].sort().join(",");
   const priorities = [...condition.priorities].sort().join(",");
+  const searchLatLng = condition.searchLatLng
+    ? `${condition.searchLatLng.latitude.toFixed(5)},${condition.searchLatLng.longitude.toFixed(5)}`
+    : "area";
   return [
     areas,
+    searchLatLng,
     condition.date,
     condition.time,
     String(condition.people),
@@ -150,6 +158,17 @@ function elapsedMs(startedAt: number): number {
   return Math.round(performance.now() - startedAt);
 }
 
+function excludeExistingCandidates(
+  candidates: PlaceSearchCandidate[],
+  existingRestaurantKeys: string[] = [],
+): PlaceSearchCandidate[] {
+  if (existingRestaurantKeys.length === 0) return candidates;
+  const existingKeys = new Set(existingRestaurantKeys);
+  return candidates.filter(
+    (candidate) => !existingKeys.has(getRestaurantDeduplicationKey(candidate)),
+  );
+}
+
 function buildRestaurant(input: {
   candidate: PlaceSearchCandidate;
   evaluation: RestaurantEvaluationResult | null;
@@ -171,7 +190,15 @@ function buildRestaurant(input: {
     location: candidate.location,
     phone: candidate.phone,
     photoUrl: candidate.photoName ? buildStorePhotoProxyPath(candidate.photoName) : null,
-    score: evaluation?.score ?? null,
+    matchTier: evaluation
+      ? computeMatchTier({
+          restaurant: evaluation,
+          counterpartId: condition.counterpart,
+          priorities: condition.priorities,
+          budgetMin: condition.budgetMin,
+          budgetMax: condition.budgetMax,
+        })
+      : null,
     room: evaluation?.room ?? null,
     quiet: evaluation?.quiet ?? null,
     prestige: evaluation?.prestige ?? null,
@@ -196,6 +223,7 @@ export async function searchRestaurants(
   const logger = deps.logger;
   const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
   const offset = Math.max(0, pagination.offset ?? 0);
+  const existingRestaurantKeys = pagination.existingRestaurantKeys ?? [];
   const searchKey = `${buildSearchConditionKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search] start", {
     logId,
@@ -204,7 +232,7 @@ export async function searchRestaurants(
     offset,
   });
 
-  const latLng = resolveAreaLatLng(condition.selectedAreas);
+  const latLng = condition.searchLatLng ?? resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
     logger?.warn("[restaurant-search] area-not-resolved", {
       logId,
@@ -242,7 +270,8 @@ export async function searchRestaurants(
     });
     return { restaurants: [], fromCache: false, hasMore: false, nextOffset: null };
   }
-  const pageCandidates = candidates.slice(offset, offset + limit);
+  const newCandidates = excludeExistingCandidates(candidates, existingRestaurantKeys);
+  const pageCandidates = newCandidates.slice(offset, offset + limit);
 
   let evaluations;
   try {
@@ -283,11 +312,12 @@ export async function searchRestaurants(
     });
   });
 
-  const hasMore = offset + restaurants.length < candidates.length;
+  const hasMore = offset + restaurants.length < newCandidates.length;
   logger?.info("[restaurant-search] complete", {
     logId,
     returned: restaurants.length,
     candidateCount: candidates.length,
+    newCandidateCount: newCandidates.length,
     evaluatedCount: evaluations.length,
     hasMore,
     nextOffset: hasMore ? offset + restaurants.length : null,
@@ -311,6 +341,7 @@ export async function* streamRestaurants(
   const logger = deps.logger;
   const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
   const offset = Math.max(0, pagination.offset ?? 0);
+  const existingRestaurantKeys = pagination.existingRestaurantKeys ?? [];
   const searchKey = `${buildSearchConditionKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search-stream] start", {
     logId,
@@ -321,7 +352,7 @@ export async function* streamRestaurants(
 
   yield { type: "phase", phase: "searching" };
 
-  const latLng = resolveAreaLatLng(condition.selectedAreas);
+  const latLng = condition.searchLatLng ?? resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
     logger?.warn("[restaurant-search-stream] area-not-resolved", {
       logId,
@@ -347,12 +378,32 @@ export async function* streamRestaurants(
     return;
   }
 
+  const newCandidates = excludeExistingCandidates(candidates, existingRestaurantKeys);
+  if (newCandidates.length === 0) {
+    yield { type: "done", fromCache: false, hasMore: false, nextOffset: null };
+    return;
+  }
+
+  const pageCandidates = newCandidates.slice(offset, offset + limit);
+  const generatedAt = new Date().toISOString();
+
+  // 施設検索の結果はここで確定しているため、AI評価を待たずに基本形をまとめて
+  // 先に届ける（同期ループなので実質1回のNDJSON書き込みバーストになる）。
+  for (const [index, candidate] of pageCandidates.entries()) {
+    const restaurant = buildRestaurant({
+      candidate,
+      evaluation: null,
+      condition,
+      searchKey,
+      absoluteIndex: offset + index,
+      generatedAt,
+    });
+    yield { type: "restaurant", restaurant };
+  }
+
   yield { type: "phase", phase: "evaluating" };
 
-  const pageCandidates = candidates.slice(offset, offset + limit);
-  const generatedAt = new Date().toISOString();
-  const yielded = new Set<string>();
-  const restaurants: Restaurant[] = [];
+  const evaluated = new Set<string>();
 
   try {
     for await (const evaluation of deps.streamEvaluations({
@@ -370,7 +421,7 @@ export async function* streamRestaurants(
       }
 
       const candidate = pageCandidates[candidateIndex];
-      if (yielded.has(candidate.name)) continue;
+      if (evaluated.has(candidate.name)) continue;
 
       const restaurant = buildRestaurant({
         candidate,
@@ -380,9 +431,8 @@ export async function* streamRestaurants(
         absoluteIndex: offset + candidateIndex,
         generatedAt,
       });
-      yielded.add(candidate.name);
-      restaurants.push(restaurant);
-      yield { type: "restaurant", restaurant };
+      evaluated.add(candidate.name);
+      yield { type: "restaurant-evaluated", restaurant };
     }
   } catch (error) {
     logger?.error("[restaurant-search-stream] evaluation-stream-failed", {
@@ -391,34 +441,25 @@ export async function* streamRestaurants(
       elapsedMs: elapsedMs(startedAt),
     });
   }
+  // 評価が届かなかった候補（ストリーム失敗・取りこぼし）は、上で送った基本形の
+  // ままにする。手順の先頭で全候補分の "restaurant" イベントを保証しているため、
+  // 未評価分を再送するフォールバックは不要。
 
-  for (const [index, candidate] of pageCandidates.entries()) {
-    if (yielded.has(candidate.name)) continue;
-    const restaurant = buildRestaurant({
-      candidate,
-      evaluation: null,
-      condition,
-      searchKey,
-      absoluteIndex: offset + index,
-      generatedAt,
-    });
-    restaurants.push(restaurant);
-    yield { type: "restaurant", restaurant };
-  }
-
-  const hasMore = offset + restaurants.length < candidates.length;
+  const hasMore = offset + pageCandidates.length < newCandidates.length;
   logger?.info("[restaurant-search-stream] complete", {
     logId,
-    returned: restaurants.length,
+    returned: pageCandidates.length,
+    evaluatedCount: evaluated.size,
     candidateCount: candidates.length,
+    newCandidateCount: newCandidates.length,
     hasMore,
-    nextOffset: hasMore ? offset + restaurants.length : null,
+    nextOffset: hasMore ? offset + pageCandidates.length : null,
     elapsedMs: elapsedMs(startedAt),
   });
   yield {
     type: "done",
     fromCache: false,
     hasMore,
-    nextOffset: hasMore ? offset + restaurants.length : null,
+    nextOffset: hasMore ? offset + pageCandidates.length : null,
   };
 }

@@ -14,7 +14,7 @@ export function PriorityStep() {
         この会食で、特に外したくないことは何ですか？
       </div>
       <div className="text-xs text-[#79726a] mb-3.5">
-        最大3つまで選択してください。選んだ条件をもとに、検索結果の接待安全度と比較表を調整します。
+        最大3つまで選択してください。選んだ条件をもとに、検索結果のマッチ度と比較表を調整します。
       </div>
       <div className="grid grid-cols-2 gap-2">
         {PRIORITIES.map((p) => {

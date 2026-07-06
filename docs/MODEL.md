@@ -12,7 +12,7 @@
 | ヒアリング | 会食の文脈（相手・重視条件・予算など）を最小限の入力で取得する行為。 |
 | 相手種別（Counterpart） | 会食相手の属性区分。緊張度や失敗できないポイントを表す。 |
 | 重視条件（Priority） | ヒアリングで選ぶ、外したくない条件。最大3つ。 |
-| 接待安全度（Score） | AI が算出する、その店が今回の会食に適しているかの評価値（0–100）。 |
+| マッチ度（MatchTier） | 相手種別・重視条件・予算と AI 評価済みフィールドを照合し、アプリ側で決定的に算出する4段階（最高・高・中・低）の適合度。AI には生成させない。 |
 | 懸念（Concern） | 予約前に把握しておくべきリスク・注意点。根拠カテゴリを伴う。 |
 | 根拠カテゴリ（Evidence） | AI 評価や懸念の裏付けとなる情報源の種類（口コミ、写真、席、メニュー、アクセス、説明文）。 |
 | 確信度（Confidence） | AI 生成内容の確からしさの区分（high/medium/low）。 |
@@ -77,7 +77,7 @@ type BudgetLabel = string;   // BUDGET_STEPS の固定語彙（"指定なし" | 
 
 ### `Restaurant`: 識別子を持つ Read Model（集約ではなく DTO に近い）
 
-`Restaurant` は識別子（`id`）を持つため型としてはエンティティだが、DDD でいう「振る舞いによって自身の不変条件を守る集約ルート」ではない。生成（Places API 施設検索＋ Gemini 構造化評価）というサービス層の処理結果を1回で丸ごと詰め替えただけの読み取り専用データであり、アプリ内でこれを変更するドメインコマンドは存在しない（`score` や `concern` を書き換えるユースケースが無い）。したがって性質としては **DTO / Read Model** に近い。
+`Restaurant` は識別子（`id`）を持つため型としてはエンティティだが、DDD でいう「振る舞いによって自身の不変条件を守る集約ルート」ではない。生成（Places API 施設検索＋ Gemini 構造化評価＋決定的なマッチ度算出）というサービス層の処理結果を1回で丸ごと詰め替えただけの読み取り専用データであり、アプリ内でこれを変更するドメインコマンドは存在しない（`matchTier` や `concern` を書き換えるユースケースが無い）。したがって性質としては **DTO / Read Model** に近い。
 
 それでも型として独立させる理由:
 
@@ -99,6 +99,10 @@ type EvidenceCategory =
 
 // 評価軸の表示ラベル。3段階の固定語彙。
 type RatingSymbol = "◎" | "○" | "△";
+
+// 相手種別・重視条件・予算と AI 評価済みフィールドを照合して決定的に算出する
+// マッチ度。AI には生成させない（app/utils/scoring.ts の computeMatchTier）。
+type MatchTier = "highest" | "high" | "medium" | "low";
 
 // 個室・席の状況。固定語彙にし、AI に自由記述させない。
 type RoomAvailability =
@@ -136,7 +140,7 @@ type Restaurant = {
 
   // AI 生成部分。ヒアリング条件を踏まえた1回の生成でまとめて埋める。生成前・失敗時は null。
   genre: Genre | null; // 料理ジャンル。施設検索の出力には含まれないため、構造化評価で AI が固定語彙から生成する
-  score: number | null; // 接待安全度 0-100
+  matchTier: MatchTier | null; // マッチ度。AI 評価フィールドとヒアリング条件から決定的に算出する（下記参照）。判定できるフィールドが1つも無い場合は null
   room: RoomAvailability | null; // 個室・席の状況（個室有無の表示も兼ねる）。固定語彙
   quiet: RatingSymbol | null; // 固定語彙
   prestige: RatingSymbol | null;
@@ -153,6 +157,17 @@ type Restaurant = {
 
 Places API 施設検索（Text Search）のフィールドマスクは `id` / `displayName` / `formattedAddress` / `location` / `nationalPhoneNumber` / `photos` に絞る（`app/server/clients/google-places.ts` の `GOOGLE_PLACES_SEARCH_FIELD_MASK`）。`rating` / `userRatingCount` / `priceLevel` など追加のフィールドを取得する場合は、SKU ティアが上がらないか実装時に確認してから追加する。
 
+### マッチ度（MatchTier）の算出方法
+
+`matchTier` は AI に生成させず、`app/utils/scoring.ts` の `computeMatchTier` がアプリ側で決定的に算出する。
+
+1. 対象フィールドを決める: 相手種別から得られる重視フィールド（`getEmphasisKeys`。例: `exec` → `room`/`prestige`/`service`）と、ヒアリングで選んだ重視条件から得られるフィールド（`PRIORITY_TO_EMPHASIS` で対応付け）を統合する。どちらも無い場合は全フィールドにフォールバックする。
+2. `access` は自由文字列（駅名・徒歩分数の組み合わせが無数にある）で良否を機械的に判定できないため、対象に選ばれても採点からは常に除外する。
+3. 残ったフィールドごとに良好（good）・不良（not-good）・不明（unknown、null や未確認）を判定する: `room` は個室あり/半個室あり/カウンターのみが良好、個室なしが不良、null・情報なしは不明。`quiet`/`prestige`/`service` は ◎/○ が良好、△ が不良、null は不明。`budgetLabel` はヒアリングの予算範囲内なら良好、範囲外なら不良、予算未指定または未パースなら不明。
+4. 判定できたフィールド数（unknown を除く）のうち良好な割合で4段階に振り分ける: 全て良好なら `highest`、半分以上なら `high`、1つ以上なら `medium`、0件なら `low`。判定できたフィールドが1つも無ければ（AI評価が未到達、または全て不明）、捏造せず `null` を返す。
+
+この計算はヒアリング条件（相手種別・予算・重視条件）と AI 評価済みフィールドの両方を必要とするため、`app/server/services/restaurant-search.ts` の `buildRestaurant()` がAI評価結果を受け取った時点で算出し、`Restaurant.matchTier` に格納する。
+
 自由記述と固定語彙の区別:
 
 - **自由記述**にするフィールド: `id` / `placeId` / `name` / `area` / `address` / `phone` / `photoUrl` / `access` / `budgetLabel` / `concerns[].text` / `matchingSummary` / `generatedAt`。実世界の値の種類が多い、または固有名詞・URL・タイムスタンプなど値そのものに意味があるため、決め打ちの語彙で表現できない。`area` / `budgetLabel` は当初 `AREA_REGIONS` / `BUDGET_STEPS` から導出する固定語彙型にする計画だったが、実装時にその移設を見送ったため（下記「現行実装との対応」）、素直な `string` にしている。
@@ -162,13 +177,13 @@ Places API 施設検索（Text Search）のフィールドマスクは `id` / `d
 生成時に満たすべき制約（`Restaurant` 型自体は自己強制しない。生成サービスと zod スキーマが担保する）:
 
 - Google 由来のフィールド（`placeId` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。これらは Places API 施設検索（Text Search）のレスポンスから直接取得し、店舗ごとにレスポンスに含まれていた値だけを埋める（含まれない場合は捏造せず `null` のまま）。`genre` は施設検索側の値ではなく、構造化評価（AI 生成フィールド）として別途生成する。
-- AI 生成フィールド（`score` 以下）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。
-- 未生成・生成失敗時は AI 生成フィールドを `null` のままにし、Google 由来のフィールドだけで一覧・MAP表示が成立するようにする（`docs/RELIABILITY.md` の段階的表示）。
+- AI 生成フィールド（`genre` 以下、`matchTier` を除く）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。`matchTier` は AI 生成フィールドではなく、それらの生成結果を使ってアプリ側で決定的に算出する（前述「マッチ度の算出方法」）。
+- 未生成・生成失敗時は AI 生成フィールドと `matchTier` を `null` のままにし、Google 由来のフィールドだけで一覧・MAP表示が成立するようにする（`docs/RELIABILITY.md` の段階的表示）。
 - `evidence` / `confidence` を伴わない AI 評価文言を生成しない（`docs/RELIABILITY.md` の根拠付け方針）。
 
 ### ドメインサービス
 
-- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Places API 施設検索呼び出し（`searchPlacesByText`、`app/server/clients/google-places.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を直列に実行し、`Restaurant[]` を生成する。座標・住所・代表写真は施設検索のレスポンスから直接得るため、`placeId` を使って別途解決する専用サービスは存在しない。解決できない値（レスポンスに含まれない）は `null` のままにし、UI はマーカー非表示・写真プレースホルダーにフォールバックする。
+- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Places API 施設検索呼び出し（`searchPlacesByText`、`app/server/clients/google-places.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を実行し、評価結果と `BookingRequest` から `computeMatchTier`（`app/utils/scoring.ts`）でマッチ度を算出して `Restaurant[]` を生成する。座標・住所・代表写真は施設検索のレスポンスから直接得るため、`placeId` を使って別途解決する専用サービスは存在しない。解決できない値（レスポンスに含まれない）は `null` のままにし、UI はマーカー非表示・写真プレースホルダーにフォールバックする。施設検索は AI 評価を待たずに先に完了させ、`Restaurant[]` の基本形（Google 由来フィールドのみ）を先に返せるようにする（詳細は `docs/ARCHITECTURE.md`）。
 
 ### リポジトリ
 

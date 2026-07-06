@@ -1,12 +1,17 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
-import { ScoreBadge } from "~/components/ui/score-badge";
+import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
-import { MAX_COMPARE_COUNT, type Restaurant } from "~/domain/models/restaurant";
+import {
+  MAX_COMPARE_COUNT,
+  type MatchTier,
+  type Restaurant,
+} from "~/domain/models/restaurant";
 import { GOLD } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
+import { resolveTierKey } from "~/components/feature/maps/match-tier-colors";
 
 export type StoreListScrollTarget = { storeId: string };
 
@@ -22,6 +27,7 @@ type StoreListProps = {
   // マップのピンをクリックしたときだけ設定する。hover による activeStoreId 変更では
   // スクロールしない（一覧を眺めているだけのユーザーの視点を勝手に動かさないため）。
   scrollTarget?: StoreListScrollTarget | null;
+  hiddenTiers?: ReadonlySet<MatchTier>;
   footer?: ReactNode;
 };
 
@@ -35,6 +41,7 @@ export function StoreList({
   onActivateStore,
   onSelectStore,
   scrollTarget,
+  hiddenTiers,
   footer,
 }: StoreListProps) {
   const t = getTheme();
@@ -50,14 +57,13 @@ export function StoreList({
 
   return (
     <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
-      <div className="font-bold text-[15px]">
-        接待安全度の高い順・{stores.length}件
-      </div>
+      <div className="font-bold text-[15px]">{stores.length}件</div>
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);
         const active = activeStoreId === store.id;
         const panelOpen = selectedStoreId === store.id;
         const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
+        const dimmedByLegend = hiddenTiers?.has(resolveTierKey(store.matchTier)) ?? false;
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (
@@ -69,6 +75,7 @@ export function StoreList({
             data-store-card="true"
             data-active={active ? "true" : "false"}
             data-selected={panelOpen ? "true" : "false"}
+            data-dimmed-by-legend={dimmedByLegend ? "true" : "false"}
             role="button"
             tabIndex={0}
             aria-label={`${store.name}の詳細を表示`}
@@ -83,7 +90,14 @@ export function StoreList({
             onFocus={() => onActivateStore?.(store.id)}
             className="bg-white border-[1.5px] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b08424]"
             style={{
-              borderColor: active || panelOpen ? GOLD : "#e4ded0",
+              borderColor: dimmedByLegend
+                ? "#d1ccc1"
+                : active || panelOpen
+                  ? GOLD
+                  : "#e4ded0",
+              background: dimmedByLegend ? "#ece9e1" : "#ffffff",
+              filter: dimmedByLegend ? "grayscale(1)" : undefined,
+              opacity: dimmedByLegend ? 0.56 : undefined,
               boxShadow: panelOpen
                 ? "0 0 0 3px rgba(176,132,36,.34),0 1px 5px rgba(0,0,0,.1)"
                 : active
@@ -96,7 +110,7 @@ export function StoreList({
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <div className="font-bold text-[15px]">{store.name}</div>
-                  <ScoreBadge score={store.score} />
+                  <MatchTierBadge tier={store.matchTier} />
                 </div>
                 <div className="text-xs text-[#79726a] mt-1">
                   {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}

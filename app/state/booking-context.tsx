@@ -5,6 +5,7 @@ import {
   MAX_PRIORITY_COUNT,
   type Restaurant,
 } from "~/domain/models/restaurant";
+import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 export type BookingState = {
   selectedAreas: string[];
@@ -75,6 +76,7 @@ type BookingActions = {
   toggleCompare: (id: string) => void;
   setRestaurants: (restaurants: Restaurant[]) => void;
   appendRestaurants: (restaurants: Restaurant[]) => void;
+  updateRestaurant: (restaurant: Restaurant) => void;
   resetForNewChat: () => void;
 };
 
@@ -195,14 +197,30 @@ export function useBooking(): BookingValue {
   const appendRestaurants = useCallback(
     (restaurants: Restaurant[]) =>
       setState((s) => {
-        const seenIds = new Set(s.restaurants.map((restaurant) => restaurant.id));
+        const seenKeys = new Set(
+          s.restaurants.map((restaurant) => getRestaurantDeduplicationKey(restaurant)),
+        );
         const nextRestaurants = restaurants.filter((restaurant) => {
-          if (seenIds.has(restaurant.id)) return false;
-          seenIds.add(restaurant.id);
+          const key = getRestaurantDeduplicationKey(restaurant);
+          if (seenKeys.has(key)) return false;
+          seenKeys.add(key);
           return true;
         });
         return { ...s, restaurants: [...s.restaurants, ...nextRestaurants] };
       }),
+    [setState],
+  );
+
+  const updateRestaurant = useCallback(
+    (restaurant: Restaurant) =>
+      setState((s) => ({
+        ...s,
+        restaurants: s.restaurants.map((r) =>
+          getRestaurantDeduplicationKey(r) === getRestaurantDeduplicationKey(restaurant)
+            ? restaurant
+            : r,
+        ),
+      })),
     [setState],
   );
 
@@ -246,6 +264,7 @@ export function useBooking(): BookingValue {
       toggleCompare,
       setRestaurants,
       appendRestaurants,
+      updateRestaurant,
       resetForNewChat,
     }),
     [
@@ -268,6 +287,7 @@ export function useBooking(): BookingValue {
       toggleCompare,
       setRestaurants,
       appendRestaurants,
+      updateRestaurant,
       resetForNewChat,
     ],
   );

@@ -1,9 +1,9 @@
 import { toPng } from "html-to-image";
 import { Download, Loader2 } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
-import { ScoreBadge } from "~/components/ui/score-badge";
+import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
-import type { Restaurant } from "~/domain/models/restaurant";
+import { MATCH_TIERS, type Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme } from "~/styles/theme";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
@@ -17,7 +17,7 @@ type ComparePanelProps = {
 };
 
 const ROWS: { label: string; key: keyof Restaurant; shaded?: boolean }[] = [
-  { label: "接待安全度", key: "score", shaded: true },
+  { label: "マッチ度", key: "matchTier", shaded: true },
   { label: "個室", key: "room" },
   { label: "静かさ", key: "quiet", shaded: true },
   { label: "格式", key: "prestige" },
@@ -26,6 +26,23 @@ const ROWS: { label: string; key: keyof Restaurant; shaded?: boolean }[] = [
   { label: "予算目安", key: "budgetLabel", shaded: true },
   { label: "懸念点", key: "concerns" },
 ];
+
+// 一覧は施設検索順のまま並び替えないため（results-screen.tsx）、比較表の並び順は
+// マッチ度と無関係。「おすすめ1位」バッジは配列の先頭ではなく、比較中の店舗の中で
+// 最も良いマッチ度を持つ店舗を探して付ける。マッチ度が1件も無い場合は表示しない。
+function findBestMatchIndex(stores: Restaurant[]): number {
+  let bestIndex = -1;
+  let bestRank = Number.POSITIVE_INFINITY;
+  stores.forEach((store, index) => {
+    if (store.matchTier === null) return;
+    const rank = MATCH_TIERS.indexOf(store.matchTier);
+    if (rank < bestRank) {
+      bestRank = rank;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+}
 
 function buildCompareImageFileName(stores: Restaurant[]): string {
   const now = new Date();
@@ -42,6 +59,7 @@ export function ComparePanel({
 }: ComparePanelProps) {
   const t = getTheme();
   const emphasisKeys = getEmphasisKeys(counterpartId);
+  const bestMatchIndex = findBestMatchIndex(stores);
   const panelRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -182,13 +200,13 @@ export function ComparePanel({
                 className="p-4 border-l border-[#e4ded0] flex flex-col gap-2"
                 style={{
                   borderBottom: `2px solid ${NAVY}`,
-                  background: i === 0 ? t.accentSoftBg : "#fff",
+                  background: i === bestMatchIndex ? t.accentSoftBg : "#fff",
                 }}
               >
                 <div
                   className="self-start font-bold text-[11px] px-2.5 py-0.5 rounded-full"
                   style={
-                    i === 0
+                    i === bestMatchIndex
                       ? { background: GOLD, color: "#20201c" }
                       : { visibility: "hidden" }
                   }
@@ -254,8 +272,8 @@ export function ComparePanel({
                           : undefined),
                       }}
                     >
-                      {row.key === "score" ? (
-                        <ScoreBadge score={store.score} showLabel={false} />
+                      {row.key === "matchTier" ? (
+                        <MatchTierBadge tier={store.matchTier} showLabel={false} />
                       ) : row.key === "concerns" ? (
                         store.concerns.length > 0 ? (
                           store.concerns.map((c) => c.text).join(" / ")

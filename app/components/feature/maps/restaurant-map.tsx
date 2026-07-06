@@ -1,20 +1,26 @@
-import { APIProvider, Map } from "@vis.gl/react-google-maps";
-import type { Restaurant } from "~/domain/models/restaurant";
-import { GOLD } from "~/mocks/data";
+import {
+  APIProvider,
+  Map,
+  type MapCameraChangedEvent,
+} from "@vis.gl/react-google-maps";
+import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import { NAVY } from "~/mocks/data";
 import { GenreMarkerOverlay } from "./genre-marker-overlay";
+import { resolveTierColor, resolveTierKey } from "./match-tier-colors";
 import {
   getInitialMapCamera,
   getMappableRestaurants,
 } from "./restaurant-map-utils";
 
-export const DEFAULT_MARKER_COLOR = "#d93025";
-
 type RestaurantMapProps = {
   restaurants: Restaurant[];
   activeRestaurantId?: string | null;
   onMarkerClick?: (restaurantId: string) => void;
+  onCenterChanged?: (center: { lat: number; lng: number }) => void;
   emptyLabel?: string;
   apiKey?: string | null;
+  // 凡例で非表示にされたマッチ度（評価未生成は「低」に含める）のピンは地図から除く。
+  hiddenTiers?: ReadonlySet<MatchTier>;
 };
 
 // 飲食店・小売など、AI が探して比較する対象と紛らわしい既存施設の POI は隠す。
@@ -32,11 +38,15 @@ export function RestaurantMap({
   restaurants,
   activeRestaurantId,
   onMarkerClick,
+  onCenterChanged,
   emptyLabel = "地図に表示できる店舗がありません",
   apiKey: apiKeyOverride,
+  hiddenTiers,
 }: RestaurantMapProps) {
   const apiKey = apiKeyOverride === undefined ? getBrowserMapsKey() : apiKeyOverride;
-  const mappableRestaurants = getMappableRestaurants(restaurants);
+  const mappableRestaurants = getMappableRestaurants(restaurants).filter(
+    (restaurant) => !hiddenTiers?.has(resolveTierKey(restaurant.matchTier)),
+  );
 
   if (mappableRestaurants.length === 0) {
     return <MapFallback message={emptyLabel} />;
@@ -59,11 +69,19 @@ export function RestaurantMap({
         disableDefaultUI
         styles={MAP_STYLES}
         style={{ width: "100%", height: "100%" }}
+        onCameraChanged={(event: MapCameraChangedEvent) => {
+          onCenterChanged?.(event.detail.center);
+        }}
       >
         {mappableRestaurants.map((restaurant) => {
           const isActive = restaurant.id === activeRestaurantId;
           const width = isActive ? 32 : 28;
           const height = isActive ? 42 : 36;
+          // ピンの色は常にマッチ度で塗り分ける（未評価は既定色）。色そのものを
+          // マッチ度専用にするため、選択中（isActive）のシグナルは色ではなく
+          // 枠線の太さ・ラベルの枠で表す。
+          const fill = resolveTierColor(restaurant.matchTier);
+          const strokeWidth = isActive ? "3.5" : "2";
           return (
             <GenreMarkerOverlay
               key={restaurant.id}
@@ -82,9 +100,9 @@ export function RestaurantMap({
                 >
                   <path
                     d="M14 35C10.1 29.3 4 22.5 4 14.2C4 8 8.5 3 14 3S24 8 24 14.2C24 22.5 17.9 29.3 14 35Z"
-                    fill={isActive ? GOLD : DEFAULT_MARKER_COLOR}
+                    fill={fill}
                     stroke="#ffffff"
-                    strokeWidth="2"
+                    strokeWidth={strokeWidth}
                     strokeLinejoin="round"
                   />
                   <circle cx="14" cy="14" r="5" fill="#ffffff" opacity="0.95" />
@@ -94,8 +112,9 @@ export function RestaurantMap({
                   style={{
                     left: width + 6,
                     top: 6,
-                    background: isActive ? GOLD : "#ffffff",
+                    background: "#ffffff",
                     color: "#20201c",
+                    border: isActive ? `2px solid ${NAVY}` : undefined,
                   }}
                 >
                   {restaurant.name}

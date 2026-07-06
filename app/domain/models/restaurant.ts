@@ -20,6 +20,12 @@ export type RoomAvailability =
 
 export type Confidence = "high" | "medium" | "low";
 
+// 相手種別・重視条件・予算と AI 評価済みフィールドを照合して決定的に算出する
+// マッチ度。AI には生成させない（app/utils/scoring.ts の computeMatchTier を正とする）。
+export type MatchTier = "highest" | "high" | "medium" | "low";
+
+export const MATCH_TIERS: readonly MatchTier[] = ["highest", "high", "medium", "low"];
+
 // 地図ピン・一覧表示で使うジャンルの固定語彙。
 // AI 評価がここに無いジャンルだと判断した場合は "other" にし、自由文を作らせない。
 export type Genre =
@@ -54,7 +60,7 @@ export type Restaurant = {
 
   // AI 生成部分。未生成・生成失敗時は null。
   genre: Genre | null;
-  score: number | null;
+  matchTier: MatchTier | null;
   room: RoomAvailability | null;
   quiet: RatingSymbol | null;
   prestige: RatingSymbol | null;
@@ -136,6 +142,13 @@ export function isRestaurant(value: unknown): value is Restaurant {
   }
 
   if (r.genre !== null && !(GENRES as readonly string[]).includes(r.genre as string)) {
+    return false;
+  }
+
+  if (
+    r.matchTier !== null &&
+    !(MATCH_TIERS as readonly string[]).includes(r.matchTier as string)
+  ) {
     return false;
   }
 

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { MemoryRouter } from "react-router";
+import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
 import { STORES } from "~/mocks/data";
 import { StoreList, type StoreListScrollTarget } from "./store-list";
 
@@ -14,8 +15,9 @@ function setup(
     onActivateStore?: (id: string) => void;
     onSelectStore?: (id: string) => void;
     selectedStoreId?: string;
-    stores?: typeof STORES;
+    stores?: Restaurant[];
     scrollTarget?: StoreListScrollTarget | null;
+    hiddenTiers?: ReadonlySet<MatchTier>;
   } = {},
 ) {
   return render(
@@ -30,6 +32,7 @@ function setup(
         onActivateStore={options.onActivateStore}
         onSelectStore={options.onSelectStore}
         scrollTarget={options.scrollTarget}
+        hiddenTiers={options.hiddenTiers}
       />
     </MemoryRouter>,
   );
@@ -77,6 +80,19 @@ describe("StoreList の地図連動", () => {
 
     expect(screen.getByText(store.name).closest("[data-selected]")).toHaveAttribute(
       "data-selected",
+      "true",
+    );
+  });
+
+  it("地図凡例で非表示にしたマッチ度の店舗カードをグレー表示にする", () => {
+    const hiddenStore = { ...store, matchTier: "high" as const };
+    setup(null, {
+      stores: [hiddenStore],
+      hiddenTiers: new Set(["high"]),
+    });
+
+    expect(screen.getByText(store.name).closest("[data-dimmed-by-legend]")).toHaveAttribute(
+      "data-dimmed-by-legend",
       "true",
     );
   });

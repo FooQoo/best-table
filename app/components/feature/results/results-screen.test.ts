@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { canRequestMoreResults, toggleSelectedStoreId } from "./results-screen";
+import {
+  canRequestMoreResults,
+  hasMapCenterMoved,
+  toggleSelectedStoreId,
+} from "./results-screen";
 
 describe("canRequestMoreResults", () => {
   it("allows loading the next page only when there is a next offset and no active load", () => {
@@ -45,5 +49,23 @@ describe("toggleSelectedStoreId", () => {
 
   it("詳細パネルがONの店舗を再度押すとOFFにする", () => {
     expect(toggleSelectedStoreId("store-a", "store-a")).toBeNull();
+  });
+});
+
+describe("hasMapCenterMoved", () => {
+  it("80m以上中心が変わったときだけ再検索候補にする", () => {
+    expect(
+      hasMapCenterMoved(
+        { lat: 35.6717, lng: 139.7639 },
+        { lat: 35.67175, lng: 139.76395 },
+      ),
+    ).toBe(false);
+
+    expect(
+      hasMapCenterMoved(
+        { lat: 35.6717, lng: 139.7639 },
+        { lat: 35.6727, lng: 139.7639 },
+      ),
+    ).toBe(true);
   });
 });

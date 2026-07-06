@@ -133,6 +133,70 @@ describe("useBooking", () => {
     ]);
   });
 
+  it("appendRestaurants は placeId が同じ店舗を重複追加しない", () => {
+    const { result } = setup();
+    const first = { ...STORES[0], id: "first-id", placeId: "places/same" };
+    const duplicate = { ...STORES[0], id: "second-id", placeId: "places/same" };
+    const second = { ...STORES[1], id: "third-id", placeId: "places/other" };
+
+    act(() => {
+      result.current.setRestaurants([first]);
+    });
+    act(() => {
+      result.current.appendRestaurants([duplicate, second]);
+    });
+
+    expect(result.current.state.restaurants.map((restaurant) => restaurant.id)).toEqual([
+      "first-id",
+      "third-id",
+    ]);
+  });
+
+  it("appendRestaurants は placeId がない場合も店名と住所で重複追加を避ける", () => {
+    const { result } = setup();
+    const first = {
+      ...STORES[0],
+      id: "first-id",
+      placeId: null,
+      name: "同じ店",
+      address: "東京都中央区銀座1-1-1",
+    };
+    const duplicate = { ...first, id: "second-id" };
+    const second = { ...STORES[1], id: "third-id", placeId: null };
+
+    act(() => {
+      result.current.setRestaurants([first]);
+    });
+    act(() => {
+      result.current.appendRestaurants([duplicate, second]);
+    });
+
+    expect(result.current.state.restaurants.map((restaurant) => restaurant.id)).toEqual([
+      "first-id",
+      "third-id",
+    ]);
+  });
+
+  it("updateRestaurant は同じ id の店舗だけを差し替える（並び順は維持）", () => {
+    const { result } = setup();
+    const first = STORES[0];
+    const second = STORES[1];
+
+    act(() => {
+      result.current.setRestaurants([first, second]);
+    });
+    act(() => {
+      result.current.updateRestaurant({ ...first, matchTier: "highest" });
+    });
+
+    expect(result.current.state.restaurants.map((restaurant) => restaurant.id)).toEqual([
+      first.id,
+      second.id,
+    ]);
+    expect(result.current.state.restaurants[0].matchTier).toBe("highest");
+    expect(result.current.state.restaurants[1]).toEqual(second);
+  });
+
   it("重視条件を更新すると /hearing → /results → /compare 相当の画面遷移でも保持される", () => {
     // BookingProvider は root.tsx でアプリ全体に1つだけマウントされるため、
     // 画面遷移は「Provider 配下で子コンポーネントが差し替わる」ことに相当する。

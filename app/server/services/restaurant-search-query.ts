@@ -9,6 +9,7 @@ import {
 // b. 構造化評価（Gemini）向けの条件サマリーの両方をここに集約する。
 export type RestaurantSearchQueryCondition = {
   selectedAreas: string[];
+  searchLatLng?: { latitude: number; longitude: number } | null;
   date: string;
   time: string;
   people: number;
@@ -44,13 +45,18 @@ export function buildPlaceSearchQuery(
   const keywords = condition.priorities
     .map((key) => PRIORITY_SEARCH_KEYWORDS[key])
     .filter((keyword): keyword is string => Boolean(keyword));
+  const areaKeyword = condition.searchLatLng
+    ? null
+    : condition.selectedAreas.join("・");
 
   return [
-    condition.selectedAreas.join("・"),
+    areaKeyword,
     "接待",
     "レストラン",
     ...keywords,
-  ].join(" ");
+  ]
+    .filter((keyword): keyword is string => Boolean(keyword))
+    .join(" ");
 }
 
 // docs/ARCHITECTURE.md「検索・評価型 b. 構造化評価呼び出し」向けの条件サマリー。
@@ -60,9 +66,10 @@ export function buildBookingConditionSummary(
   condition: RestaurantSearchQueryCondition,
 ): string {
   const lines: string[] = [];
-  lines.push(
-    `${condition.selectedAreas.join("・")}エリアで、接待・会食に使えるレストランを探しています。`,
-  );
+  const searchAreaLabel = condition.searchLatLng
+    ? "地図の表示エリア"
+    : `${condition.selectedAreas.join("・")}エリア`;
+  lines.push(`${searchAreaLabel}で、接待・会食に使えるレストランを探しています。`);
   lines.push(`日時: ${condition.date} ${condition.time}、人数: ${condition.people}名`);
 
   const counterpart = describeCounterpart(condition);
@@ -91,6 +98,12 @@ export function summarizeRestaurantSearchCondition(
 ) {
   return {
     areas: condition.selectedAreas,
+    searchLatLng: condition.searchLatLng
+      ? {
+          latitude: Number(condition.searchLatLng.latitude.toFixed(5)),
+          longitude: Number(condition.searchLatLng.longitude.toFixed(5)),
+        }
+      : null,
     date: condition.date,
     time: condition.time,
     people: condition.people,

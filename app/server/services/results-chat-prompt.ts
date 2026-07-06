@@ -5,6 +5,7 @@ import {
   describeCounterpart,
   describePriorities,
 } from "~/domain/services/booking-summary-format";
+import { MATCH_TIER_LABELS } from "~/utils/evidence-labels";
 
 export type ResultsChatPromptInput = {
   question: string;
@@ -107,7 +108,7 @@ function formatRestaurants(restaurants: Restaurant[]): string {
       return [
         `${index + 1}. ${restaurant.name}`,
         `エリア: ${restaurant.area}`,
-        `接待安全度: ${restaurant.score ?? "未生成"}`,
+        `マッチ度: ${restaurant.matchTier ? MATCH_TIER_LABELS[restaurant.matchTier] : "未評価"}`,
         `個室: ${restaurant.room ?? "情報なし"}`,
         `静かさ: ${restaurant.quiet ?? "情報なし"}`,
         `格式: ${restaurant.prestige ?? "情報なし"}`,

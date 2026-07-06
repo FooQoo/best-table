@@ -24,7 +24,6 @@ describe("evaluateRestaurantCandidates", () => {
       {
         candidateName: "桂",
         genre: "japanese",
-        score: 90,
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",
@@ -44,7 +43,6 @@ describe("evaluateRestaurantCandidates", () => {
       {
         candidateName: "桂",
         genre: "japanese",
-        score: 90,
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",

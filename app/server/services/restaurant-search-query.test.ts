@@ -43,6 +43,15 @@ describe("buildPlaceSearchQuery", () => {
     });
     expect(query).toBe("銀座・六本木 接待 レストラン");
   });
+
+  it("omits selected area names when searching from the map center", () => {
+    const query = buildPlaceSearchQuery({
+      ...baseCondition,
+      searchLatLng: { latitude: 35.6812, longitude: 139.7671 },
+    });
+    expect(query).toBe("接待 レストラン 個室 高級");
+    expect(query).not.toContain("銀座");
+  });
 });
 
 describe("buildBookingConditionSummary", () => {
@@ -52,6 +61,15 @@ describe("buildBookingConditionSummary", () => {
     expect(summary).toContain("2026-07-15");
     expect(summary).toContain("19:00");
     expect(summary).toContain("4名");
+  });
+
+  it("uses a map area label when searching from the map center", () => {
+    const summary = buildBookingConditionSummary({
+      ...baseCondition,
+      searchLatLng: { latitude: 35.6812, longitude: 139.7671 },
+    });
+    expect(summary).toContain("地図の表示エリア");
+    expect(summary).not.toContain("銀座エリア");
   });
 
   it("includes readable priority labels instead of raw keys", () => {

@@ -33,7 +33,7 @@ const restaurants = [
     phone: null,
     photoUrl: null,
     genre: "japanese",
-    score: 88,
+    matchTier: "high",
     room: "個室あり",
     quiet: "◎",
     prestige: "◎",
@@ -99,7 +99,7 @@ describe("buildResultsChatSuggestionsPrompt", () => {
     });
 
     expect(prompt).not.toContain("ヒアリング条件");
-    expect(prompt).not.toContain("接待安全度");
+    expect(prompt).not.toContain("マッチ度");
   });
 
   it("instructs the model not to assume availability or unlisted restaurants", () => {

@@ -18,7 +18,7 @@ function buildValidRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
     location: null,
     phone: null,
     photoUrl: null,
-    score: 90,
+    matchTier: "highest",
     room: "個室あり",
     quiet: "◎",
     prestige: "◎",
@@ -55,7 +55,7 @@ describe("isRestaurant", () => {
 
   it("AI 生成フィールドが未生成（null）でも true と判定する（データ不足を過信しない前提）", () => {
     const unresolved = buildValidRestaurant({
-      score: null,
+      matchTier: null,
       room: null,
       quiet: null,
       prestige: null,
@@ -97,6 +97,16 @@ describe("isRestaurant", () => {
 
   it("genre が null の場合は true", () => {
     const unresolved = buildValidRestaurant({ genre: null });
+    expect(isRestaurant(unresolved)).toBe(true);
+  });
+
+  it("matchTier が固定語彙にない値の場合は false", () => {
+    const invalid = buildValidRestaurant({ matchTier: "perfect" as never });
+    expect(isRestaurant(invalid)).toBe(false);
+  });
+
+  it("matchTier が null の場合は true", () => {
+    const unresolved = buildValidRestaurant({ matchTier: null });
     expect(isRestaurant(unresolved)).toBe(true);
   });
 

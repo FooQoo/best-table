@@ -5,6 +5,7 @@ import type { RestaurantSearchPagination } from "./restaurant-search";
 export function parseRestaurantSearchPagination(body: {
   limit?: unknown;
   offset?: unknown;
+  existingRestaurantKeys?: string[];
 }): Required<RestaurantSearchPagination> {
   const limit = typeof body.limit === "number" && Number.isFinite(body.limit)
     ? body.limit
@@ -15,5 +16,6 @@ export function parseRestaurantSearchPagination(body: {
   return {
     limit: Math.max(1, Math.min(limit, 20)),
     offset: Math.max(0, offset),
+    existingRestaurantKeys: body.existingRestaurantKeys ?? [],
   };
 }

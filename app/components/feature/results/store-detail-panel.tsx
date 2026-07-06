@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { ConcernTags } from "~/components/ui/concern-tags";
-import { ScoreBadge } from "~/components/ui/score-badge";
+import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
 import type { Restaurant } from "~/domain/models/restaurant";
 import { getAvailabilityMessage } from "~/utils/availability-message";
@@ -80,8 +80,8 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
           <StorePhoto store={store} className="h-28 w-28 flex-none" />
           <div className="min-w-0 flex-1 space-y-2 text-[13px] text-[#79726a]">
             <div className="flex items-center gap-2">
-              <ScoreBadge score={store.score} />
-              <span>接待安全度</span>
+              <MatchTierBadge tier={store.matchTier} />
+              <span>マッチ度</span>
             </div>
             <div>個室：{store.room ?? "情報なし"}</div>
             <div>予算目安：{store.budgetLabel ?? "情報なし"}</div>

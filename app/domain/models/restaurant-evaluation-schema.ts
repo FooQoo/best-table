@@ -47,12 +47,6 @@ export const restaurantEvaluationItemSchema = z.object({
     .string()
     .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
   genre: genreSchema,
-  score: z
-    .number()
-    .nullable()
-    .describe(
-      "0〜100の整数スコア。接待・会食適性の総合評価。根拠が乏しい場合は null。",
-    ),
   room: z
     .enum(["個室あり", "半個室あり", "カウンターのみ", "個室なし", "情報なし"])
     .nullable(),

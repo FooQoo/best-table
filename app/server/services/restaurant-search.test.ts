@@ -73,7 +73,6 @@ describe("searchRestaurants", () => {
         {
           candidateName: "桂",
           genre: "japanese" as const,
-          score: 90,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
@@ -99,7 +98,7 @@ describe("searchRestaurants", () => {
       address: "東京都中央区銀座5-5-11",
       location: { lat: 35.6717, lng: 139.7639 },
       photoUrl: "/api/photos/places/abc/photos/photo-1",
-      score: 90,
+      matchTier: "highest",
       room: "個室あり",
       phone: "03-1234-5678",
       access: "銀座駅周辺",
@@ -147,7 +146,7 @@ describe("searchRestaurants", () => {
     expect(result.restaurants).toHaveLength(1);
     expect(result.restaurants[0]).toMatchObject({
       name: "評価未取得の店",
-      score: null,
+      matchTier: null,
       matchingSummary: null,
       concerns: [],
     });
@@ -169,7 +168,6 @@ describe("searchRestaurants", () => {
         {
           candidateName: "Dominique Bouchet Tokyo",
           genre: "western" as const,
-          score: 95,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
@@ -189,7 +187,7 @@ describe("searchRestaurants", () => {
     expect(result.restaurants[0]).toMatchObject({
       placeId: "places/dbt",
       name: "Dominique Bouchet Tokyo",
-      score: 95,
+      matchTier: "highest",
     });
   });
 
@@ -284,7 +282,7 @@ describe("searchRestaurants", () => {
     expect(prompt).not.toContain("候補10");
   });
 
-  it("streams restaurants as evaluation elements become available", async () => {
+  it("emits the base restaurant immediately after search, before AI evaluation starts", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
@@ -300,7 +298,6 @@ describe("searchRestaurants", () => {
         yield {
           candidateName: "逐次返却の店",
           genre: "japanese" as const,
-          score: 88,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "○" as const,
@@ -321,12 +318,20 @@ describe("searchRestaurants", () => {
     }
 
     expect(events[0]).toEqual({ type: "phase", phase: "searching" });
-    expect(events[1]).toEqual({ type: "phase", phase: "evaluating" });
-    expect(events[2]).toMatchObject({
+    expect(events[1]).toMatchObject({
       type: "restaurant",
       restaurant: {
         name: "逐次返却の店",
-        score: 88,
+        matchTier: null,
+        matchingSummary: null,
+      },
+    });
+    expect(events[2]).toEqual({ type: "phase", phase: "evaluating" });
+    expect(events[3]).toMatchObject({
+      type: "restaurant-evaluated",
+      restaurant: {
+        name: "逐次返却の店",
+        matchTier: "highest",
         matchingSummary: "接待に使いやすい候補です。",
       },
     });
@@ -336,6 +341,126 @@ describe("searchRestaurants", () => {
       hasMore: false,
       nextOffset: null,
     });
+  });
+
+  it("keeps a candidate at its base state (single event) when its evaluation never arrives", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "評価が届く店",
+          placeId: "places/evaluated",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+        {
+          name: "評価が届かない店",
+          placeId: "places/straggler",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {
+        yield {
+          candidateName: "評価が届く店",
+          genre: "japanese" as const,
+          room: "個室あり" as const,
+          quiet: "◎" as const,
+          prestige: "◎" as const,
+          service: "◎" as const,
+          access: "銀座駅周辺",
+          budgetLabel: "¥20,000",
+          concerns: [],
+          matchingSummary: "評価済みです。",
+          evidence: ["description" as const],
+          confidence: "medium" as const,
+        };
+      }),
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    const evaluatedEvents = events.filter((e) => e.type === "restaurant-evaluated");
+    expect(evaluatedEvents).toHaveLength(1);
+    expect(evaluatedEvents[0]).toMatchObject({
+      restaurant: { name: "評価が届く店", matchingSummary: "評価済みです。" },
+    });
+
+    const strugglerRestaurantEvents = events.filter(
+      (e) => e.type === "restaurant" && e.restaurant.name === "評価が届かない店",
+    );
+    expect(strugglerRestaurantEvents).toHaveLength(1);
+    expect(strugglerRestaurantEvents[0]).toMatchObject({
+      restaurant: { name: "評価が届かない店", matchTier: null, matchingSummary: null },
+    });
+  });
+
+  it("excludes already displayed restaurants before streaming AI evaluation", async () => {
+    const streamEvaluations = vi.fn(async function* (input: { prompt: string }) {
+      expect(input.prompt).not.toContain("既存の店");
+      expect(input.prompt).toContain("追加の店");
+      yield {
+        candidateName: "追加の店",
+        genre: "japanese" as const,
+        room: "個室あり" as const,
+        quiet: "◎" as const,
+        prestige: "◎" as const,
+        service: "◎" as const,
+        access: "銀座駅周辺",
+        budgetLabel: "¥20,000",
+        concerns: [],
+        matchingSummary: "追加分だけ評価しています。",
+        evidence: ["description" as const],
+        confidence: "medium" as const,
+      };
+    });
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "既存の店",
+          placeId: "places/existing",
+          address: "東京都中央区銀座1-1-1",
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+        {
+          name: "追加の店",
+          placeId: "places/new",
+          address: "東京都千代田区丸の内1-1-1",
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      streamEvaluations,
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(
+      condition,
+      { existingRestaurantKeys: ["place:places/existing"] },
+      deps,
+    )) {
+      events.push(event);
+    }
+
+    expect(streamEvaluations).toHaveBeenCalledTimes(1);
+    expect(events.some((event) => event.type === "restaurant" && event.restaurant.name === "既存の店")).toBe(false);
+    expect(events.some((event) => event.type === "restaurant" && event.restaurant.name === "追加の店")).toBe(true);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "restaurant-evaluated" &&
+          event.restaurant.name === "追加の店",
+      ),
+    ).toBe(true);
   });
 
   it("emits the searching phase but not the evaluating phase when the area cannot be resolved", async () => {
