@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Restaurant } from "~/domain/models/restaurant";
+import type { GroundingCandidate } from "~/server/clients/gemini-grounding";
 import {
   searchRestaurants,
   streamRestaurants,
@@ -26,6 +27,7 @@ const unknownAreaCondition = { ...condition, selectedAreas: ["未知のエリア
 
 function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSearchDeps {
   const cache = new Map<string, Restaurant[]>();
+  const candidateCache = new Map<string, GroundingCandidate[]>();
   return {
     searchCandidates: vi.fn(async () => []),
     evaluateCandidates: vi.fn(async () => []),
@@ -34,6 +36,10 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
     getCached: (key) => cache.get(key) ?? null,
     setCached: (key, restaurants) => {
       cache.set(key, restaurants);
+    },
+    getCachedCandidates: (key) => candidateCache.get(key) ?? null,
+    setCachedCandidates: (key, candidates) => {
+      candidateCache.set(key, candidates);
     },
     ...overrides,
   };
@@ -452,5 +458,119 @@ describe("searchRestaurants", () => {
       { type: "phase", phase: "grounding" },
       { type: "done", fromCache: false, hasMore: false, nextOffset: null },
     ]);
+  });
+
+  it("reuses cached grounding candidates for a later page instead of re-running grounding", async () => {
+    const candidates = Array.from({ length: 12 }, (_, index) => ({
+      name: `候補${index + 1}`,
+      placeId: `places/place-${index + 1}`,
+      mapsUri: null,
+      address: null,
+      phone: null,
+      mapsText: null,
+    }));
+    const searchCandidates = vi.fn(async () => candidates);
+    const deps = buildDeps({ searchCandidates });
+
+    const first = await searchRestaurants(condition, { limit: 10, offset: 0 }, deps);
+    const second = await searchRestaurants(condition, { limit: 10, offset: 10 }, deps);
+
+    expect(searchCandidates).toHaveBeenCalledTimes(1);
+    expect(first.restaurants.map((r) => r.name)).toEqual(
+      candidates.slice(0, 10).map((c) => c.name),
+    );
+    expect(second.restaurants.map((r) => r.name)).toEqual(
+      candidates.slice(10, 12).map((c) => c.name),
+    );
+  });
+
+  it("computes hasMore from the cached candidate count instead of assuming a full page means more results", async () => {
+    const candidates = Array.from({ length: 10 }, (_, index) => ({
+      name: `候補${index + 1}`,
+      placeId: `places/place-${index + 1}`,
+      mapsUri: null,
+      address: null,
+      phone: null,
+      mapsText: null,
+    }));
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => candidates),
+      // 全候補が評価済みでないと結果はキャッシュされない（未評価結果を保存しないガードのため）。
+      evaluateCandidates: vi.fn(async () =>
+        candidates.map((candidate) => ({
+          candidateName: candidate.name,
+          genre: null,
+          score: 80,
+          room: null,
+          quiet: null,
+          prestige: null,
+          service: null,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: null,
+          evidence: [],
+          confidence: null,
+        })),
+      ),
+    });
+
+    await searchRestaurants(condition, { limit: 10, offset: 0 }, deps);
+    const cachedResult = await searchRestaurants(condition, { limit: 10, offset: 0 }, deps);
+
+    expect(cachedResult.fromCache).toBe(true);
+    // ページがちょうど埋まっていても、候補キャッシュから総数(10件)が分かるため
+    // hasMore は false になる（cached.length === limit だけで true と誤判定しない）。
+    expect(cachedResult.hasMore).toBe(false);
+    expect(cachedResult.nextOffset).toBeNull();
+  });
+
+  it("does not cache an incomplete result when the evaluation stream fails partway, so a retry is possible", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "対象1",
+          placeId: "places/x1",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
+        {
+          name: "対象2",
+          placeId: "places/x2",
+          mapsUri: null,
+          address: null,
+          phone: null,
+          mapsText: null,
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {
+        yield {
+          candidateName: "対象1",
+          genre: null,
+          score: 80,
+          room: null,
+          quiet: null,
+          prestige: null,
+          service: null,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: null,
+          evidence: [],
+          confidence: null,
+        };
+        throw new Error("stream failed");
+      }),
+    });
+
+    for await (const _event of streamRestaurants(condition, {}, deps)) {
+      // 全イベントを消費するだけでよい
+    }
+
+    const cacheKey =
+      "銀座|2026-07-15|19:00|4|指定なし|指定なし|room|exec|limit=10|offset=0";
+    expect(deps.getCached(cacheKey)).toBeNull();
   });
 });

@@ -102,7 +102,7 @@ export function StoreList({
                   {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}
                 </div>
                 <div className="text-xs text-[#79726a] mt-0.5">
-                  個室：{store.room}・予算目安：{store.budgetLabel ?? "情報なし"}
+                  個室：{store.room ?? "情報なし"}・予算目安：{store.budgetLabel ?? "情報なし"}
                 </div>
               </div>
             </div>
@@ -115,7 +115,7 @@ export function StoreList({
                     className="text-[11px] px-2 py-0.5 rounded-full font-bold"
                     style={{ background: GOLD, color: "#20201c" }}
                   >
-                    {EMPHASIS_LABELS[key]}：{store[key]}
+                    {EMPHASIS_LABELS[key]}：{store[key] ?? "情報なし"}
                   </span>
                 ))}
               </div>

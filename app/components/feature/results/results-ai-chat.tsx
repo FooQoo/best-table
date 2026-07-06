@@ -244,7 +244,8 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
         type="button"
         data-results-ai-chat
         onClick={() => setOpen(true)}
-        className="absolute bottom-5 right-5 z-20 flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c]"
+        disabled={stores.length === 0}
+        className="absolute bottom-5 right-5 z-20 flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c] disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="AIに地図上の店舗を相談する"
       >
         <MessageCircle className="size-4" aria-hidden="true" />
@@ -348,7 +349,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
           <textarea
             ref={textareaRef}
             value={input}
-            onChange={(event) => setInput(event.target.value.slice(0, 100))}
+            onChange={(event) => setInput(event.target.value.slice(0, 400))}
             onKeyDown={(event) => {
               if (event.key !== "Enter" || event.shiftKey) return;
               event.preventDefault();

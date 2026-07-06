@@ -220,7 +220,13 @@ export function ResultsScreen() {
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
-            const parsed = JSON.parse(trimmed) as unknown;
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(trimmed);
+            } catch {
+              // 不正な1行だけ読み飛ばし、既に届いた結果やストリームの継続を無駄にしない。
+              continue;
+            }
             if (!isSearchStreamEvent(parsed)) continue;
 
             if (parsed.type === "phase") {

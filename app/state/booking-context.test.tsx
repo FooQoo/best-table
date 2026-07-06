@@ -1,6 +1,6 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
 import { STORES } from "~/mocks/data";
-import { BookingProvider, useBooking } from "./booking-context";
+import { BookingProvider, initialBookingState, useBooking } from "./booking-context";
 
 // BookingProvider は毎回新しい Jotai store を作るため、テストごとに状態は独立している。
 function setup() {
@@ -79,6 +79,30 @@ describe("useBooking", () => {
     expect(result.current.state.counterpart).toBeNull();
     expect(result.current.state.priorities).toEqual([]);
     expect(result.current.state.compareIds).toEqual([]);
+  });
+
+  it("resetForNewChat は予算条件も初期化する（前回の会食条件を引き継がない）", () => {
+    const { result } = setup();
+
+    act(() => {
+      result.current.setBudgetMin("¥10,000");
+      result.current.setBudgetMax("¥20,000");
+      result.current.toggleBudgetOther();
+      result.current.setBudgetOtherText("1人2万円くらいまで");
+    });
+
+    act(() => {
+      result.current.resetForNewChat();
+    });
+
+    expect(result.current.state.budgetMin).toBe(initialBookingState.budgetMin);
+    expect(result.current.state.budgetMax).toBe(initialBookingState.budgetMax);
+    expect(result.current.state.budgetOtherOn).toBe(
+      initialBookingState.budgetOtherOn,
+    );
+    expect(result.current.state.budgetOtherText).toBe(
+      initialBookingState.budgetOtherText,
+    );
   });
 
   it("相手種別を設定すると取得できる", () => {
