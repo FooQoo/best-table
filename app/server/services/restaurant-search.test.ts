@@ -79,7 +79,6 @@ describe("searchRestaurants", () => {
       evaluateCandidates: vi.fn(async () => [
         {
           candidateName: "桂",
-          displayNameJa: null,
           genre: "japanese" as const,
           score: 90,
           room: "個室あり" as const,
@@ -161,7 +160,7 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("uses displayNameJa for UI while keeping candidateName for evaluation matching", async () => {
+  it("always keeps the grounding candidate name as-is, without AI-based translation", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
@@ -176,7 +175,6 @@ describe("searchRestaurants", () => {
       evaluateCandidates: vi.fn(async () => [
         {
           candidateName: "Dominique Bouchet Tokyo",
-          displayNameJa: "ドミニク・ブシェ トーキョー",
           genre: "western" as const,
           score: 95,
           room: "個室あり" as const,
@@ -197,7 +195,7 @@ describe("searchRestaurants", () => {
 
     expect(result.restaurants[0]).toMatchObject({
       placeId: "places/dbt",
-      name: "ドミニク・ブシェ トーキョー",
+      name: "Dominique Bouchet Tokyo",
       score: 95,
     });
   });
@@ -376,7 +374,6 @@ describe("searchRestaurants", () => {
       streamEvaluations: vi.fn(async function* () {
         yield {
           candidateName: "逐次返却の店",
-          displayNameJa: null,
           genre: "japanese" as const,
           score: 88,
           room: "個室あり" as const,

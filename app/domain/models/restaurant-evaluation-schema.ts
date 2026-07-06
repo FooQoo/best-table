@@ -47,12 +47,6 @@ export const restaurantEvaluationItemSchema = z.object({
   candidateName: z
     .string()
     .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
-  displayNameJa: z
-    .string()
-    .nullable()
-    .describe(
-      "UI表示用の日本語店舗名。候補名が英語・ローマ字の場合のみ、一般に確認できる日本語表記へ補正する。確信がなければ null。",
-    ),
   genre: genreSchema,
   score: z
     .number()

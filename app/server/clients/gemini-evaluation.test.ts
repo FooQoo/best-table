@@ -23,7 +23,6 @@ describe("evaluateRestaurantCandidates", () => {
     const model = mockModelReturning([
       {
         candidateName: "桂",
-        displayNameJa: null,
         genre: "japanese",
         score: 90,
         room: "個室あり",
@@ -44,7 +43,6 @@ describe("evaluateRestaurantCandidates", () => {
     expect(result).toEqual([
       {
         candidateName: "桂",
-        displayNameJa: null,
         genre: "japanese",
         score: 90,
         room: "個室あり",

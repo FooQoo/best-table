@@ -99,7 +99,6 @@ function buildEvaluationPrompt(
     "",
     "以下の候補について、上記の会食条件への適性を評価してください。",
     "candidateName は候補名を翻訳・補正せず、下記の文字列と完全一致させてください。",
-    "displayNameJa は UI 表示用です。候補名が英語・ローマ字の場合のみ、日本語で一般に使われる店舗名へ補正してください。固有名詞の確信がない場合は null にしてください。",
     names,
     "access は住所・近隣ランドマーク・Maps情報に根拠がある場合のみ生成してください。徒歩分数など未確認の数値は作らないでください。",
     "genre は指定された分類から選び、当てはまらない・判断できない場合は other にしてください。",
@@ -172,7 +171,7 @@ function buildRestaurant(input: {
     // URL や画面状態で扱いやすい形に変換する。
     id: buildRestaurantId(candidate.placeId, cacheKey, absoluteIndex),
     placeId: candidate.placeId,
-    name: evaluation?.displayNameJa ?? candidate.name,
+    name: candidate.name,
     genre: evaluation?.genre ?? null,
     area: condition.selectedAreas[0] ?? "",
     address: detail?.address ?? candidate.address,
