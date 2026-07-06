@@ -17,14 +17,17 @@ export function AppLayout() {
         <button
           type="button"
           onClick={goTop}
-          className="flex min-w-0 items-baseline gap-3.5 bg-transparent border-none cursor-pointer px-0.5 py-1.5 rounded hover:opacity-85 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
+          className="flex items-center gap-3 bg-transparent border-none cursor-pointer px-0.5 py-1.5 rounded hover:opacity-85 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
         >
-          <span className="shrink-0 font-serif font-bold text-[22px] text-[#c8a24a] tracking-wide">
-            Best Table
-          </span>
-          <span className="hidden truncate text-xs text-[#9aa5ad] sm:inline">
-            接待・会食のための、お店選びAI
-          </span>
+          <img src="/logo.png" alt="Best Table logo" className="h-12 w-auto shrink-0" />
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <span className="font-serif font-bold text-[22px] text-[#c8a24a] tracking-wide leading-none">
+              Best Table
+            </span>
+            <span className="hidden text-xs text-[#9aa5ad] sm:inline">
+              接待・会食のための、お店選びAI
+            </span>
+          </div>
         </button>
         <button
           type="button"
