@@ -273,8 +273,12 @@ export function ResultsScreen() {
     if (hasSubmittedRef.current) return;
     hasSubmittedRef.current = true;
     submitSearch("initial", 0);
-    return () => abortControllerRef.current?.abort();
     // 検索条件は /hearing 経由でのみ変わり、この画面滞在中は変わらないため初回のみ実行する。
+    // StrictMode の開発時二重実行では mount→cleanup→mountが同一インスタンスに対して起こり、
+    // ここで abort すると2回目の mount は hasSubmittedRef により再実行されず、
+    // 検索が永久に完了しなくなる（実際にAbortErrorで検索が止まる不具合を確認済み）。
+    // submitSearch 自身が次回呼び出し時に前回のコントローラーを abort するため、
+    // ここでの明示的な cleanup abort は行わない。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
