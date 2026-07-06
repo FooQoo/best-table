@@ -10,6 +10,7 @@ import {
   EVIDENCE_LABELS,
   GENRE_LABELS,
 } from "~/utils/evidence-labels";
+import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { buildStoreQA } from "~/utils/store-qa";
 
 type StoreDetailPanelProps = {
@@ -89,6 +90,14 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
             <div data-testid="results-detail-availability">
               空席状況：{getAvailabilityMessage()}
             </div>
+            <a
+              href={buildGoogleMapsUrl(store)}
+              target="_blank"
+              rel="noopener"
+              className="inline-block text-[#8a6a1f] underline underline-offset-2"
+            >
+              Google Mapで開く
+            </a>
           </div>
         </div>
 
