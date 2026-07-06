@@ -2,6 +2,7 @@ export const DEFAULT_GEMINI_MODEL_ID = "gemini-3-flash-preview";
 
 export const GEMINI_TEXT_SETTINGS = {
   temperature: 0.2,
+  maxOutputTokens: 2048,
 } as const;
 
 export const GEMINI_GROUNDING_SETTINGS = {
