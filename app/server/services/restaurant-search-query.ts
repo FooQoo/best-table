@@ -4,9 +4,9 @@ import {
   describePriorities,
 } from "~/domain/services/booking-summary-format";
 
-// docs/ARCHITECTURE.md「検索・評価型 a. グラウンディング呼び出し」のプロンプト組み立て。
-// ここでは自由文プロンプトの構築だけを行い、実際の Gemini 呼び出しは
-// app/server/clients/gemini-search.ts に任せる。
+// docs/ARCHITECTURE.md「検索・評価型」の条件組み立て。
+// a. 施設検索（Places API Text Search）向けのクエリ文字列と、
+// b. 構造化評価（Gemini）向けの条件サマリーの両方をここに集約する。
 export type RestaurantSearchQueryCondition = {
   selectedAreas: string[];
   date: string;
@@ -23,9 +23,40 @@ export type RestaurantSearchQueryCondition = {
   counterpartOtherText: string;
 };
 
-const TARGET_CANDIDATE_COUNT = 30;
+// Places API Text Search の textQuery に使う短い検索キーワード。
+// AI評価用の文章的な優先ラベル（例:「個室・半個室を優先」）とは別に、
+// 検索エンジンが解釈しやすい語だけを対応させる。
+const PRIORITY_SEARCH_KEYWORDS: Record<string, string> = {
+  calm: "落ち着いた",
+  room: "個室",
+  prestige: "高級",
+  service: "接客が良い",
+  access: "駅近",
+  budget: "",
+};
 
-export function buildGroundingPrompt(
+// docs/ARCHITECTURE.md「検索・評価型 a. 施設検索」: エリア名 + 用途 + 重視条件の
+// キーワードだけを含む短い検索クエリ。自由文の説明や条件の断定はしない
+// （Places API 側の実在店舗検索に絞り込みヒントを渡すだけの用途）。
+export function buildPlaceSearchQuery(
+  condition: RestaurantSearchQueryCondition,
+): string {
+  const keywords = condition.priorities
+    .map((key) => PRIORITY_SEARCH_KEYWORDS[key])
+    .filter((keyword): keyword is string => Boolean(keyword));
+
+  return [
+    condition.selectedAreas.join("・"),
+    "接待",
+    "レストラン",
+    ...keywords,
+  ].join(" ");
+}
+
+// docs/ARCHITECTURE.md「検索・評価型 b. 構造化評価呼び出し」向けの条件サマリー。
+// Places API から取得した実在の候補一覧に対して AI が適性を評価する際の背景説明として使う
+// （店舗探索自体はもう AI に依頼しないため、候補数や表記に関する指示は含めない）。
+export function buildBookingConditionSummary(
   condition: RestaurantSearchQueryCondition,
 ): string {
   const lines: string[] = [];
@@ -48,16 +79,6 @@ export function buildGroundingPrompt(
   if (priorities.length > 0) {
     lines.push(`重視する点: ${priorities.join("・")}`);
   }
-
-  lines.push(
-    `候補は最大${TARGET_CANDIDATE_COUNT}件まで、実在する店舗のみを挙げてください。該当が少ない場合は無理に${TARGET_CANDIDATE_COUNT}件に満たなくても構いません。`,
-  );
-  lines.push(
-    "店舗名は英語表記や翻訳をせず、日本語の正式名称（現地表記）でそのまま出力してください。",
-  );
-  lines.push(
-    "回答は店舗名の簡潔な列挙のみでよく、住所や説明文は不要です。",
-  );
 
   return lines.join("\n");
 }

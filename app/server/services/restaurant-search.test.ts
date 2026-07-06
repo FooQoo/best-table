@@ -28,7 +28,6 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
     searchCandidates: vi.fn(async () => []),
     evaluateCandidates: vi.fn(async () => []),
     streamEvaluations: vi.fn(async function* () {}),
-    resolvePlaceDetails: vi.fn(async () => null),
     ...overrides,
   };
 }
@@ -46,7 +45,7 @@ describe("searchRestaurants", () => {
     expect(deps.searchCandidates).not.toHaveBeenCalled();
   });
 
-  it("returns an empty result without calling evaluation when grounding finds no candidates", async () => {
+  it("returns an empty result without calling evaluation when the place search finds no candidates", async () => {
     const deps = buildDeps({ searchCandidates: vi.fn(async () => []) });
     const result = await searchRestaurants(condition, {}, deps);
     expect(result).toEqual({
@@ -58,15 +57,16 @@ describe("searchRestaurants", () => {
     expect(deps.evaluateCandidates).not.toHaveBeenCalled();
   });
 
-  it("merges grounding candidates with their evaluation by matching candidate name", async () => {
+  it("merges search candidates with their evaluation by matching candidate name", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
           name: "桂",
           placeId: "places/abc",
-          mapsUri: "https://maps.google.com/?cid=1",
+          address: "東京都中央区銀座5-5-11",
+          location: { lat: 35.6717, lng: 139.7639 },
           phone: "03-1234-5678",
-          mapsText: "* **Nearby Landmarks & Areas:**\n* Near Ginza Station",
+          photoName: "places/abc/photos/photo-1",
         },
       ]),
       evaluateCandidates: vi.fn(async () => [
@@ -96,9 +96,9 @@ describe("searchRestaurants", () => {
       placeId: "places/abc",
       name: "桂",
       genre: "japanese",
-      address: null,
-      location: null,
-      photoUrl: null,
+      address: "東京都中央区銀座5-5-11",
+      location: { lat: 35.6717, lng: 139.7639 },
+      photoUrl: "/api/photos/places/abc/photos/photo-1",
       score: 90,
       room: "個室あり",
       phone: "03-1234-5678",
@@ -114,9 +114,10 @@ describe("searchRestaurants", () => {
         {
           name: "桂",
           placeId: "places/ChIJabc123",
-          mapsUri: null,
+          address: null,
+          location: null,
           phone: null,
-          mapsText: null,
+          photoName: null,
         },
       ]),
     });
@@ -132,9 +133,10 @@ describe("searchRestaurants", () => {
         {
           name: "評価未取得の店",
           placeId: "places/xyz",
-          mapsUri: null,
+          address: null,
+          location: null,
           phone: null,
-          mapsText: null,
+          photoName: null,
         },
       ]),
       evaluateCandidates: vi.fn(async () => []),
@@ -151,15 +153,16 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("always keeps the grounding candidate name as-is, without AI-based translation", async () => {
+  it("always keeps the search candidate name as-is, without AI-based translation", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
           name: "Dominique Bouchet Tokyo",
           placeId: "places/dbt",
-          mapsUri: null,
+          address: null,
+          location: null,
           phone: null,
-          mapsText: null,
+          photoName: null,
         },
       ]),
       evaluateCandidates: vi.fn(async () => [
@@ -190,34 +193,21 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("resolves Place Details for the requested 10 candidate page and merges address, location, and photo URL", async () => {
+  it("takes address, location, and photo URL directly from the Text Search candidate (no separate Place Details call)", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
-      mapsUri: null,
+      address: index === 0 ? "東京都中央区銀座1-1-1" : null,
+      location: index === 0 ? { lat: 35.6717, lng: 139.7639 } : null,
       phone: null,
-      mapsText: null,
+      photoName: index === 0 ? "places/place-1/photos/photo-1" : null,
     }));
-    const resolvePlaceDetails = vi.fn(async (placeId: string | null) => {
-      if (placeId === "places/place-1") {
-        return {
-          location: { lat: 35.6717, lng: 139.7639 },
-          address: "東京都中央区銀座1-1-1",
-          shortAddress: "銀座1-1-1",
-          photoName: "places/place-1/photos/photo-1",
-        };
-      }
-      return null;
-    });
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => candidates),
-      resolvePlaceDetails,
     });
 
     const result = await searchRestaurants(condition, { limit: 10, offset: 0 }, deps);
 
-    expect(resolvePlaceDetails).toHaveBeenCalledTimes(10);
-    expect(resolvePlaceDetails).not.toHaveBeenCalledWith("places/place-11");
     expect(result.restaurants).toHaveLength(10);
     expect(result.hasMore).toBe(true);
     expect(result.nextOffset).toBe(10);
@@ -228,6 +218,7 @@ describe("searchRestaurants", () => {
     });
     expect(result.restaurants[1]).toMatchObject({
       name: "候補2",
+      address: null,
       location: null,
       photoUrl: null,
     });
@@ -237,9 +228,10 @@ describe("searchRestaurants", () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
-      mapsUri: null,
+      address: null,
+      location: null,
       phone: null,
-      mapsText: null,
+      photoName: null,
     }));
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => candidates),
@@ -255,13 +247,25 @@ describe("searchRestaurants", () => {
     expect(result.nextOffset).toBeNull();
   });
 
+  it("requests exactly offset + limit candidates from the place search, so pagination stays within a single deterministic call", async () => {
+    const searchCandidates = vi.fn(async () => []);
+    const deps = buildDeps({ searchCandidates });
+
+    await searchRestaurants(condition, { limit: 10, offset: 10 }, deps);
+
+    expect(searchCandidates).toHaveBeenCalledWith(
+      expect.objectContaining({ pageSize: 20 }),
+    );
+  });
+
   it("evaluates only the requested candidate page to keep structured output small", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
-      mapsUri: null,
+      address: null,
+      location: null,
       phone: null,
-      mapsText: null,
+      photoName: null,
     }));
     const evaluateCandidates: RestaurantSearchDeps["evaluateCandidates"] = vi.fn(
       async () => [],
@@ -280,38 +284,16 @@ describe("searchRestaurants", () => {
     expect(prompt).not.toContain("候補10");
   });
 
-  it("leaves address null when Place Details cannot resolve a candidate", async () => {
-    const deps = buildDeps({
-      searchCandidates: vi.fn(async () => [
-        {
-          name: "住所未解決の店",
-          placeId: "places/address-unresolved",
-          mapsUri: null,
-          phone: null,
-          mapsText: null,
-        },
-      ]),
-      resolvePlaceDetails: vi.fn(async () => null),
-    });
-
-    const result = await searchRestaurants(condition, {}, deps);
-
-    expect(result.restaurants[0]).toMatchObject({
-      address: null,
-      location: null,
-      photoUrl: null,
-    });
-  });
-
   it("streams restaurants as evaluation elements become available", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
           name: "逐次返却の店",
           placeId: "places/stream",
-          mapsUri: null,
+          address: null,
+          location: null,
           phone: null,
-          mapsText: null,
+          photoName: null,
         },
       ]),
       streamEvaluations: vi.fn(async function* () {
@@ -338,7 +320,7 @@ describe("searchRestaurants", () => {
       events.push(event);
     }
 
-    expect(events[0]).toEqual({ type: "phase", phase: "grounding" });
+    expect(events[0]).toEqual({ type: "phase", phase: "searching" });
     expect(events[1]).toEqual({ type: "phase", phase: "evaluating" });
     expect(events[2]).toMatchObject({
       type: "restaurant",
@@ -356,19 +338,19 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("emits the grounding phase but not the evaluating phase when the area cannot be resolved", async () => {
+  it("emits the searching phase but not the evaluating phase when the area cannot be resolved", async () => {
     const events = [];
     for await (const event of streamRestaurants(unknownAreaCondition, {}, buildDeps())) {
       events.push(event);
     }
 
     expect(events).toEqual([
-      { type: "phase", phase: "grounding" },
+      { type: "phase", phase: "searching" },
       { type: "done", fromCache: false, hasMore: false, nextOffset: null },
     ]);
   });
 
-  it("emits the grounding phase but not the evaluating phase when there are no candidates", async () => {
+  it("emits the searching phase but not the evaluating phase when there are no candidates", async () => {
     const deps = buildDeps({ searchCandidates: vi.fn(async () => []) });
 
     const events = [];
@@ -377,18 +359,19 @@ describe("searchRestaurants", () => {
     }
 
     expect(events).toEqual([
-      { type: "phase", phase: "grounding" },
+      { type: "phase", phase: "searching" },
       { type: "done", fromCache: false, hasMore: false, nextOffset: null },
     ]);
   });
 
-  it("re-runs grounding for a later page (no candidate cache)", async () => {
+  it("re-runs the place search for a later page, relying on Text Search determinism instead of a candidate cache", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
-      mapsUri: null,
+      address: null,
+      location: null,
       phone: null,
-      mapsText: null,
+      photoName: null,
     }));
     const searchCandidates = vi.fn(async () => candidates);
     const deps = buildDeps({ searchCandidates });

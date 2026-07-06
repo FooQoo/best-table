@@ -1,28 +1,27 @@
 import type { Restaurant } from "~/domain/models/restaurant";
 import { resolveAreaLatLng } from "~/constants/area-coordinates";
 import {
-  searchRestaurantCandidates,
-  type GroundingCandidate,
-} from "~/server/clients/gemini-grounding";
+  searchPlacesByText,
+  type PlaceSearchCandidate,
+  buildStorePhotoProxyPath,
+} from "~/server/clients/google-places";
 import {
   evaluateRestaurantCandidates,
   streamRestaurantEvaluations,
 } from "~/server/clients/gemini-evaluation";
 import type { RestaurantEvaluationResult } from "~/domain/models/restaurant-evaluation-schema";
 import {
-  buildStorePhotoProxyPath,
-  fetchPlaceDetails,
-  type PlaceDetailsResult,
-} from "~/server/clients/google-places";
-import {
-  buildGroundingPrompt,
+  buildBookingConditionSummary,
+  buildPlaceSearchQuery,
   summarizeRestaurantSearchCondition,
   type RestaurantSearchQueryCondition,
 } from "./restaurant-search-query";
 import { summarizeError } from "~/server/utils/summarize-error";
 
 // docs/ARCHITECTURE.md「検索・評価型」のユースケース単位のオーケストレーション。
-// グラウンディング → 構造化評価の順に直列実行し、結果をまとめて返す。
+// 施設検索（Places API Text Search） → 構造化評価（Gemini）の順に直列実行し、
+// 結果をまとめて返す。施設検索は決定的な REST 呼び出しのため、同一条件での
+// 再実行（ページング含む）でも候補の重複・欠落は起きない。
 export type RestaurantSearchResult = {
   restaurants: Restaurant[];
   fromCache: boolean;
@@ -36,7 +35,7 @@ export type RestaurantSearchPagination = {
 };
 
 export type RestaurantSearchStreamEvent =
-  | { type: "phase"; phase: "grounding" | "evaluating" }
+  | { type: "phase"; phase: "searching" | "evaluating" }
   | { type: "restaurant"; restaurant: Restaurant }
   | {
       type: "done";
@@ -46,18 +45,16 @@ export type RestaurantSearchStreamEvent =
     };
 
 export type RestaurantSearchDeps = {
-  searchCandidates: typeof searchRestaurantCandidates;
+  searchCandidates: typeof searchPlacesByText;
   evaluateCandidates: typeof evaluateRestaurantCandidates;
   streamEvaluations: typeof streamRestaurantEvaluations;
-  resolvePlaceDetails: typeof fetchPlaceDetails;
   logger?: Pick<Console, "info" | "warn" | "error">;
 };
 
 const defaultDeps: RestaurantSearchDeps = {
-  searchCandidates: searchRestaurantCandidates,
+  searchCandidates: searchPlacesByText,
   evaluateCandidates: evaluateRestaurantCandidates,
   streamEvaluations: streamRestaurantEvaluations,
-  resolvePlaceDetails: fetchPlaceDetails,
   logger: console,
 };
 
@@ -78,23 +75,27 @@ function buildSearchConditionKey(condition: RestaurantSearchQueryCondition): str
   ].join("|");
 }
 
-// グラウンディング呼び出し。両関数（searchRestaurants / streamRestaurants）で共通。
-async function resolveGroundingCandidates(input: {
+// 施設検索呼び出し。両関数（searchRestaurants / streamRestaurants）で共通。
+// Text Search は決定的なので、同一条件・同一 pageSize なら常に同じ順序の候補を返す。
+// ページングのたびに呼び直しても重複・欠落は起きない。
+async function resolvePlaceCandidates(input: {
   condition: RestaurantSearchQueryCondition;
   latLng: { latitude: number; longitude: number };
+  pageSize: number;
   deps: RestaurantSearchDeps;
   logId: string;
   startedAt: number;
   logPrefix: string;
-}): Promise<GroundingCandidate[]> {
-  const { condition, latLng, deps, logId, startedAt, logPrefix } = input;
+}): Promise<PlaceSearchCandidate[]> {
+  const { condition, latLng, pageSize, deps, logId, startedAt, logPrefix } = input;
   const logger = deps.logger;
 
   const candidates = await deps.searchCandidates({
-    prompt: buildGroundingPrompt(condition),
+    textQuery: buildPlaceSearchQuery(condition),
     latLng,
+    pageSize,
   });
-  logger?.info(`[${logPrefix}] grounding-complete`, {
+  logger?.info(`[${logPrefix}] place-search-complete`, {
     logId,
     count: candidates.length,
     sampleNames: candidates.slice(0, 5).map((candidate) => candidate.name),
@@ -116,13 +117,13 @@ export function buildRestaurantId(
 
 function buildEvaluationPrompt(
   condition: RestaurantSearchQueryCondition,
-  candidates: GroundingCandidate[],
+  candidates: PlaceSearchCandidate[],
 ): string {
   const names = candidates
     .map((candidate, index) => {
       const context = [
+        candidate.address ? `住所: ${candidate.address}` : null,
         candidate.phone ? `電話: ${candidate.phone}` : null,
-        candidate.mapsText ? `Maps情報: ${summarizeMapsText(candidate.mapsText)}` : null,
       ]
         .filter(Boolean)
         .join(" / ");
@@ -130,27 +131,15 @@ function buildEvaluationPrompt(
     })
     .join("\n");
   return [
-    buildGroundingPrompt(condition),
+    buildBookingConditionSummary(condition),
     "",
     "以下の候補について、上記の会食条件への適性を評価してください。",
     "candidateName は候補名を翻訳・補正せず、下記の文字列と完全一致させてください。",
     names,
-    "access は住所・近隣ランドマーク・Maps情報に根拠がある場合のみ生成してください。徒歩分数など未確認の数値は作らないでください。",
+    "access は住所やエリアの一般的な知識から根拠がある場合のみ生成してください。徒歩分数など未確認の数値は作らないでください。",
     "genre は指定された分類から選び、当てはまらない・判断できない場合は other にしてください。",
     "根拠が不足する項目は null または空配列にし、確認できない事実を作らないでください。",
   ].join("\n");
-}
-
-function summarizeMapsText(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) =>
-      /Address|Nearby Landmarks|Around|Near|Beside|Within|Station|駅|Phone/.test(
-        line,
-      ),
-    )
-    .join(" ")
-    .slice(0, 700);
 }
 
 function createSearchLogId(): string {
@@ -162,15 +151,14 @@ function elapsedMs(startedAt: number): number {
 }
 
 function buildRestaurant(input: {
-  candidate: GroundingCandidate;
+  candidate: PlaceSearchCandidate;
   evaluation: RestaurantEvaluationResult | null;
-  detail: PlaceDetailsResult | null;
   condition: RestaurantSearchQueryCondition;
   searchKey: string;
   absoluteIndex: number;
   generatedAt: string;
 }): Restaurant {
-  const { candidate, evaluation, detail, condition, searchKey, absoluteIndex } = input;
+  const { candidate, evaluation, condition, searchKey, absoluteIndex } = input;
   return {
     // placeId は "places/ChIJ..." のように "/" を含むことがあるため、
     // URL や画面状態で扱いやすい形に変換する。
@@ -179,10 +167,10 @@ function buildRestaurant(input: {
     name: candidate.name,
     genre: evaluation?.genre ?? null,
     area: condition.selectedAreas[0] ?? "",
-    address: detail?.address ?? null,
-    location: detail?.location ?? null,
+    address: candidate.address,
+    location: candidate.location,
     phone: candidate.phone,
-    photoUrl: detail?.photoName ? buildStorePhotoProxyPath(detail.photoName) : null,
+    photoUrl: candidate.photoName ? buildStorePhotoProxyPath(candidate.photoName) : null,
     score: evaluation?.score ?? null,
     room: evaluation?.room ?? null,
     quiet: evaluation?.quiet ?? null,
@@ -227,18 +215,19 @@ export async function searchRestaurants(
   }
   logger?.info("[restaurant-search] area-resolved", { logId, latLng });
 
-  let candidates: GroundingCandidate[];
+  let candidates: PlaceSearchCandidate[];
   try {
-    candidates = await resolveGroundingCandidates({
+    candidates = await resolvePlaceCandidates({
       condition,
       latLng,
+      pageSize: offset + limit,
       deps,
       logId,
       startedAt,
       logPrefix: "restaurant-search",
     });
   } catch (error) {
-    logger?.error("[restaurant-search] grounding-failed", {
+    logger?.error("[restaurant-search] place-search-failed", {
       logId,
       error: summarizeError(error),
       elapsedMs: elapsedMs(startedAt),
@@ -247,7 +236,7 @@ export async function searchRestaurants(
   }
 
   if (candidates.length === 0) {
-    logger?.warn("[restaurant-search] no-grounding-candidates", {
+    logger?.warn("[restaurant-search] no-search-candidates", {
       logId,
       elapsedMs: elapsedMs(startedAt),
     });
@@ -279,38 +268,14 @@ export async function searchRestaurants(
   const evaluationByName = new Map(
     evaluations.map((evaluation) => [evaluation.candidateName, evaluation]),
   );
-  const placesStartedAt = performance.now();
-  const placeDetails = await Promise.all(
-    pageCandidates.map(async (candidate) => {
-      try {
-        return await deps.resolvePlaceDetails(candidate.placeId);
-      } catch (error) {
-        logger?.warn("[restaurant-search] place-details-failed", {
-          logId,
-          candidateName: candidate.name,
-          hasPlaceId: Boolean(candidate.placeId),
-          error: summarizeError(error),
-        });
-        return null;
-      }
-    }),
-  );
-  logger?.info("[restaurant-search] place-details-complete", {
-    logId,
-    requested: pageCandidates.length,
-    resolved: placeDetails.filter(Boolean).length,
-    elapsedMs: elapsedMs(placesStartedAt),
-  });
 
   const generatedAt = new Date().toISOString();
   const restaurants: Restaurant[] = pageCandidates.map((candidate, index) => {
     const evaluation = evaluationByName.get(candidate.name) ?? null;
     const absoluteIndex = offset + index;
-    const detail = placeDetails[index] ?? null;
     return buildRestaurant({
       candidate,
       evaluation,
-      detail,
       condition,
       searchKey,
       absoluteIndex,
@@ -354,7 +319,7 @@ export async function* streamRestaurants(
     offset,
   });
 
-  yield { type: "phase", phase: "grounding" };
+  yield { type: "phase", phase: "searching" };
 
   const latLng = resolveAreaLatLng(condition.selectedAreas);
   if (!latLng) {
@@ -367,9 +332,10 @@ export async function* streamRestaurants(
     return;
   }
 
-  const candidates = await resolveGroundingCandidates({
+  const candidates = await resolvePlaceCandidates({
     condition,
     latLng,
+    pageSize: offset + limit,
     deps,
     logId,
     startedAt,
@@ -387,20 +353,6 @@ export async function* streamRestaurants(
   const generatedAt = new Date().toISOString();
   const yielded = new Set<string>();
   const restaurants: Restaurant[] = [];
-  const detailPromises = new Map(
-    pageCandidates.map((candidate) => [
-      candidate.name,
-      deps.resolvePlaceDetails(candidate.placeId).catch((error) => {
-        logger?.warn("[restaurant-search-stream] place-details-failed", {
-          logId,
-          candidateName: candidate.name,
-          hasPlaceId: Boolean(candidate.placeId),
-          error: summarizeError(error),
-        });
-        return null;
-      }),
-    ]),
-  );
 
   try {
     for await (const evaluation of deps.streamEvaluations({
@@ -420,11 +372,9 @@ export async function* streamRestaurants(
       const candidate = pageCandidates[candidateIndex];
       if (yielded.has(candidate.name)) continue;
 
-      const detail = (await detailPromises.get(candidate.name)) ?? null;
       const restaurant = buildRestaurant({
         candidate,
         evaluation,
-        detail,
         condition,
         searchKey,
         absoluteIndex: offset + candidateIndex,
@@ -444,11 +394,9 @@ export async function* streamRestaurants(
 
   for (const [index, candidate] of pageCandidates.entries()) {
     if (yielded.has(candidate.name)) continue;
-    const detail = (await detailPromises.get(candidate.name)) ?? null;
     const restaurant = buildRestaurant({
       candidate,
       evaluation: null,
-      detail,
       condition,
       searchKey,
       absoluteIndex: offset + index,

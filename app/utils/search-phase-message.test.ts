@@ -8,8 +8,8 @@ describe("getSearchPhaseMessage", () => {
     );
   });
 
-  it("returns the grounding message while candidate stores are being found", () => {
-    expect(getSearchPhaseMessage("grounding", 0)).toBe(
+  it("returns the searching message while candidate stores are being found", () => {
+    expect(getSearchPhaseMessage("searching", 0)).toBe(
       "周辺の候補店舗を検索しています…",
     );
   });

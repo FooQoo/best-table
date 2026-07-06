@@ -55,7 +55,7 @@ function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
   if (typeof value !== "object" || value === null) return false;
   const event = value as Record<string, unknown>;
   if (event.type === "phase") {
-    return event.phase === "grounding" || event.phase === "evaluating";
+    return event.phase === "searching" || event.phase === "evaluating";
   }
   if (event.type === "restaurant") return typeof event.restaurant === "object";
   if (event.type === "error") return typeof event.message === "string";

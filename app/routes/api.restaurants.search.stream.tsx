@@ -66,7 +66,7 @@ export async function action({ request }: ActionFunctionArgs) {
         const repository = getRestaurantSearchRepository();
 
         if (process.env.MODE === "mock") {
-          send({ type: "phase", phase: "grounding" });
+          send({ type: "phase", phase: "searching" });
           send({ type: "phase", phase: "evaluating" });
           const result = await repository.search(condition, pagination);
           for (const restaurant of result.restaurants) {

@@ -1,69 +1,170 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  GOOGLE_PLACES_DETAILS_FIELD_MASK,
+  GOOGLE_PLACES_SEARCH_FIELD_MASK,
   buildStorePhotoProxyPath,
-  fetchPlaceDetails,
   fetchPlacePhotoMedia,
-  toPlaceDetailsResult,
+  searchPlacesByText,
+  toPlaceSearchCandidate,
 } from "./google-places";
 
-describe("GOOGLE_PLACES_DETAILS_FIELD_MASK", () => {
-  it("only requests fields needed for map rendering and representative photos", () => {
-    const fields = GOOGLE_PLACES_DETAILS_FIELD_MASK.split(",");
+describe("GOOGLE_PLACES_SEARCH_FIELD_MASK", () => {
+  it("only requests fields needed for the restaurant list, map, and representative photo", () => {
+    const fields = GOOGLE_PLACES_SEARCH_FIELD_MASK.split(",");
 
     expect(fields).toEqual([
-      "location",
-      "formattedAddress",
-      "shortFormattedAddress",
-      "types",
-      "viewport",
-      "plusCode",
-      "photos",
+      "places.id",
+      "places.displayName",
+      "places.formattedAddress",
+      "places.location",
+      "places.nationalPhoneNumber",
+      "places.photos",
     ]);
-    expect(fields).not.toContain("displayName");
-    expect(fields).not.toContain("googleMapsUri");
-    expect(fields).not.toContain("rating");
-    expect(fields).not.toContain("reviews");
-    expect(fields).not.toContain("regularOpeningHours");
+    expect(fields).not.toContain("places.rating");
+    expect(fields).not.toContain("places.priceLevel");
+    expect(fields).not.toContain("places.reviews");
   });
 });
 
-describe("toPlaceDetailsResult", () => {
-  it("converts a Place Details response into Restaurant location/address/photo candidates", () => {
-    const result = toPlaceDetailsResult({
-      location: { latitude: 35.6717, longitude: 139.7639 },
+describe("toPlaceSearchCandidate", () => {
+  it("converts a Text Search place into a candidate with normalized placeId", () => {
+    const result = toPlaceSearchCandidate({
+      id: "abc123",
+      displayName: { text: "桂", languageCode: "ja" },
       formattedAddress: "東京都中央区銀座5-5-11",
-      shortFormattedAddress: "中央区銀座5-5-11",
-      photos: [
-        {
-          name: "places/abc/photos/photo-1",
-          widthPx: 1200,
-          heightPx: 800,
-        },
-      ],
+      location: { latitude: 35.6717, longitude: 139.7639 },
+      nationalPhoneNumber: "03-1234-5678",
+      photos: [{ name: "places/abc123/photos/photo-1", widthPx: 1200, heightPx: 800 }],
     });
 
     expect(result).toEqual({
-      location: { lat: 35.6717, lng: 139.7639 },
+      placeId: "places/abc123",
+      name: "桂",
       address: "東京都中央区銀座5-5-11",
-      shortAddress: "中央区銀座5-5-11",
-      photoName: "places/abc/photos/photo-1",
+      location: { lat: 35.6717, lng: 139.7639 },
+      phone: "03-1234-5678",
+      photoName: "places/abc123/photos/photo-1",
     });
   });
 
-  it("falls back to short address and nulls when fields are missing or malformed", () => {
-    const result = toPlaceDetailsResult({
+  it("keeps an already-prefixed placeId as-is", () => {
+    const result = toPlaceSearchCandidate({
+      id: "places/abc123",
+      displayName: { text: "桂" },
+    });
+
+    expect(result?.placeId).toBe("places/abc123");
+  });
+
+  it("falls back to nulls when optional fields are missing or malformed", () => {
+    const result = toPlaceSearchCandidate({
+      id: "abc123",
+      displayName: { text: "桂" },
       location: { latitude: "35.6", longitude: 139.7 },
-      shortFormattedAddress: "銀座",
       photos: [{ name: "" }],
     });
 
     expect(result).toEqual({
+      placeId: "places/abc123",
+      name: "桂",
+      address: null,
       location: null,
-      address: "銀座",
-      shortAddress: "銀座",
+      phone: null,
       photoName: null,
     });
+  });
+
+  it("returns null when the place has no id or no display name", () => {
+    expect(toPlaceSearchCandidate({ displayName: { text: "桂" } })).toBeNull();
+    expect(toPlaceSearchCandidate({ id: "abc123" })).toBeNull();
+    expect(toPlaceSearchCandidate(null)).toBeNull();
+  });
+});
+
+describe("searchPlacesByText", () => {
+  it("calls Text Search with the field mask, server API key, and location bias", async () => {
+    const fetchFn = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
+      new Response(
+        JSON.stringify({
+          places: [
+            {
+              id: "abc123",
+              displayName: { text: "桂" },
+              formattedAddress: "東京都中央区銀座5-5-11",
+              location: { latitude: 35.6717, longitude: 139.7639 },
+            },
+          ],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const candidates = await searchPlacesByText(
+      {
+        textQuery: "銀座 接待 レストラン",
+        latLng: { latitude: 35.6717, longitude: 139.7639 },
+      },
+      { apiKey: "server-key", fetchFn },
+    );
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      "https://places.googleapis.com/v1/places:searchText",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "X-Goog-Api-Key": "server-key",
+          "X-Goog-FieldMask": GOOGLE_PLACES_SEARCH_FIELD_MASK,
+        }),
+      }),
+    );
+    const body = JSON.parse(vi.mocked(fetchFn).mock.calls[0][1]?.body as string);
+    expect(body).toMatchObject({
+      textQuery: "銀座 接待 レストラン",
+      includedType: "restaurant",
+      pageSize: 20,
+      locationBias: {
+        circle: {
+          center: { latitude: 35.6717, longitude: 139.7639 },
+          radius: 3000,
+        },
+      },
+    });
+    expect(candidates).toEqual([
+      {
+        placeId: "places/abc123",
+        name: "桂",
+        address: "東京都中央区銀座5-5-11",
+        location: { lat: 35.6717, lng: 139.7639 },
+        phone: null,
+        photoName: null,
+      },
+    ]);
+  });
+
+  it("returns an empty array instead of throwing for missing key, HTTP failures, or malformed responses", async () => {
+    const fetchFn = vi.fn(async () => new Response("not json", { status: 500 }));
+
+    await expect(
+      searchPlacesByText(
+        { textQuery: "test", latLng: { latitude: 0, longitude: 0 } },
+        { apiKey: "", fetchFn },
+      ),
+    ).resolves.toEqual([]);
+    await expect(
+      searchPlacesByText(
+        { textQuery: "test", latLng: { latitude: 0, longitude: 0 } },
+        { apiKey: "server-key", fetchFn },
+      ),
+    ).resolves.toEqual([]);
+  });
+
+  it("does not fabricate candidates when the response has no places", async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }));
+
+    const candidates = await searchPlacesByText(
+      { textQuery: "test", latLng: { latitude: 0, longitude: 0 } },
+      { apiKey: "server-key", fetchFn },
+    );
+    expect(candidates).toEqual([]);
   });
 });
 
@@ -113,45 +214,5 @@ describe("fetchPlacePhotoMedia", () => {
     await expect(
       fetchPlacePhotoMedia("places/abc/photos/photo-1", { apiKey: "server-key", fetchFn }),
     ).resolves.toBeNull();
-  });
-});
-
-describe("fetchPlaceDetails", () => {
-  it("calls Place Details with the safe FieldMask and server API key", async () => {
-    const fetchFn = vi.fn(async () => {
-      return new Response(
-        JSON.stringify({
-          location: { latitude: 35.6717, longitude: 139.7639 },
-          formattedAddress: "東京都中央区銀座5-5-11",
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    });
-
-    const result = await fetchPlaceDetails("places/abc", {
-      apiKey: "server-key",
-      fetchFn,
-    });
-
-    expect(result).not.toBeNull();
-    expect(fetchFn).toHaveBeenCalledWith(
-      "https://places.googleapis.com/v1/places/abc?languageCode=ja&regionCode=JP",
-      {
-        headers: {
-          "X-Goog-Api-Key": "server-key",
-          "X-Goog-FieldMask": GOOGLE_PLACES_DETAILS_FIELD_MASK,
-        },
-      },
-    );
-    expect(result?.location).toEqual({ lat: 35.6717, lng: 139.7639 });
-    expect(result?.address).toBe("東京都中央区銀座5-5-11");
-  });
-
-  it("returns null instead of throwing for missing placeId, missing key, and HTTP failures", async () => {
-    const fetchFn = vi.fn(async () => new Response("{}", { status: 500 }));
-
-    await expect(fetchPlaceDetails(null, { apiKey: "server-key", fetchFn })).resolves.toBeNull();
-    await expect(fetchPlaceDetails("places/abc", { apiKey: "", fetchFn })).resolves.toBeNull();
-    await expect(fetchPlaceDetails("places/abc", { apiKey: "server-key", fetchFn })).resolves.toBeNull();
   });
 });

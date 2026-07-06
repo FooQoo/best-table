@@ -5,11 +5,6 @@ export const GEMINI_TEXT_SETTINGS = {
   maxOutputTokens: 2048,
 } as const;
 
-export const GEMINI_GROUNDING_SETTINGS = {
-  temperature: 0.2,
-  maxOutputTokens: 2048,
-} as const;
-
 export const GEMINI_STRUCTURED_SETTINGS = {
   temperature: 0,
   maxOutputTokens: 4096,

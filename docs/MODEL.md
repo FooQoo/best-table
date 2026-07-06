@@ -71,13 +71,13 @@ type BudgetLabel = string;   // BUDGET_STEPS の固定語彙（"指定なし" | 
 
 ### ドメインサービス
 
-- `AreaGeocodingService`（概念、実装は `app/constants/area-coordinates.ts` の `resolveAreaLatLng`）: `AreaCity` を Gemini グラウンディングに渡す緯度経度に変換する。固定のエリア→緯度経度対応表を使う（`docs/ARCHITECTURE.md`）。
+- `AreaGeocodingService`（概念、実装は `app/constants/area-coordinates.ts` の `resolveAreaLatLng`）: `AreaCity` を Places API 施設検索（Text Search）に渡す緯度経度に変換する。固定のエリア→緯度経度対応表を使う（`docs/ARCHITECTURE.md`）。
 
 ## コンテキスト2: 店舗探索・評価（Restaurant Discovery）
 
 ### `Restaurant`: 識別子を持つ Read Model（集約ではなく DTO に近い）
 
-`Restaurant` は識別子（`id`）を持つため型としてはエンティティだが、DDD でいう「振る舞いによって自身の不変条件を守る集約ルート」ではない。生成（Gemini グラウンディング＋構造化評価）というサービス層の処理結果を1回で丸ごと詰め替えただけの読み取り専用データであり、アプリ内でこれを変更するドメインコマンドは存在しない（`score` や `concern` を書き換えるユースケースが無い）。したがって性質としては **DTO / Read Model** に近い。
+`Restaurant` は識別子（`id`）を持つため型としてはエンティティだが、DDD でいう「振る舞いによって自身の不変条件を守る集約ルート」ではない。生成（Places API 施設検索＋ Gemini 構造化評価）というサービス層の処理結果を1回で丸ごと詰め替えただけの読み取り専用データであり、アプリ内でこれを変更するドメインコマンドは存在しない（`score` や `concern` を書き換えるユースケースが無い）。したがって性質としては **DTO / Read Model** に近い。
 
 それでも型として独立させる理由:
 
@@ -85,7 +85,7 @@ type BudgetLabel = string;   // BUDGET_STEPS の固定語彙（"指定なし" | 
 - `RestaurantRepository` がキャッシュ・取得する単位であり、部分更新ではなく常に丸ごと1レコードとして扱われる。
 - 生データ（Google 由来）と AI 派生評価を型として分離しない、という明示的な設計判断がある（後述）。
 
-生データと AI 派生評価を型として分離しない理由: 店舗候補は Google マップによるグラウンディングと AI 評価をまとめて一度に生成するだけであり、生成過程が単一のため、型を分ける意味がない。検索結果一覧、MAP、比較表はすべてこの型を参照し、画面ごとに別の形へ作り替えない。
+生データと AI 派生評価を型として分離しない理由: 店舗候補は Places API による施設検索と AI 評価をまとめて一度に生成するだけであり、生成過程が単一のため、型を分ける意味がない。検索結果一覧、MAP、比較表はすべてこの型を参照し、画面ごとに別の形へ作り替えない。
 
 ```ts
 // app/domain/models/restaurant.ts（実装済み）
@@ -124,18 +124,18 @@ type Genre =
 type ConcernItem = { text: string; evidence: EvidenceCategory[] };
 
 type Restaurant = {
-  // Google 由来（グラウンディング出力、および応答本文からのベストエフォート抽出）。確認できない値は null のまま。
+  // Google 由来（Places API 施設検索のレスポンスから直接取得）。確認できない値は null のまま。
   id: string; // アプリ内部の一意ID。placeId から "/" を "_" に置換して作る（URL に使うため。詳細は docs/ARCHITECTURE.md）
-  placeId: string | null; // グラウンディングメタデータ由来。Google発行の不透明な文字列（"places/ChIJ..." 形式）
+  placeId: string | null; // 施設検索の `id` を "places/{id}" 形式に正規化したもの。Google発行の不透明な文字列
   name: string; // 店舗名。固有名詞のため自由文字列
   area: string; // ヒアリングで選んだエリア名をそのまま使う自由文字列
-  address: string | null; // 住所。応答本文からのベストエフォート抽出。見つからなければ null
-  location: { lat: number; lng: number } | null; // MAP表示に使う実座標。グラウンディング出力には含まれないため、placeId から別途解決する。解決できない場合は null
-  phone: string | null; // 連絡先。グラウンディング出力に含まれないため現状つねに null
-  photoUrl: string | null; // 代表写真。グラウンディング出力には含まれないため、placeId から別途解決する。解決できない場合は null
+  address: string | null; // 住所。施設検索の `formattedAddress`。含まれなければ null
+  location: { lat: number; lng: number } | null; // MAP表示に使う実座標。施設検索の `location`。含まれなければ null
+  phone: string | null; // 連絡先。施設検索の `nationalPhoneNumber`。含まれなければ null
+  photoUrl: string | null; // 代表写真。施設検索の `photos` から得た photo resource name をプロキシ経由の URL に変換。含まれなければ null
 
   // AI 生成部分。ヒアリング条件を踏まえた1回の生成でまとめて埋める。生成前・失敗時は null。
-  genre: Genre | null; // 料理ジャンル。グラウンディング出力には含まれないため、構造化評価で AI が固定語彙から生成する
+  genre: Genre | null; // 料理ジャンル。施設検索の出力には含まれないため、構造化評価で AI が固定語彙から生成する
   score: number | null; // 接待安全度 0-100
   room: RoomAvailability | null; // 個室・席の状況（個室有無の表示も兼ねる）。固定語彙
   quiet: RatingSymbol | null; // 固定語彙
@@ -151,7 +151,7 @@ type Restaurant = {
 };
 ```
 
-Place Details Essentials で `location` と同じ SKU に収まる `formattedAddress` / `shortFormattedAddress` / `types` / `viewport` / `plusCode` / `photos` を同時取得候補にする。ただし現行 `Restaurant` 型へ保存するのは、まず `address` / `location` / `photoUrl` に必要な値だけとし、追加フィールドを UI に出す場合は別途型追加する。
+Places API 施設検索（Text Search）のフィールドマスクは `id` / `displayName` / `formattedAddress` / `location` / `nationalPhoneNumber` / `photos` に絞る（`app/server/clients/google-places.ts` の `GOOGLE_PLACES_SEARCH_FIELD_MASK`）。`rating` / `userRatingCount` / `priceLevel` など追加のフィールドを取得する場合は、SKU ティアが上がらないか実装時に確認してから追加する。
 
 自由記述と固定語彙の区別:
 
@@ -161,16 +161,14 @@ Place Details Essentials で `location` と同じ SKU に収まる `formattedAdd
 
 生成時に満たすべき制約（`Restaurant` 型自体は自己強制しない。生成サービスと zod スキーマが担保する）:
 
-- Google 由来のフィールド（`placeId` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。実際には Gemini のグラウンディング応答に含まれる情報が `uri` / `title` / `placeId` のみだったため、`phone` は現状つねに `null`、`address` のみ応答本文からのベストエフォート抽出で埋まることがある。`location` / `address` / `photoUrl` は `placeId` から解決し、取得できた場合だけ埋める。`genre` はグラウンディング側の値ではなく、構造化評価（AI 生成フィールド）として別途生成する。
+- Google 由来のフィールド（`placeId` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。これらは Places API 施設検索（Text Search）のレスポンスから直接取得し、店舗ごとにレスポンスに含まれていた値だけを埋める（含まれない場合は捏造せず `null` のまま）。`genre` は施設検索側の値ではなく、構造化評価（AI 生成フィールド）として別途生成する。
 - AI 生成フィールド（`score` 以下）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。
 - 未生成・生成失敗時は AI 生成フィールドを `null` のままにし、Google 由来のフィールドだけで一覧・MAP表示が成立するようにする（`docs/RELIABILITY.md` の段階的表示）。
 - `evidence` / `confidence` を伴わない AI 評価文言を生成しない（`docs/RELIABILITY.md` の根拠付け方針）。
 
 ### ドメインサービス
 
-- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Gemini グラウンディング呼び出し（`app/server/clients/gemini-grounding.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を直列に実行し、`Restaurant[]` を生成する。
-- `RestaurantLocationResolver`（実装は `app/server/clients/google-places.ts`）: `placeId` から地図表示用の緯度経度を解決する。解決できない場合は `null` を返し、UI はその店舗のマーカーを出さない。
-- `RestaurantPhotoResolver`（実装は `app/server/clients/google-places.ts`）: `placeId` から代表写真を解決する。解決できない場合は `null` を返し、UI は既存の写真プレースホルダーに戻す。
+- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Places API 施設検索呼び出し（`searchPlacesByText`、`app/server/clients/google-places.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を直列に実行し、`Restaurant[]` を生成する。座標・住所・代表写真は施設検索のレスポンスから直接得るため、`placeId` を使って別途解決する専用サービスは存在しない。解決できない値（レスポンスに含まれない）は `null` のままにし、UI はマーカー非表示・写真プレースホルダーにフォールバックする。
 
 ### リポジトリ
 
