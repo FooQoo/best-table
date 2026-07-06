@@ -1,6 +1,10 @@
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
-import { COUNTERPARTS, PRIORITIES } from "~/mocks/data";
+import {
+  describeBudget,
+  describeCounterpart,
+  describePriorities,
+} from "~/domain/services/booking-summary-format";
 
 export type ResultsChatPromptInput = {
   question: string;
@@ -13,13 +17,6 @@ export type ResultsChatSuggestionsPromptInput = {
   answer: string;
   restaurants: Restaurant[];
 };
-
-const PRIORITY_LABEL_BY_KEY = Object.fromEntries(
-  PRIORITIES.map((p) => [p.key, p.label]),
-);
-const COUNTERPART_LABEL_BY_ID = Object.fromEntries(
-  COUNTERPARTS.map((c) => [c.id, c.label]),
-);
 
 export function buildResultsChatPrompt(input: ResultsChatPromptInput): string {
   const lines: string[] = [];
@@ -128,34 +125,4 @@ function formatRestaurants(restaurants: Restaurant[]): string {
 // 表示中にない店舗名を前提にした質問を作らせないための最小限の根拠として名称だけ渡す。
 function formatRestaurantNames(restaurants: Restaurant[]): string {
   return restaurants.map((restaurant) => `- ${restaurant.name}`).join("\n");
-}
-
-function describeBudget(summary: ResultsChatBookingSummary): string | null {
-  if (summary.budgetOtherOn && summary.budgetOtherText.trim()) {
-    return summary.budgetOtherText.trim();
-  }
-  if (summary.budgetMin !== "指定なし" || summary.budgetMax !== "指定なし") {
-    return `${summary.budgetMin}〜${summary.budgetMax}`;
-  }
-  return null;
-}
-
-function describeCounterpart(summary: ResultsChatBookingSummary): string | null {
-  if (summary.counterpart === "other" && summary.counterpartOtherText.trim()) {
-    return summary.counterpartOtherText.trim();
-  }
-  if (summary.counterpart) {
-    return COUNTERPART_LABEL_BY_ID[summary.counterpart] ?? null;
-  }
-  return null;
-}
-
-function describePriorities(summary: ResultsChatBookingSummary): string[] {
-  const labels = summary.priorities.map(
-    (key) => PRIORITY_LABEL_BY_KEY[key] ?? key,
-  );
-  if (summary.priorityOtherOn && summary.priorityOtherText.trim()) {
-    labels.push(summary.priorityOtherText.trim());
-  }
-  return labels;
 }

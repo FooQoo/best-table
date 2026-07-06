@@ -1,4 +1,8 @@
-import { COUNTERPARTS, PRIORITIES } from "~/mocks/data";
+import {
+  describeBudget,
+  describeCounterpart,
+  describePriorities,
+} from "~/domain/services/booking-summary-format";
 
 // docs/ARCHITECTURE.md「検索・評価型 a. グラウンディング呼び出し」のプロンプト組み立て。
 // ここでは自由文プロンプトの構築だけを行い、実際の Gemini 呼び出しは
@@ -19,44 +23,7 @@ export type RestaurantSearchQueryCondition = {
   counterpartOtherText: string;
 };
 
-const PRIORITY_LABEL_BY_KEY = Object.fromEntries(
-  PRIORITIES.map((p) => [p.key, p.label]),
-);
-const COUNTERPART_LABEL_BY_ID = Object.fromEntries(
-  COUNTERPARTS.map((c) => [c.id, c.label]),
-);
-
 const TARGET_CANDIDATE_COUNT = 30;
-
-function describeBudget(condition: RestaurantSearchQueryCondition): string | null {
-  if (condition.budgetOtherOn && condition.budgetOtherText.trim()) {
-    return condition.budgetOtherText.trim();
-  }
-  if (condition.budgetMin !== "指定なし" || condition.budgetMax !== "指定なし") {
-    return `${condition.budgetMin}〜${condition.budgetMax}`;
-  }
-  return null;
-}
-
-function describeCounterpart(condition: RestaurantSearchQueryCondition): string | null {
-  if (condition.counterpart === "other" && condition.counterpartOtherText.trim()) {
-    return condition.counterpartOtherText.trim();
-  }
-  if (condition.counterpart) {
-    return COUNTERPART_LABEL_BY_ID[condition.counterpart] ?? null;
-  }
-  return null;
-}
-
-function describePriorities(condition: RestaurantSearchQueryCondition): string[] {
-  const labels = condition.priorities.map(
-    (key) => PRIORITY_LABEL_BY_KEY[key] ?? key,
-  );
-  if (condition.priorityOtherOn && condition.priorityOtherText.trim()) {
-    labels.push(condition.priorityOtherText.trim());
-  }
-  return labels;
-}
 
 export function buildGroundingPrompt(
   condition: RestaurantSearchQueryCondition,
@@ -90,4 +57,25 @@ export function buildGroundingPrompt(
   );
 
   return lines.join("\n");
+}
+
+// ログ出力用の要約。個人情報になり得ない範囲の条件だけを残す。
+// app/server/services/restaurant-search.ts と /api/restaurants/search resource route の
+// 両方でほぼ同じ実装が重複していたため、条件の型と一緒にここへ集約する。
+export function summarizeRestaurantSearchCondition(
+  condition: RestaurantSearchQueryCondition,
+) {
+  return {
+    areas: condition.selectedAreas,
+    date: condition.date,
+    time: condition.time,
+    people: condition.people,
+    budget:
+      condition.budgetOtherOn && condition.budgetOtherText.trim()
+        ? "custom"
+        : `${condition.budgetMin}-${condition.budgetMax}`,
+    priorities: condition.priorities,
+    priorityOtherOn: condition.priorityOtherOn,
+    counterpart: condition.counterpart,
+  };
 }

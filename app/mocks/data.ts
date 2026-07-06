@@ -85,17 +85,6 @@ export const AREA_REGIONS: AreaRegion[] = [
   },
 ];
 
-export type HistoryItem = {
-  title: string;
-  date: string;
-};
-
-export const HISTORY: HistoryItem[] = [
-  { title: "銀座・取引先接待", date: "7/2" },
-  { title: "六本木・社内懇親会", date: "6/28" },
-  { title: "赤坂・お礼の会食", date: "6/20" },
-];
-
 // app/mocks/ 専用の拡張。`Restaurant`（docs/MODEL.md 準拠のドメイン型）に、通常モック表示で使う
 // 相対位置の MAP マーカー座標・写真プレースホルダーラベルを足したもの。
 // `MODE=mock` の検索結果（地図実装検証用の座標・住所・代表写真付きデータ）は、

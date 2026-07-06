@@ -20,7 +20,7 @@ export type RoomAvailability =
 
 export type Confidence = "high" | "medium" | "low";
 
-// 地図ピンのジャンル別アイコン（app/utils/genre-icon.ts）に対応する固定語彙。
+// 地図ピン・一覧表示で使うジャンルの固定語彙。
 // AI 評価がここに無いジャンルだと判断した場合は "other" にし、自由文を作らせない。
 export type Genre =
   | "japanese"

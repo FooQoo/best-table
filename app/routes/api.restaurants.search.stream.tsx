@@ -3,9 +3,10 @@ import { getRestaurantSearchRepository } from "~/server/repositories/restaurant-
 import {
   streamRestaurants,
   type RestaurantSearchStreamEvent,
-  type RestaurantSearchPagination,
 } from "~/server/services/restaurant-search";
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
+import { parseRestaurantSearchPagination } from "~/server/services/restaurant-search-pagination";
+import { summarizeError } from "~/server/utils/summarize-error";
 
 type RestaurantSearchStreamRequest = RestaurantSearchQueryCondition & {
   limit?: number;
@@ -18,19 +19,8 @@ type StreamEvent =
 
 const encoder = new TextEncoder();
 
-function parsePageValue(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
 function encodeEvent(event: StreamEvent): Uint8Array {
   return encoder.encode(`${JSON.stringify(event)}\n`);
-}
-
-function summarizeError(error: unknown) {
-  if (error instanceof Error) {
-    return { name: error.name, message: error.message };
-  }
-  return { message: String(error) };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -44,10 +34,10 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const { limit: rawLimit, offset: rawOffset, ...condition } = body;
-  const pagination: RestaurantSearchPagination = {
-    limit: Math.max(1, Math.min(parsePageValue(rawLimit, 10), 20)),
-    offset: Math.max(0, parsePageValue(rawOffset, 0)),
-  };
+  const pagination = parseRestaurantSearchPagination({
+    limit: rawLimit,
+    offset: rawOffset,
+  });
 
   const stream = new ReadableStream({
     async start(controller) {

@@ -18,8 +18,7 @@ const concernItemSchema = z.object({
   evidence: z.array(evidenceCategorySchema),
 });
 
-// app/domain/models/restaurant.ts の Genre と対応させる固定語彙。
-// 地図ピンのアイコン選択（app/utils/genre-icon.ts）に使うため、自由文にせず
+// app/domain/models/restaurant.ts の Genre と対応させる固定語彙。自由文にせず
 // 判断が付かない場合は "other" にする（存在しないジャンルを捏造させない）。
 const genreSchema = z
   .enum([

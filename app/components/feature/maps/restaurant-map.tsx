@@ -19,11 +19,9 @@ type RestaurantMapProps = {
 
 // 飲食店・小売など、AI が探して比較する対象と紛らわしい既存施設の POI は隠す。
 // 駅（transit）や美術館などのランドマーク（poi.attraction）は残す。
+// featureType 未指定で全 elementType（デフォルト "all"）に効くため、labels 系を個別指定する必要はない。
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: "poi.business", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", elementType: "labels", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.business", elementType: "labels.text", stylers: [{ visibility: "off" }] },
 ];
 
 function getBrowserMapsKey(): string | undefined {

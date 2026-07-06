@@ -25,8 +25,10 @@ import {
 } from "~/server/repositories/restaurant-candidate-cache";
 import {
   buildGroundingPrompt,
+  summarizeRestaurantSearchCondition,
   type RestaurantSearchQueryCondition,
 } from "./restaurant-search-query";
+import { summarizeError } from "~/server/utils/summarize-error";
 
 // docs/ARCHITECTURE.md「検索・評価型」のユースケース単位のオーケストレーション。
 // キャッシュ確認 → グラウンディング → 構造化評価の順に直列実行し、結果をまとめて返す。
@@ -183,36 +185,6 @@ function elapsedMs(startedAt: number): number {
   return Math.round(performance.now() - startedAt);
 }
 
-function summarizeCondition(condition: RestaurantSearchQueryCondition) {
-  return {
-    areas: condition.selectedAreas,
-    date: condition.date,
-    time: condition.time,
-    people: condition.people,
-    budget:
-      condition.budgetOtherOn && condition.budgetOtherText.trim()
-        ? "custom"
-        : `${condition.budgetMin}-${condition.budgetMax}`,
-    priorities: condition.priorities,
-    priorityOtherOn: condition.priorityOtherOn,
-    counterpart: condition.counterpart,
-  };
-}
-
-function summarizeError(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      cause:
-        error.cause instanceof Error
-          ? { name: error.cause.name, message: error.cause.message }
-          : undefined,
-    };
-  }
-  return { message: String(error) };
-}
-
 function buildRestaurant(input: {
   candidate: GroundingCandidate;
   evaluation: RestaurantEvaluationResult | null;
@@ -263,7 +235,7 @@ export async function searchRestaurants(
   const cacheKey = `${buildRestaurantSearchCacheKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search] start", {
     logId,
-    condition: summarizeCondition(condition),
+    condition: summarizeRestaurantSearchCondition(condition),
     limit,
     offset,
   });
@@ -441,7 +413,7 @@ export async function* streamRestaurants(
   const cacheKey = `${buildRestaurantSearchCacheKey(condition)}|limit=${limit}|offset=${offset}`;
   logger?.info("[restaurant-search-stream] start", {
     logId,
-    condition: summarizeCondition(condition),
+    condition: summarizeRestaurantSearchCondition(condition),
     limit,
     offset,
   });

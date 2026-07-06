@@ -1,5 +1,5 @@
 import { Loader2, MessageCircle, Send, Square, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import type { Restaurant } from "~/domain/models/restaurant";
@@ -89,11 +89,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const hasAsked = messages.some((message) => message.role === "user");
-  const storeCountLabel = useMemo(
-    () => `${stores.length}件の表示中店舗`,
-    [stores.length],
-  );
+  const storeCountLabel = `${stores.length}件の表示中店舗`;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -292,9 +288,9 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-              {messages.map((message, index) => (
+              {messages.map((message) => (
                 <div
-                  key={`${message.role}-${index}`}
+                  key={message.id}
                   className={
                     message.role === "user"
                       ? "ml-8 whitespace-pre-wrap break-words rounded-md bg-[#20201c] px-3 py-2 text-[13px] leading-relaxed text-[#fffdf8]"

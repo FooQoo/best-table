@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  canRequestMoreResults,
-  isSearchResponse,
-  toggleSelectedStoreId,
-} from "./results-screen";
+import { canRequestMoreResults, toggleSelectedStoreId } from "./results-screen";
 
 describe("canRequestMoreResults", () => {
   it("allows loading the next page only when there is a next offset and no active load", () => {
@@ -49,30 +45,5 @@ describe("toggleSelectedStoreId", () => {
 
   it("詳細パネルがONの店舗を再度押すとOFFにする", () => {
     expect(toggleSelectedStoreId("store-a", "store-a")).toBeNull();
-  });
-});
-
-describe("isSearchResponse", () => {
-  it("accepts the expected restaurant search response shape", () => {
-    expect(
-      isSearchResponse({
-        restaurants: [],
-        fromCache: false,
-        hasMore: false,
-        nextOffset: null,
-      }),
-    ).toBe(true);
-  });
-
-  it("rejects error payloads before they can be stored as restaurants state", () => {
-    expect(isSearchResponse({ error: "レストラン検索に失敗しました。" })).toBe(false);
-    expect(
-      isSearchResponse({
-        restaurants: { error: "not an array" },
-        fromCache: false,
-        hasMore: false,
-        nextOffset: null,
-      }),
-    ).toBe(false);
   });
 });

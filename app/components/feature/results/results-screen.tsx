@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
-import { PRIORITIES } from "~/mocks/data";
+import { getPriorityLabel } from "~/domain/services/booking-summary-format";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
 import { ComparePanel } from "~/components/feature/results/compare-panel";
@@ -23,13 +23,6 @@ import type { SearchPhase } from "~/utils/search-phase-message";
 
 const PAGE_SIZE = 10;
 
-type SearchResponse = {
-  restaurants: Restaurant[];
-  fromCache: boolean;
-  hasMore: boolean;
-  nextOffset: number | null;
-};
-
 type FetchMode = "initial" | "more";
 
 type SearchStreamEvent =
@@ -42,17 +35,6 @@ type SearchStreamEvent =
       nextOffset: number | null;
     }
   | { type: "error"; message: string };
-
-export function isSearchResponse(value: unknown): value is SearchResponse {
-  if (typeof value !== "object" || value === null) return false;
-  const body = value as Record<string, unknown>;
-  return (
-    Array.isArray(body.restaurants) &&
-    typeof body.fromCache === "boolean" &&
-    typeof body.hasMore === "boolean" &&
-    (typeof body.nextOffset === "number" || body.nextOffset === null)
-  );
-}
 
 export function canRequestMoreResults(input: {
   isLoadingMore: boolean;
@@ -95,7 +77,6 @@ export function ResultsScreen() {
     appendRestaurants,
   } = useBooking();
   const hasSubmittedRef = useRef(false);
-  const pendingModeRef = useRef<FetchMode>("initial");
   const abortControllerRef = useRef<AbortController | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -178,7 +159,6 @@ export function ResultsScreen() {
 
   const submitSearch = useCallback(
     async (mode: FetchMode, offset: number) => {
-      pendingModeRef.current = mode;
       abortControllerRef.current?.abort();
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -308,9 +288,6 @@ export function ResultsScreen() {
     return () => observer.disconnect();
   }, [hasMore, loadMore, nextOffset]);
 
-  const priorityLabelByKey = Object.fromEntries(
-    PRIORITIES.map((p) => [p.key, p.label]),
-  );
   const recapKeyword = state.selectedAreas.length
     ? state.selectedAreas.join("・")
     : "エリア未指定";
@@ -322,7 +299,7 @@ export function ResultsScreen() {
         ? state.budgetOtherText
         : "指定なし";
   const recapPriorities = state.priorities.length
-    ? state.priorities.map((k) => priorityLabelByKey[k]).join("・")
+    ? state.priorities.map((k) => getPriorityLabel(k)).join("・")
     : state.counterpart
       ? "指定なし"
       : "未ヒアリング";
