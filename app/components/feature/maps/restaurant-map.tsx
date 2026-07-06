@@ -1,11 +1,13 @@
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 import type { Restaurant } from "~/domain/models/restaurant";
-import { GOLD, NAVY } from "~/mocks/data";
+import { GOLD } from "~/mocks/data";
 import { GenreMarkerOverlay } from "./genre-marker-overlay";
 import {
   getInitialMapCamera,
   getMappableRestaurants,
 } from "./restaurant-map-utils";
+
+export const DEFAULT_MARKER_COLOR = "#d93025";
 
 type RestaurantMapProps = {
   restaurants: Restaurant[];
@@ -82,7 +84,7 @@ export function RestaurantMap({
                 >
                   <path
                     d="M14 35C10.1 29.3 4 22.5 4 14.2C4 8 8.5 3 14 3S24 8 24 14.2C24 22.5 17.9 29.3 14 35Z"
-                    fill={isActive ? GOLD : NAVY}
+                    fill={isActive ? GOLD : DEFAULT_MARKER_COLOR}
                     stroke="#ffffff"
                     strokeWidth="2"
                     strokeLinejoin="round"

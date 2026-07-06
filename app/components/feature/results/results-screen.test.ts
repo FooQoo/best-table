@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRequestMoreResults } from "./results-screen";
+import { canRequestMoreResults, toggleSelectedStoreId } from "./results-screen";
 
 describe("canRequestMoreResults", () => {
   it("allows loading the next page only when there is a next offset and no active load", () => {
@@ -34,5 +34,16 @@ describe("canRequestMoreResults", () => {
         nextOffset: null,
       }),
     ).toBe(false);
+  });
+});
+
+describe("toggleSelectedStoreId", () => {
+  it("未選択または別店舗のときは、押した店舗の詳細パネルをONにする", () => {
+    expect(toggleSelectedStoreId(null, "store-a")).toBe("store-a");
+    expect(toggleSelectedStoreId("store-b", "store-a")).toBe("store-a");
+  });
+
+  it("詳細パネルがONの店舗を再度押すとOFFにする", () => {
+    expect(toggleSelectedStoreId("store-a", "store-a")).toBeNull();
   });
 });

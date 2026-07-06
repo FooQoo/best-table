@@ -16,6 +16,7 @@ type StoreListProps = {
   onToggleCompare: (id: string) => void;
   counterpartId: string | null;
   activeStoreId?: string | null;
+  selectedStoreId?: string | null;
   onActivateStore?: (id: string) => void;
   onSelectStore?: (id: string) => void;
   // マップのピンをクリックしたときだけ設定する。hover による activeStoreId 変更では
@@ -30,6 +31,7 @@ export function StoreList({
   onToggleCompare,
   counterpartId,
   activeStoreId,
+  selectedStoreId,
   onActivateStore,
   onSelectStore,
   scrollTarget,
@@ -54,6 +56,7 @@ export function StoreList({
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);
         const active = activeStoreId === store.id;
+        const panelOpen = selectedStoreId === store.id;
         const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
         const s = toggleButtonStyle(t, selected, disabled);
 
@@ -63,7 +66,9 @@ export function StoreList({
             ref={(el) => {
               cardRefs.current[store.id] = el;
             }}
+            data-store-card="true"
             data-active={active ? "true" : "false"}
+            data-selected={panelOpen ? "true" : "false"}
             role="button"
             tabIndex={0}
             aria-label={`${store.name}の詳細を表示`}
@@ -78,10 +83,12 @@ export function StoreList({
             onFocus={() => onActivateStore?.(store.id)}
             className="bg-white border-[1.5px] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] p-4 flex flex-col gap-2.5 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b08424]"
             style={{
-              borderColor: active ? GOLD : "#e4ded0",
-              boxShadow: active
-                ? "0 0 0 2px rgba(176,132,36,.22),0 1px 4px rgba(0,0,0,.08)"
-                : undefined,
+              borderColor: active || panelOpen ? GOLD : "#e4ded0",
+              boxShadow: panelOpen
+                ? "0 0 0 3px rgba(176,132,36,.34),0 1px 5px rgba(0,0,0,.1)"
+                : active
+                  ? "0 0 0 2px rgba(176,132,36,.22),0 1px 4px rgba(0,0,0,.08)"
+                  : undefined,
             }}
           >
             <div className="flex gap-3">

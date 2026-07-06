@@ -13,6 +13,7 @@ function setup(
     activeStoreId?: string;
     onActivateStore?: (id: string) => void;
     onSelectStore?: (id: string) => void;
+    selectedStoreId?: string;
     stores?: typeof STORES;
     scrollTarget?: StoreListScrollTarget | null;
   } = {},
@@ -25,6 +26,7 @@ function setup(
         onToggleCompare={() => {}}
         counterpartId={counterpartId}
         activeStoreId={options.activeStoreId}
+        selectedStoreId={options.selectedStoreId}
         onActivateStore={options.onActivateStore}
         onSelectStore={options.onSelectStore}
         scrollTarget={options.scrollTarget}
@@ -66,6 +68,15 @@ describe("StoreList の地図連動", () => {
 
     expect(screen.getByText(store.name).closest("[data-active]")).toHaveAttribute(
       "data-active",
+      "true",
+    );
+  });
+
+  it("selectedStoreId と一致する店舗カードにパネルON状態のリングを付ける", () => {
+    setup(null, { selectedStoreId: store.id });
+
+    expect(screen.getByText(store.name).closest("[data-selected]")).toHaveAttribute(
+      "data-selected",
       "true",
     );
   });

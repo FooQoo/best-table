@@ -1,6 +1,27 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { vi } from "vitest";
 import type { Restaurant } from "~/domain/models/restaurant";
-import { RestaurantMap } from "./restaurant-map";
+import { DEFAULT_MARKER_COLOR, RestaurantMap } from "./restaurant-map";
+
+vi.mock("@vis.gl/react-google-maps", () => ({
+  APIProvider: ({ children }: { children: ReactNode }) => (
+    <div data-testid="api-provider">{children}</div>
+  ),
+  Map: ({ children }: { children: ReactNode }) => (
+    <div data-testid="map">{children}</div>
+  ),
+}));
+
+vi.mock("./genre-marker-overlay", () => ({
+  GenreMarkerOverlay: ({
+    title,
+    children,
+  }: {
+    title?: string;
+    children: ReactNode;
+  }) => <div title={title}>{children}</div>,
+}));
 
 const restaurant: Restaurant = {
   id: "r1",
@@ -41,5 +62,14 @@ describe("RestaurantMap", () => {
     expect(
       screen.getByText("地図に表示できる店舗がありません"),
     ).toBeInTheDocument();
+  });
+
+  it("renders unspecified markers in red", () => {
+    const { container } = render(
+      <RestaurantMap restaurants={[restaurant]} apiKey="test-key" />,
+    );
+
+    expect(screen.getByTitle("地図テスト店")).toBeInTheDocument();
+    expect(container.querySelector(`path[fill="${DEFAULT_MARKER_COLOR}"]`)).not.toBeNull();
   });
 });

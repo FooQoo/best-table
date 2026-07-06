@@ -39,6 +39,13 @@ export function canRequestMoreResults(input: {
   return input.hasMore && !input.isLoadingMore && input.nextOffset !== null;
 }
 
+export function toggleSelectedStoreId(
+  currentStoreId: string | null,
+  nextStoreId: string,
+): string | null {
+  return currentStoreId === nextStoreId ? null : nextStoreId;
+}
+
 export function ResultsScreen() {
   const navigate = useNavigate();
   const {
@@ -70,7 +77,9 @@ export function ResultsScreen() {
 
   const handleSelectStore = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
-    setSelectedStoreId(storeId);
+    setSelectedStoreId((currentStoreId) =>
+      toggleSelectedStoreId(currentStoreId, storeId),
+    );
   }, []);
 
   const buildCondition = useCallback(
@@ -265,6 +274,7 @@ export function ResultsScreen() {
               onToggleCompare={toggleCompare}
               counterpartId={state.counterpart}
               activeStoreId={activeStoreId}
+              selectedStoreId={selectedStoreId}
               onActivateStore={setActiveStoreId}
               onSelectStore={handleSelectStore}
               scrollTarget={scrollTarget}
@@ -296,6 +306,7 @@ export function ResultsScreen() {
               />
               {selectedStore && (
                 <StoreDetailPanel
+                  key={selectedStore.id}
                   store={selectedStore}
                   onClose={() => setSelectedStoreId(null)}
                 />
