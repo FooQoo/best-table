@@ -1,7 +1,6 @@
 <div align="center">
-  <img src="public/logo.png" height="140" alt="Best Table logo">
-
-  <h1>Best Table</h1>
+  <img src="public/logo.png" height="72" alt="Best Table logo" valign="middle">
+  <h1 valign="middle" style="display: inline-block; margin-left: 12px;">Best Table</h1>
 
   <p><strong>接待・会食向けのレストラン比較を、AI で支援する。</strong></p>
 
