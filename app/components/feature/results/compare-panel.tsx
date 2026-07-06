@@ -65,41 +65,43 @@ export function ComparePanel({
     // foreignObject 内に複製されてしまい、描画内容が可視領域の外側に
     // ずれて空の画像になる。そのためクローン自身は static のままにし、
     // 画面外に置く役目は別のラッパー要素だけに持たせる。
-    const originalScrollArea = panel.querySelector<HTMLElement>(
-      "[data-compare-scroll-area]",
-    );
-    const fullWidth = originalScrollArea?.scrollWidth ?? panel.offsetWidth;
-    const fullHeight = originalScrollArea?.scrollHeight ?? panel.offsetHeight;
-
-    const clone = panel.cloneNode(true) as HTMLElement;
-    clone.style.position = "static";
-    clone.style.transform = "none";
-    clone.style.width = `${panel.offsetWidth}px`;
-    clone.style.height = "auto";
-    clone.style.overflow = "visible";
-    for (const excluded of clone.querySelectorAll<HTMLElement>(
-      "[data-compare-export-exclude]",
-    )) {
-      excluded.remove();
-    }
-    const scrollArea = clone.querySelector<HTMLElement>(
-      "[data-compare-scroll-area]",
-    );
-    if (scrollArea) {
-      scrollArea.style.flex = "none";
-      scrollArea.style.overflow = "visible";
-      scrollArea.style.width = `${fullWidth}px`;
-      scrollArea.style.height = `${fullHeight}px`;
-    }
-
-    const wrapper = document.createElement("div");
-    wrapper.style.position = "fixed";
-    wrapper.style.top = "0";
-    wrapper.style.left = "-99999px";
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
-
+    let wrapper: HTMLElement | null = null;
     try {
+      const originalScrollArea = panel.querySelector<HTMLElement>(
+        "[data-compare-scroll-area]",
+      );
+      const fullWidth = originalScrollArea?.scrollWidth ?? panel.offsetWidth;
+      const fullHeight =
+        originalScrollArea?.scrollHeight ?? panel.offsetHeight;
+
+      const clone = panel.cloneNode(true) as HTMLElement;
+      clone.style.position = "static";
+      clone.style.transform = "none";
+      clone.style.width = `${panel.offsetWidth}px`;
+      clone.style.height = "auto";
+      clone.style.overflow = "visible";
+      for (const excluded of clone.querySelectorAll<HTMLElement>(
+        "[data-compare-export-exclude]",
+      )) {
+        excluded.remove();
+      }
+      const scrollArea = clone.querySelector<HTMLElement>(
+        "[data-compare-scroll-area]",
+      );
+      if (scrollArea) {
+        scrollArea.style.flex = "none";
+        scrollArea.style.overflow = "visible";
+        scrollArea.style.width = `${fullWidth}px`;
+        scrollArea.style.height = `${fullHeight}px`;
+      }
+
+      wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.top = "0";
+      wrapper.style.left = "-99999px";
+      wrapper.appendChild(clone);
+      document.body.appendChild(wrapper);
+
       const dataUrl = await toPng(clone, {
         backgroundColor: "#fffdf8",
         cacheBust: true,
@@ -113,7 +115,7 @@ export function ComparePanel({
       console.error("比較表の画像生成に失敗しました", error);
       setSaveFailed(true);
     } finally {
-      document.body.removeChild(wrapper);
+      wrapper?.remove();
       setIsSaving(false);
     }
   };
