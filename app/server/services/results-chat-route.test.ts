@@ -45,7 +45,6 @@ const restaurant: Restaurant = {
   evidence: [],
   confidence: null,
   generatedAt: null,
-  ikyu: null,
 };
 
 function request(overrides: Record<string, unknown> = {}) {

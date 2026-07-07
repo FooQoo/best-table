@@ -118,17 +118,6 @@ export function StoreList({
                 <div className="text-xs text-[#79726a] mt-0.5">
                   個室：{store.room ?? "情報なし"}・予算目安：{store.budgetLabel ?? "情報なし"}
                 </div>
-                {store.ikyu && (
-                  <div className="mt-1.5">
-                    <span
-                      data-testid={`ikyu-listed-${store.id}`}
-                      className="text-[10px] px-2 py-0.5 rounded-full font-bold border"
-                      style={{ borderColor: GOLD, color: "#8a6a1a", background: "#fffdf8" }}
-                    >
-                      一休.com掲載
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
             {emphasisKeys.length > 0 && (

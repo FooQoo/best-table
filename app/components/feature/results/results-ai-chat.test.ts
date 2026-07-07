@@ -34,7 +34,6 @@ const stores = [
     evidence: [],
     confidence: null,
     generatedAt: null,
-    ikyu: null,
   },
 ] as Restaurant[];
 

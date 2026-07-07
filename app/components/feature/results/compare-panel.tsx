@@ -8,6 +8,7 @@ import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme } from "~/styles/theme";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
+import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
 import { getEmphasisKeys } from "~/utils/scoring";
 
 type ComparePanelProps = {
@@ -232,17 +233,15 @@ export function ComparePanel({
                     Google Mapで空席・予約を確認
                   </a>
                 </div>
-                {store.ikyu && (
-                  <a
-                    href={store.ikyu.url}
-                    target="_blank"
-                    rel="noopener"
-                    data-testid={`compare-ikyu-referral-${store.id}`}
-                    className="self-start text-[11px] font-bold text-[#8a6a1f] underline underline-offset-2"
-                  >
-                    一休.comで空席を確認
-                  </a>
-                )}
+                <a
+                  href={buildIkyuSearchUrl(store)}
+                  target="_blank"
+                  rel="noopener"
+                  data-testid={`compare-ikyu-referral-${store.id}`}
+                  className="self-start text-[11px] font-bold text-[#8a6a1f] underline underline-offset-2"
+                >
+                  一休.comで空席を確認
+                </a>
               </div>
             ))}
 

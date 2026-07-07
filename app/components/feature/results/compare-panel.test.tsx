@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { STORES } from "~/mocks/data";
 import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
+import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
 import { ComparePanel } from "./compare-panel";
 
 const stores = STORES.slice(0, 2);
@@ -83,22 +84,13 @@ describe("ComparePanel の境界状態", () => {
     });
   });
 
-  it("ikyu を持つ店舗には一休.comの送客リンクを、マスタ由来のURLで表示する", () => {
-    const ikyuStore = STORES[0];
-    expect(ikyuStore.ikyu).not.toBeNull();
-    render(<ComparePanel stores={[ikyuStore]} counterpartId={null} isOpen />);
+  it("各店舗に店舗名を term にした一休.comの送客リンクを表示する", () => {
+    setup(null);
 
-    const link = screen.getByTestId(`compare-ikyu-referral-${ikyuStore.id}`);
-    expect(link).toHaveTextContent("一休.comで空席を確認");
-    expect(link).toHaveAttribute("href", ikyuStore.ikyu!.url);
-  });
-
-  it("ikyu が null の店舗には一休.comの送客リンクを表示しない", () => {
-    const nonIkyuStore = STORES.find((s) => s.ikyu === null)!;
-    render(<ComparePanel stores={[nonIkyuStore]} counterpartId={null} isOpen />);
-
-    expect(
-      screen.queryByTestId(`compare-ikyu-referral-${nonIkyuStore.id}`),
-    ).not.toBeInTheDocument();
+    stores.forEach((store) => {
+      const link = screen.getByTestId(`compare-ikyu-referral-${store.id}`);
+      expect(link).toHaveTextContent("一休.comで空席を確認");
+      expect(link).toHaveAttribute("href", buildIkyuSearchUrl(store));
+    });
   });
 });

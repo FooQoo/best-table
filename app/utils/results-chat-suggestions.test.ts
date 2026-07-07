@@ -28,7 +28,6 @@ const baseRestaurant: Restaurant = {
   evidence: ["review"],
   confidence: "medium",
   generatedAt: "2026-07-05T00:00:00.000Z",
-  ikyu: null,
 };
 
 describe("buildResultsChatSuggestions", () => {
