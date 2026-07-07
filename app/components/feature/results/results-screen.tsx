@@ -35,6 +35,7 @@ import {
 import type { SearchPhase } from "~/utils/search-phase-message";
 import { resolveSwipeDirection, type SwipePoint } from "~/utils/swipe";
 import { cn } from "~/utils/cn";
+import { Z_INDEX } from "~/styles/z-index";
 import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 const PAGE_SIZE = 10;
@@ -169,7 +170,8 @@ export function ResultsScreen() {
   }, []);
 
   // 一覧は縦スクロールのみなので、コンテンツ全面での左スワイプ（地図へ）は安全に許可できる。
-  // 地図は1本指ドラッグでパンするため、地図側では上部のタブ帯のみでスワイプを受け付ける。
+  // 地図は1本指ドラッグでパンするため、地図側では上部のタブ帯と左端の細いストリップのみで
+  // スワイプを受け付ける。
   const handleListSwipeEnd = useCallback((event: ReactTouchEvent) => {
     const start = swipeStartRef.current;
     swipeStartRef.current = null;
@@ -180,6 +182,19 @@ export function ResultsScreen() {
       y: touch.clientY,
     });
     if (direction === "left") setMobileView("map");
+  }, []);
+
+  // 地図左端の細いストリップ。地図パンと干渉しない範囲でだけ右スワイプ（一覧へ戻る）を受け付ける。
+  const handleMapEdgeSwipeEnd = useCallback((event: ReactTouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const direction = resolveSwipeDirection(start, {
+      x: touch.clientX,
+      y: touch.clientY,
+    });
+    if (direction === "right") setMobileView("list");
   }, []);
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
@@ -560,6 +575,15 @@ export function ResultsScreen() {
               <StoreListSkeleton />
             </div>
             <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+              <div
+                className={cn(
+                  "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
+                  Z_INDEX.mapSwipeEdge,
+                )}
+                onTouchStart={handleSwipeTouchStart}
+                onTouchEnd={handleMapEdgeSwipeEnd}
+                aria-hidden="true"
+              />
               <ResultsMap
                 stores={[]}
                 bookingSummary={chatBookingSummary}
@@ -646,6 +670,15 @@ export function ResultsScreen() {
                 />
               </div>
               <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+                <div
+                  className={cn(
+                    "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
+                    Z_INDEX.mapSwipeEdge,
+                  )}
+                  onTouchStart={handleSwipeTouchStart}
+                  onTouchEnd={handleMapEdgeSwipeEnd}
+                  aria-hidden="true"
+                />
                 <ResultsMap
                   stores={restaurants}
                   bookingSummary={chatBookingSummary}
