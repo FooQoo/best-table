@@ -12,6 +12,7 @@ vi.mock("@vis.gl/react-google-maps", () => ({
   Map: ({ children }: { children: ReactNode }) => (
     <div data-testid="map">{children}</div>
   ),
+  useMap: () => null,
 }));
 
 vi.mock("./genre-marker-overlay", () => ({

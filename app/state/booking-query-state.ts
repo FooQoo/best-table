@@ -51,6 +51,8 @@ export type BookingQueryState = {
   priorityOtherText: string;
 };
 
+type BookingQueryInput = Partial<Record<keyof BookingQueryState, unknown>>;
+
 export type BookingQuerySetters = {
   toggleCity: (city: string) => Promise<URLSearchParams> | void;
   removeArea: (city: string) => Promise<URLSearchParams>;
@@ -192,9 +194,7 @@ export function parseBookingQueryFromSearchParams(
   return normalizeBookingQuery(raw);
 }
 
-export function normalizeBookingQuery(
-  value: Partial<BookingQueryState>,
-): BookingQueryState {
+export function normalizeBookingQuery(value: BookingQueryInput): BookingQueryState {
   const selectedAreas = normalizeUniqueStrings(
     value.selectedAreas,
     VALID_AREAS,

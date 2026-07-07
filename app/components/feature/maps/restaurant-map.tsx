@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import {
   APIProvider,
   Map,
+  useMap,
   type MapCameraChangedEvent,
 } from "@vis.gl/react-google-maps";
 import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
@@ -10,6 +12,7 @@ import { resolveTierColor, resolveTierKey } from "./match-tier-colors";
 import {
   getInitialMapCamera,
   getMappableRestaurants,
+  type MappableRestaurant,
 } from "./restaurant-map-utils";
 
 type RestaurantMapProps = {
@@ -21,7 +24,34 @@ type RestaurantMapProps = {
   apiKey?: string | null;
   // 凡例で非表示にされたマッチ度（評価未生成は「低」に含める）のピンは地図から除く。
   hiddenTiers?: ReadonlySet<MatchTier>;
+  // カードクリックなど、明示的に選択された店舗の位置に地図を移動させたいときだけ設定する。
+  focusRestaurantId?: string | null;
 };
+
+// focusRestaurantId が変わるたびに、その店舗の位置へ地図の中心を移動する。
+function MapCenterOnFocus({
+  restaurants,
+  focusRestaurantId,
+}: {
+  restaurants: MappableRestaurant[];
+  focusRestaurantId?: string | null;
+}) {
+  const map = useMap();
+  const target = restaurants.find(
+    (restaurant) => restaurant.id === focusRestaurantId,
+  );
+  const targetLat = target?.location.lat;
+  const targetLng = target?.location.lng;
+
+  // restaurants は評価到着のたびに再生成されるため、参照ではなく実際に移動すべき
+  // 座標（targetLat/targetLng）だけを依存にして、無関係な再描画で pan が中断されるのを防ぐ。
+  useEffect(() => {
+    if (!map || targetLat === undefined || targetLng === undefined) return;
+    map.panTo({ lat: targetLat, lng: targetLng });
+  }, [map, targetLat, targetLng]);
+
+  return null;
+}
 
 // 飲食店・小売など、AI が探して比較する対象と紛らわしい既存施設の POI は隠す。
 // 駅（transit）や美術館などのランドマーク（poi.attraction）は残す。
@@ -42,6 +72,7 @@ export function RestaurantMap({
   emptyLabel = "地図に表示できる店舗がありません",
   apiKey: apiKeyOverride,
   hiddenTiers,
+  focusRestaurantId,
 }: RestaurantMapProps) {
   const apiKey = apiKeyOverride === undefined ? getBrowserMapsKey() : apiKeyOverride;
   const mappableRestaurants = getMappableRestaurants(restaurants).filter(
@@ -73,6 +104,10 @@ export function RestaurantMap({
           onCenterChanged?.(event.detail.center);
         }}
       >
+        <MapCenterOnFocus
+          restaurants={mappableRestaurants}
+          focusRestaurantId={focusRestaurantId}
+        />
         {mappableRestaurants.map((restaurant) => {
           const isActive = restaurant.id === activeRestaurantId;
           const width = isActive ? 32 : 28;

@@ -354,6 +354,8 @@ mock/real の切り替えは resource route（`app/routes/api.restaurants.search
 - ライブラリは Google Maps JavaScript API の React バインディングとして `@vis.gl/react-google-maps` を使う。実装時点の 1.9.0 では `<APIProvider>` / `<Map>` を使用し、ピン自体は上記「ピンのデザイン」のとおり自前の `OverlayView` ラッパーで描画する（`<AdvancedMarker>`/`<Marker>`/`<Pin>` は使わない）。型定義は `@types/google.maps` を devDependencies に追加し、`tsconfig.json` の `compilerOptions.types` に `google.maps` を加えて有効化している。
 - マーカーの位置には `Restaurant.location`（実緯度経度）をそのまま使う。`location` が `null` の店舗はマーカーを表示せず、架空の位置を作らない。
 - マーカーと店舗カードの連動は画面ローカルの選択状態で実装する。マーカークリックで対応カードを強調し、店舗カード側の選択またはフォーカスで対応マーカーを強調する。比較追加状態そのものとは別概念として扱い、比較候補の選択を地図操作で勝手に変更しない。
+- 店舗詳細パネルの表示対象（`results-screen.tsx` の `selectedStoreId`）が変わったときは、`RestaurantMap` の `focusRestaurantId` prop 経由で地図の中心を対象店舗の位置へ `panTo` する（`app/components/feature/maps/restaurant-map.tsx` の `MapCenterOnFocus`）。`useMap()` で取得した地図インスタンスに対して行うため `<Map>` の子として配置する。依存配列は対象店舗の緯度経度（プリミティブ値）のみとし、`restaurants` 配列の参照（AI評価の到着ごとに再生成される）を依存に含めない。含めてしまうと評価到着のたびに `panTo` が再実行され、パン中のアニメーションが中断されて「動きが止まる」ように見える不具合があった。
+- カードのホバー・フォーカスによる `activeStoreId` の変更だけでは中心移動しない（一覧を眺めているだけのユーザーの視点を勝手に動かさないため）。
 - 地図の初期表示は、取得した店舗群の座標に合わせて `getInitialMapCamera` で center / zoom を計算する。
 - `app/mocks/` には `Restaurant.location` を持つ mock search result を置き、`pnpm dev:mock` では API route 境界でそのデータを返す。UI 側が mock mode を特別扱いしない構成を優先する。
 - 代表写真は `Restaurant.photoUrl` がある場合だけ表示し、無い場合は既存の `StorePhotoPlaceholder` を使う。写真取得は一覧全件に対して先行実行せず、10件単位の取得範囲に限定する。
@@ -409,10 +411,10 @@ mock/real の切り替えは resource route（`app/routes/api.restaurants.search
 
 実装方針:
 
-- `BookingRequest` 相当の検索・会食条件（エリア、日付、時刻、人数、相手種別、予算、重視条件、自由入力）は、`nuqs` の parser / serializer と React Router の `useSearchParams` で URL query state として扱う。
-- URL query が空、または一部欠けている場合は `initialBookingState` 相当の初期値で補完する。
+- `BookingRequest` 相当の検索・会食条件（エリア、日付、時刻、人数、相手種別、予算、重視条件、自由入力）は、`nuqs` の parser / serializer と React Router の `useSearchParams` で URL query state として扱う。値は `app/state/booking-query-state.ts` の `BookingQueryState` として定義し、Jotai の `BookingState` からは分離している。
+- URL query が空、または一部欠けている場合は `DEFAULT_BOOKING_QUERY`（`app/state/booking-query-state.ts`）相当の初期値で補完する（`normalizeBookingQuery`）。加えて `/`（`TopScreen`）は初回マウント時、URL に query が一切無ければ `DEFAULT_BOOKING_QUERY` を明示的に URL へ書き込む（`?` のまま初期値だけ暗黙適用にしない）。
 - URL query から復元した値は、固定語彙・型・上限に合わせて正規化してから UI、検索 API、AI チャットの `bookingSummary` に渡す。
-- Jotai の `bookingAtom` は、比較候補、取得済み店舗、既存コンポーネントの互換レイヤーなど、URL に保存しない画面内一時状態を扱う。
+- Jotai の `bookingAtom`（`BookingState`）は、比較候補（`compareIds`）と取得済み店舗（`restaurants`）だけを持つ、URL に保存しない画面内一時状態専用の atom。検索・会食条件のミラーや互換用セッターは持たない。
 - 画面コンポーネントは、検索条件については query state を正とし、URL に保存しない状態については `useBooking()` から状態と操作を取得する。
 - `BookingProvider` は Jotai の store スコープを作るために `app/root.tsx` でアプリ全体を包む。
 - query parser / serializer / normalize 処理は、ルートモジュールへ散らさず、`app/state/` または Client/Server 両方から使える純粋関数として集約する。

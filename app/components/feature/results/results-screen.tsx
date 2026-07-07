@@ -490,6 +490,7 @@ export function ResultsScreen() {
                 stores={restaurants}
                 bookingSummary={chatBookingSummary}
                 activeStoreId={activeStoreId}
+                focusStoreId={selectedStoreId}
                 onMarkerClick={handleMarkerClick}
                 onCenterChanged={handleMapCenterChanged}
                 showSearchThisArea={showSearchThisArea}

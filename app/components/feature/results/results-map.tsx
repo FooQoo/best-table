@@ -8,6 +8,7 @@ type ResultsMapProps = {
   stores: Restaurant[];
   bookingSummary: ResultsChatBookingSummary;
   activeStoreId?: string | null;
+  focusStoreId?: string | null;
   onMarkerClick?: (storeId: string) => void;
   onCenterChanged?: (center: { lat: number; lng: number }) => void;
   showSearchThisArea?: boolean;
@@ -20,6 +21,7 @@ export function ResultsMap({
   stores,
   bookingSummary,
   activeStoreId,
+  focusStoreId,
   onMarkerClick,
   onCenterChanged,
   showSearchThisArea = false,
@@ -42,6 +44,7 @@ export function ResultsMap({
       <RestaurantMap
         restaurants={stores}
         activeRestaurantId={activeStoreId}
+        focusRestaurantId={focusStoreId}
         onMarkerClick={onMarkerClick}
         onCenterChanged={onCenterChanged}
         hiddenTiers={hiddenTiers}
