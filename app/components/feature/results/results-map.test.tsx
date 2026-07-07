@@ -2,22 +2,30 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { useState } from "react";
-import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import type { Restaurant } from "~/domain/models/restaurant";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
+import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
+import type { CompareVisibilityGroup } from "~/components/feature/maps/map-filter-panel";
 import { ResultsMap } from "./results-map";
 
 vi.mock("~/components/feature/maps/restaurant-map", () => ({
   RestaurantMap: ({
+    restaurants,
     hiddenTiers,
     onCenterChanged,
+    emptyLabel,
   }: {
+    restaurants: Restaurant[];
     hiddenTiers?: Set<string>;
     onCenterChanged?: (center: { lat: number; lng: number }) => void;
+    emptyLabel?: string;
   }) => (
     <button
       type="button"
       data-testid="restaurant-map"
       data-hidden-tiers={hiddenTiers ? [...hiddenTiers].join(",") : ""}
+      data-restaurant-ids={restaurants.map((r) => r.id).join(",")}
+      data-empty-label={emptyLabel ?? ""}
       onClick={() => onCenterChanged?.({ lat: 35.67, lng: 139.76 })}
     />
   ),
@@ -79,13 +87,17 @@ function renderResultsMap(
       bookingSummary={bookingSummary}
       hiddenTiers={new Set()}
       onToggleTier={() => {}}
+      hiddenCompareGroups={new Set()}
+      onToggleCompareGroup={() => {}}
       {...props}
     />,
   );
 }
 
 function ControlledResultsMap({ stores }: { stores: Restaurant[] }) {
-  const [hiddenTiers, setHiddenTiers] = useState<Set<MatchTier>>(new Set());
+  const [hiddenTiers, setHiddenTiers] = useState<Set<TierFilterKey>>(
+    new Set(),
+  );
   return (
     <ResultsMap
       stores={stores}
@@ -99,33 +111,61 @@ function ControlledResultsMap({ stores }: { stores: Restaurant[] }) {
           return next;
         })
       }
+      hiddenCompareGroups={new Set()}
+      onToggleCompareGroup={() => {}}
+    />
+  );
+}
+
+function ControlledCompareResultsMap({
+  stores,
+  compareIds,
+}: {
+  stores: Restaurant[];
+  compareIds: string[];
+}) {
+  const [hiddenCompareGroups, setHiddenCompareGroups] = useState<
+    Set<CompareVisibilityGroup>
+  >(new Set());
+  return (
+    <ResultsMap
+      stores={stores}
+      bookingSummary={bookingSummary}
+      hiddenTiers={new Set()}
+      onToggleTier={() => {}}
+      compareIds={compareIds}
+      hiddenCompareGroups={hiddenCompareGroups}
+      onToggleCompareGroup={(group) =>
+        setHiddenCompareGroups((prev) => {
+          const next = new Set(prev);
+          if (next.has(group)) next.delete(group);
+          else next.add(group);
+          return next;
+        })
+      }
     />
   );
 }
 
 describe("ResultsMap", () => {
-  it("does not show the legend while no restaurant has been evaluated yet", () => {
+  it("shows the match-tier and compare sections from the start, before any evaluation or compare selection", () => {
     renderResultsMap();
 
-    expect(screen.queryByRole("button", { name: "最高" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "最高0件" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "評価未生成1件" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "比較対象0件" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "比較対象外1件" }),
+    ).toBeInTheDocument();
   });
 
-  it("shows the legend automatically once a restaurant's evaluation arrives", () => {
-    const { rerender } = renderResultsMap();
-
-    rerender(
-      <ResultsMap
-        stores={[buildStore({ matchTier: "high" })]}
-        bookingSummary={bookingSummary}
-        hiddenTiers={new Set()}
-        onToggleTier={() => {}}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "最高" })).toBeInTheDocument();
-  });
-
-  it("hides a tier's pins on the map when its legend row is clicked", async () => {
+  it("hides a tier's pins on the map when its filter row is clicked", async () => {
     render(
       <ControlledResultsMap stores={[buildStore({ matchTier: "high" })]} />,
     );
@@ -135,14 +175,14 @@ describe("ResultsMap", () => {
       "",
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "高" }));
+    await userEvent.click(screen.getByRole("button", { name: "高1件" }));
 
     expect(screen.getByTestId("restaurant-map")).toHaveAttribute(
       "data-hidden-tiers",
       "high",
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "高" }));
+    await userEvent.click(screen.getByRole("button", { name: "高1件" }));
 
     expect(screen.getByTestId("restaurant-map")).toHaveAttribute(
       "data-hidden-tiers",
@@ -168,5 +208,44 @@ describe("ResultsMap", () => {
     await userEvent.click(screen.getByTestId("restaurant-map"));
 
     expect(onCenterChanged).toHaveBeenCalledWith({ lat: 35.67, lng: 139.76 });
+  });
+
+  it("hides non-target pins on the map when '比較対象外' is unchecked", async () => {
+    render(
+      <ControlledCompareResultsMap
+        stores={[buildStore({ id: "s1" }), buildStore({ id: "s2" })]}
+        compareIds={["s1"]}
+      />,
+    );
+
+    expect(screen.getByTestId("restaurant-map")).toHaveAttribute(
+      "data-restaurant-ids",
+      "s1,s2",
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "比較対象外1件" }),
+    );
+
+    expect(screen.getByTestId("restaurant-map")).toHaveAttribute(
+      "data-restaurant-ids",
+      "s1",
+    );
+  });
+
+  it("hides target pins on the map when '比較対象' is unchecked", async () => {
+    render(
+      <ControlledCompareResultsMap
+        stores={[buildStore({ id: "s1" }), buildStore({ id: "s2" })]}
+        compareIds={["s1"]}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "比較対象1件" }));
+
+    expect(screen.getByTestId("restaurant-map")).toHaveAttribute(
+      "data-restaurant-ids",
+      "s2",
+    );
   });
 });

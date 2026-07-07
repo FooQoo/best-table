@@ -102,8 +102,8 @@ describe("RestaurantMap", () => {
     expect(path?.getAttribute("stroke-width")).toBe("3.5");
   });
 
-  it("excludes restaurants whose tier is hidden via the legend filter", () => {
-    const unevaluated = restaurant; // matchTier: null -> grouped with "low"
+  it("excludes restaurants whose tier is hidden via the filter panel", () => {
+    const unevaluated = restaurant; // matchTier: null -> filter key "unevaluated"
     const visible = {
       ...restaurant,
       id: "r2",
@@ -115,7 +115,7 @@ describe("RestaurantMap", () => {
       <RestaurantMap
         restaurants={[unevaluated, visible]}
         apiKey="test-key"
-        hiddenTiers={new Set(["low"])}
+        hiddenTiers={new Set(["unevaluated"])}
       />,
     );
 
@@ -128,7 +128,7 @@ describe("RestaurantMap", () => {
       <RestaurantMap
         restaurants={[restaurant]}
         apiKey="test-key"
-        hiddenTiers={new Set(["low"])}
+        hiddenTiers={new Set(["unevaluated"])}
       />,
     );
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import type { Restaurant } from "~/domain/models/restaurant";
+import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
 import { useBooking } from "~/state/booking-context";
 import {
@@ -14,6 +15,7 @@ import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import { ComparePanel } from "~/components/feature/results/compare-panel";
 import { CompareTray } from "~/components/feature/results/compare-tray";
 import { ResultsMap } from "~/components/feature/results/results-map";
+import type { CompareVisibilityGroup } from "~/components/feature/maps/map-filter-panel";
 import { ResultsSummaryBar } from "~/components/feature/results/results-summary-bar";
 import { StoreDetailPanel } from "~/components/feature/results/store-detail-panel";
 import {
@@ -130,9 +132,12 @@ export function ResultsScreen() {
   const [activeSearchCenter, setActiveSearchCenter] =
     useState<MapSearchCenter | null>(null);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
-  const [hiddenTiers, setHiddenTiers] = useState<Set<MatchTier>>(new Set());
+  const [hiddenTiers, setHiddenTiers] = useState<Set<TierFilterKey>>(new Set());
+  const [hiddenCompareGroups, setHiddenCompareGroups] = useState<
+    Set<CompareVisibilityGroup>
+  >(new Set());
 
-  const toggleHiddenTier = useCallback((tier: MatchTier) => {
+  const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
       const next = new Set(prev);
       if (next.has(tier)) {
@@ -143,6 +148,21 @@ export function ResultsScreen() {
       return next;
     });
   }, []);
+
+  const toggleHiddenCompareGroup = useCallback(
+    (group: CompareVisibilityGroup) => {
+      setHiddenCompareGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(group)) {
+          next.delete(group);
+        } else {
+          next.add(group);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   const handleMarkerClick = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -425,6 +445,9 @@ export function ResultsScreen() {
               bookingSummary={chatBookingSummary}
               hiddenTiers={hiddenTiers}
               onToggleTier={toggleHiddenTier}
+              compareIds={state.compareIds}
+              hiddenCompareGroups={hiddenCompareGroups}
+              onToggleCompareGroup={toggleHiddenCompareGroup}
             />
           </>
         ) : searchError && !hasVisibleStores ? (
@@ -498,6 +521,9 @@ export function ResultsScreen() {
                 onSearchThisArea={searchThisArea}
                 hiddenTiers={hiddenTiers}
                 onToggleTier={toggleHiddenTier}
+                compareIds={state.compareIds}
+                hiddenCompareGroups={hiddenCompareGroups}
+                onToggleCompareGroup={toggleHiddenCompareGroup}
               />
               {selectedStore && (
                 <StoreDetailPanel

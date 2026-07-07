@@ -5,10 +5,14 @@ import {
   useMap,
   type MapCameraChangedEvent,
 } from "@vis.gl/react-google-maps";
-import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import type { Restaurant } from "~/domain/models/restaurant";
 import { NAVY } from "~/mocks/data";
 import { GenreMarkerOverlay } from "./genre-marker-overlay";
-import { resolveTierColor, resolveTierKey } from "./match-tier-colors";
+import {
+  resolveTierColor,
+  resolveTierFilterKey,
+  type TierFilterKey,
+} from "./match-tier-colors";
 import {
   getInitialMapCamera,
   getMappableRestaurants,
@@ -22,8 +26,8 @@ type RestaurantMapProps = {
   onCenterChanged?: (center: { lat: number; lng: number }) => void;
   emptyLabel?: string;
   apiKey?: string | null;
-  // 凡例で非表示にされたマッチ度（評価未生成は「低」に含める）のピンは地図から除く。
-  hiddenTiers?: ReadonlySet<MatchTier>;
+  // 絞り込みパネルで非表示にされたマッチ度（評価未生成は独立した行）のピンは地図から除く。
+  hiddenTiers?: ReadonlySet<TierFilterKey>;
   // カードクリックなど、明示的に選択された店舗の位置に地図を移動させたいときだけ設定する。
   focusRestaurantId?: string | null;
 };
@@ -76,7 +80,7 @@ export function RestaurantMap({
 }: RestaurantMapProps) {
   const apiKey = apiKeyOverride === undefined ? getBrowserMapsKey() : apiKeyOverride;
   const mappableRestaurants = getMappableRestaurants(restaurants).filter(
-    (restaurant) => !hiddenTiers?.has(resolveTierKey(restaurant.matchTier)),
+    (restaurant) => !hiddenTiers?.has(resolveTierFilterKey(restaurant.matchTier)),
   );
 
   if (mappableRestaurants.length === 0) {

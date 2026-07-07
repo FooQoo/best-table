@@ -2,7 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { MemoryRouter } from "react-router";
-import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import type { Restaurant } from "~/domain/models/restaurant";
+import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { STORES } from "~/mocks/data";
 import { StoreList, type StoreListScrollTarget } from "./store-list";
 
@@ -17,7 +18,7 @@ function setup(
     selectedStoreId?: string;
     stores?: Restaurant[];
     scrollTarget?: StoreListScrollTarget | null;
-    hiddenTiers?: ReadonlySet<MatchTier>;
+    hiddenTiers?: ReadonlySet<TierFilterKey>;
   } = {},
 ) {
   return render(

@@ -2,16 +2,15 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
-import {
-  MAX_COMPARE_COUNT,
-  type MatchTier,
-  type Restaurant,
-} from "~/domain/models/restaurant";
+import { MAX_COMPARE_COUNT, type Restaurant } from "~/domain/models/restaurant";
 import { GOLD } from "~/mocks/data";
 import { getTheme, toggleButtonStyle } from "~/styles/theme";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { EMPHASIS_LABELS, getEmphasisKeys } from "~/utils/scoring";
-import { resolveTierKey } from "~/components/feature/maps/match-tier-colors";
+import {
+  resolveTierFilterKey,
+  type TierFilterKey,
+} from "~/components/feature/maps/match-tier-colors";
 
 export type StoreListScrollTarget = { storeId: string };
 
@@ -27,7 +26,7 @@ type StoreListProps = {
   // マップのピンをクリックしたときだけ設定する。hover による activeStoreId 変更では
   // スクロールしない（一覧を眺めているだけのユーザーの視点を勝手に動かさないため）。
   scrollTarget?: StoreListScrollTarget | null;
-  hiddenTiers?: ReadonlySet<MatchTier>;
+  hiddenTiers?: ReadonlySet<TierFilterKey>;
   footer?: ReactNode;
 };
 
@@ -63,7 +62,8 @@ export function StoreList({
         const active = activeStoreId === store.id;
         const panelOpen = selectedStoreId === store.id;
         const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
-        const dimmedByLegend = hiddenTiers?.has(resolveTierKey(store.matchTier)) ?? false;
+        const dimmedByLegend =
+          hiddenTiers?.has(resolveTierFilterKey(store.matchTier)) ?? false;
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (

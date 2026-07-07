@@ -1,7 +1,11 @@
-import type { MatchTier, Restaurant } from "~/domain/models/restaurant";
+import type { Restaurant } from "~/domain/models/restaurant";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import { RestaurantMap } from "~/components/feature/maps/restaurant-map";
-import { MatchTierLegend } from "~/components/feature/maps/match-tier-legend";
+import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
+import {
+  MapFilterPanel,
+  type CompareVisibilityGroup,
+} from "~/components/feature/maps/map-filter-panel";
 import { ResultsAiChat } from "~/components/feature/results/results-ai-chat";
 
 type ResultsMapProps = {
@@ -13,8 +17,11 @@ type ResultsMapProps = {
   onCenterChanged?: (center: { lat: number; lng: number }) => void;
   showSearchThisArea?: boolean;
   onSearchThisArea?: () => void;
-  hiddenTiers: ReadonlySet<MatchTier>;
-  onToggleTier: (tier: MatchTier) => void;
+  hiddenTiers: ReadonlySet<TierFilterKey>;
+  onToggleTier: (tier: TierFilterKey) => void;
+  compareIds?: string[];
+  hiddenCompareGroups: ReadonlySet<CompareVisibilityGroup>;
+  onToggleCompareGroup: (group: CompareVisibilityGroup) => void;
 };
 
 export function ResultsMap({
@@ -28,8 +35,17 @@ export function ResultsMap({
   onSearchThisArea,
   hiddenTiers,
   onToggleTier,
+  compareIds = [],
+  hiddenCompareGroups,
+  onToggleCompareGroup,
 }: ResultsMapProps) {
-  const hasEvaluatedStore = stores.some((store) => store.matchTier !== null);
+  const mapStores = stores.filter((store) => {
+    const group: CompareVisibilityGroup = compareIds.includes(store.id)
+      ? "target"
+      : "excluded";
+    return !hiddenCompareGroups.has(group);
+  });
+  const isFilteredEmpty = stores.length > 0 && mapStores.length === 0;
 
   return (
     <div className="h-full flex-1 relative overflow-hidden bg-[#e9e4d6]">
@@ -37,17 +53,23 @@ export function ResultsMap({
         <div className="text-[11px] font-mono text-[#8a8474] bg-[#f7f4ee]/90 border border-[#ddd4c2] rounded px-2 py-1">
           地図エリア
         </div>
-        {hasEvaluatedStore && (
-          <MatchTierLegend hiddenTiers={hiddenTiers} onToggleTier={onToggleTier} />
-        )}
+        <MapFilterPanel
+          restaurants={stores}
+          hiddenTiers={hiddenTiers}
+          onToggleTier={onToggleTier}
+          compareIds={compareIds}
+          hiddenCompareGroups={hiddenCompareGroups}
+          onToggleCompareGroup={onToggleCompareGroup}
+        />
       </div>
       <RestaurantMap
-        restaurants={stores}
+        restaurants={mapStores}
         activeRestaurantId={activeStoreId}
         focusRestaurantId={focusStoreId}
         onMarkerClick={onMarkerClick}
         onCenterChanged={onCenterChanged}
         hiddenTiers={hiddenTiers}
+        emptyLabel={isFilteredEmpty ? "絞り込み条件に一致する店舗がありません" : undefined}
       />
       {showSearchThisArea && (
         <button
