@@ -38,12 +38,14 @@ export function ResultsSummaryBar({
 }: ResultsSummaryBarProps) {
   return (
     <div className="relative bg-white border-b-[1.5px] border-[#e4ded0]">
-      <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-4">
+      <div className="flex items-center gap-2 px-4 py-2 sm:gap-4 sm:px-8 sm:py-4">
         {isEditingConditions ? (
-          <span className="text-sm text-[#20201c]">条件を編集しています</span>
+          <span className="min-w-0 flex-1 truncate text-xs text-[#20201c] sm:text-sm">
+            条件を編集しています
+          </span>
         ) : (
-          <div className="flex min-w-0 flex-col gap-2 text-sm text-[#20201c] sm:flex-row sm:items-center sm:gap-3">
-            <span className="leading-relaxed sm:whitespace-nowrap">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-[#20201c] sm:gap-3 sm:text-sm">
+            <span className="min-w-0 flex-1 truncate leading-relaxed">
               <b>{recapKeyword}</b>・{recapDateTime}・{people}名・ご予算：
               {recapBudget}・重視：{recapPriorities}
             </span>
@@ -55,12 +57,12 @@ export function ResultsSummaryBar({
             )}
           </div>
         )}
-        <div className="flex flex-none items-center justify-end gap-3">
+        <div className="flex flex-none items-center justify-end gap-2 sm:gap-3">
           {isEditingConditions && (
             <button
               type="button"
               onClick={onConfirmConditions}
-              className="text-[13px] text-[#8a6a1a] bg-transparent border-none cursor-pointer underline p-1 rounded hover:text-[#5c4610] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
+              className="text-xs text-[#8a6a1a] bg-transparent border-none cursor-pointer underline p-1 rounded whitespace-nowrap hover:text-[#5c4610] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] sm:text-[13px]"
             >
               条件の変更を完了する
             </button>
@@ -72,7 +74,7 @@ export function ResultsSummaryBar({
             onClick={
               isEditingConditions ? onCancelConditions : onStartEditingConditions
             }
-            className="w-28 whitespace-nowrap rounded border-none bg-transparent p-1 text-center text-[13px] text-[#8a6a1a] underline cursor-pointer hover:text-[#5c4610] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
+            className="w-16 whitespace-nowrap rounded border-none bg-transparent p-1 text-center text-xs text-[#8a6a1a] underline cursor-pointer hover:text-[#5c4610] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] sm:w-28 sm:text-[13px]"
           >
             {isEditingConditions ? "キャンセル" : "条件を変更する"}
           </button>

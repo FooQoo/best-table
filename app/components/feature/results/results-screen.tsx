@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
@@ -27,6 +33,7 @@ import {
   StoreListSkeletonItems,
 } from "~/components/feature/results/store-list-skeleton";
 import type { SearchPhase } from "~/utils/search-phase-message";
+import { resolveSwipeDirection, type SwipePoint } from "~/utils/swipe";
 import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 const PAGE_SIZE = 10;
@@ -138,6 +145,41 @@ export function ResultsScreen() {
   const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [mobileView, setMobileView] = useState<MobileResultsView>("list");
   const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
+  const swipeStartRef = useRef<SwipePoint | null>(null);
+
+  const handleSwipeTouchStart = useCallback((event: ReactTouchEvent) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  // タブ帯（「一覧/地図」ボタンの帯）は地図のパン操作と競合しないため、両方向のスワイプを許可する。
+  const handleTabBarSwipeEnd = useCallback((event: ReactTouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const direction = resolveSwipeDirection(start, {
+      x: touch.clientX,
+      y: touch.clientY,
+    });
+    if (direction === "left") setMobileView("map");
+    if (direction === "right") setMobileView("list");
+  }, []);
+
+  // 一覧は縦スクロールのみなので、コンテンツ全面での左スワイプ（地図へ）は安全に許可できる。
+  // 地図は1本指ドラッグでパンするため、地図側では上部のタブ帯のみでスワイプを受け付ける。
+  const handleListSwipeEnd = useCallback((event: ReactTouchEvent) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const direction = resolveSwipeDirection(start, {
+      x: touch.clientX,
+      y: touch.clientY,
+    });
+    if (direction === "left") setMobileView("map");
+  }, []);
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
@@ -483,7 +525,11 @@ export function ResultsScreen() {
         phaseRestaurantCount={phaseRestaurantCount}
       />
 
-      <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
+      <div
+        className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden"
+        onTouchStart={handleSwipeTouchStart}
+        onTouchEnd={handleTabBarSwipeEnd}
+      >
         <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
           {(["list", "map"] as const).map((view) => (
             <button
@@ -555,6 +601,8 @@ export function ResultsScreen() {
               scrollTarget={scrollTarget}
               hiddenTiers={hiddenTiers}
               className={mobileView === "list" ? "" : "hidden md:flex"}
+              onTouchStart={handleSwipeTouchStart}
+              onTouchEnd={handleListSwipeEnd}
               banner={
                 searchError && hasVisibleStores ? (
                   <div
