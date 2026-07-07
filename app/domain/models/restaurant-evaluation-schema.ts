@@ -5,7 +5,6 @@ import { z } from "zod";
 // z.union / z.record は Google の構造化出力で未サポートのため使わない
 // （node_modules/@ai-sdk/google/docs/15-google.mdx「Troubleshooting: Schema Limitations」）。
 const evidenceCategorySchema = z.enum([
-  "review",
   "photo",
   "seat",
   "menu",

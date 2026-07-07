@@ -7,7 +7,7 @@ describe("ConcernTags", () => {
       <ConcernTags
         storeId="s1"
         concerns={[
-          { text: "懸念A", evidence: ["review"] },
+          { text: "懸念A", evidence: ["description"] },
           { text: "懸念B", evidence: ["seat"] },
         ]}
       />,
@@ -23,12 +23,12 @@ describe("ConcernTags", () => {
     render(
       <ConcernTags
         storeId="s1"
-        concerns={[{ text: "懸念A", evidence: ["review", "seat"] }]}
+        concerns={[{ text: "懸念A", evidence: ["description", "seat"] }]}
       />,
     );
 
     const el = screen.getByTestId("concern-tags-s1");
-    expect(el).toHaveTextContent("口コミ");
+    expect(el).toHaveTextContent("店舗紹介文");
     expect(el).toHaveTextContent("席");
   });
 

@@ -6,7 +6,6 @@ import type {
 } from "~/domain/models/restaurant";
 
 export const EVIDENCE_LABELS: Record<EvidenceCategory, string> = {
-  review: "口コミ",
   photo: "写真",
   seat: "席",
   menu: "メニュー",

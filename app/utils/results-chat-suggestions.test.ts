@@ -23,9 +23,9 @@ const baseRestaurant: Restaurant = {
   service: "○",
   access: "銀座駅から徒歩3分",
   budgetLabel: "¥15,000前後",
-  concerns: [{ text: "人気店のため事前確認が必要", evidence: ["review"] }],
+  concerns: [{ text: "人気店のため事前確認が必要", evidence: ["description"] }],
   matchingSummary: "個室と格式のバランスが良い候補です。",
-  evidence: ["review"],
+  evidence: ["description"],
   confidence: "medium",
   generatedAt: "2026-07-05T00:00:00.000Z",
 };

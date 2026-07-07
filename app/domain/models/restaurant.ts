@@ -2,7 +2,6 @@
 // フィールドの意味・null の扱い・固定語彙かどうかの区別は docs/MODEL.md を正とする。
 
 export type EvidenceCategory =
-  | "review"
   | "photo"
   | "seat"
   | "menu"
@@ -80,7 +79,6 @@ export const MIN_COMPARE_COUNT = 2;
 export const MAX_PRIORITY_COUNT = 3;
 
 const EVIDENCE_CATEGORIES: readonly EvidenceCategory[] = [
-  "review",
   "photo",
   "seat",
   "menu",
