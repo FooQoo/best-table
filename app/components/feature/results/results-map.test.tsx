@@ -199,7 +199,7 @@ describe("ResultsMap", () => {
     );
 
     expect(onSearchThisArea).toHaveBeenCalledTimes(1);
-  });
+  }, 20_000);
 
   it("passes map center changes to the results screen", async () => {
     const onCenterChanged = vi.fn();

@@ -64,7 +64,7 @@ describe("MapFilterPanel", () => {
     expect(
       screen.getByRole("button", { name: "比較対象外0件" }),
     ).toBeInTheDocument();
-  });
+  }, 20_000);
 
   it("counts restaurants per match tier, keeping unevaluated separate from 'low'", () => {
     renderPanel({

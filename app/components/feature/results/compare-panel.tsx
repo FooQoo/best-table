@@ -147,8 +147,8 @@ export function ComparePanel({
       data-open={isOpen ? "true" : "false"}
       className={`absolute inset-0 ${Z_INDEX.comparePanel} flex flex-col overflow-hidden bg-[#fffdf8] shadow-[-10px_0_24px_rgba(20,20,20,.16)] transition-transform duration-300 data-[open=false]:pointer-events-none data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0`}
     >
-      <div className="flex-none border-b border-[#e4ded0] px-5 py-4 flex items-center justify-between gap-3">
-        <h2 className="m-0 font-serif text-lg font-bold text-[#20201c]">
+      <div className="flex flex-none flex-col gap-3 border-b border-[#e4ded0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
+        <h2 className="m-0 font-serif text-base font-bold text-[#20201c] sm:text-lg">
           {stores.length}件を比較中
         </h2>
         {stores.length > 0 && (
@@ -165,7 +165,7 @@ export function ComparePanel({
               type="button"
               onClick={handleSaveImage}
               disabled={isSaving}
-              className="flex flex-none items-center gap-1.5 rounded-full border border-[#ddd4c2] bg-white px-3 py-1.5 text-xs font-bold text-[#4a463f] transition-colors hover:bg-[#f7f4ee] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex flex-none items-center justify-center gap-1.5 rounded-full border border-[#ddd4c2] bg-white px-3 py-1.5 text-xs font-bold text-[#4a463f] transition-colors hover:bg-[#f7f4ee] disabled:cursor-not-allowed disabled:opacity-60"
               aria-label="比較表を画像として保存"
               title="比較表を画像として保存"
             >
@@ -180,7 +180,7 @@ export function ComparePanel({
         )}
       </div>
 
-      <div className="flex-1 overflow-auto px-5" data-compare-scroll-area>
+      <div className="flex-1 overflow-auto px-4 sm:px-5" data-compare-scroll-area>
         {stores.length === 0 ? (
           <div className="grid h-full place-items-center text-sm font-bold text-[#79726a]">
             店舗が選択されていません

@@ -49,9 +49,9 @@ export function ResultsMap({
   const isFilteredEmpty = stores.length > 0 && mapStores.length === 0;
 
   return (
-    <div className="h-full flex-1 relative overflow-hidden bg-[#e9e4d6]">
+    <div className="h-full min-h-[420px] flex-1 relative overflow-hidden bg-[#e9e4d6] md:min-h-0">
       <div
-        className={`absolute top-4 right-4 ${Z_INDEX.mapControls} flex flex-col items-end gap-2`}
+        className={`absolute top-3 right-3 ${Z_INDEX.mapControls} flex max-h-[calc(100%-96px)] flex-col items-end gap-2 overflow-y-auto md:top-4 md:right-4 md:max-h-none md:overflow-visible`}
       >
         <div className="text-[11px] font-mono text-[#8a8474] bg-[#f7f4ee]/90 border border-[#ddd4c2] rounded px-2 py-1">
           地図エリア

@@ -17,8 +17,8 @@ export function CompareTray({
   const isDisabled = !isCompareOpen && !canCompare;
 
   return (
-    <div className="flex-none px-8 py-4 bg-[#12202f] flex justify-between items-center">
-      <div className="text-sm text-[#e4ded0]">
+    <div className="flex flex-none flex-col gap-3 bg-[#12202f] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-4">
+      <div className="text-sm leading-relaxed text-[#e4ded0]">
         {compareCount}件を比較トレイに追加中（2〜5件選択できます）
       </div>
       <button
@@ -26,7 +26,7 @@ export function CompareTray({
         disabled={isDisabled}
         aria-pressed={isCompareOpen}
         onClick={onToggleCompare}
-        className="px-7 py-3 border-none rounded-md shadow-[0_1px_3px_rgba(0,0,0,.2)] font-bold text-sm cursor-pointer transition-colors disabled:cursor-not-allowed"
+        className="w-full rounded-md border-none px-7 py-3 text-sm font-bold shadow-[0_1px_3px_rgba(0,0,0,.2)] transition-colors cursor-pointer disabled:cursor-not-allowed sm:w-auto"
         style={
           !isDisabled
             ? { background: t.accent, color: "#20201c" }

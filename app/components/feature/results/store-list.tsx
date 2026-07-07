@@ -29,6 +29,7 @@ type StoreListProps = {
   hiddenTiers?: ReadonlySet<TierFilterKey>;
   footer?: ReactNode;
   banner?: ReactNode;
+  className?: string;
 };
 
 export function StoreList({
@@ -44,6 +45,7 @@ export function StoreList({
   hiddenTiers,
   footer,
   banner,
+  className,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
@@ -57,7 +59,9 @@ export function StoreList({
   }, [scrollTarget]);
 
   return (
-    <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
+    <div
+      className={`w-full flex-none overflow-y-auto bg-[#f7f4ee] p-4 flex flex-col gap-4 md:w-[400px] md:p-6 ${className ?? ""}`}
+    >
       {banner}
       <div className="font-bold text-[15px]">{stores.length}件</div>
       {stores.map((store) => {
@@ -109,10 +113,10 @@ export function StoreList({
             }}
           >
             <div className="flex gap-3">
-              <StorePhoto store={store} className="w-20 h-20 flex-none" />
+              <StorePhoto store={store} className="h-20 w-20 flex-none" />
               <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <div className="font-bold text-[15px]">{store.name}</div>
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="font-bold text-[15px] leading-snug">{store.name}</div>
                   <MatchTierBadge tier={store.matchTier} />
                 </div>
                 <div className="text-xs text-[#79726a] mt-1">

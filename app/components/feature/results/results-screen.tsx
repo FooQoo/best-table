@@ -33,6 +33,7 @@ const PAGE_SIZE = 10;
 
 type FetchMode = "initial" | "more";
 type MapSearchCenter = { lat: number; lng: number };
+type MobileResultsView = "list" | "map";
 
 type SearchStreamEvent =
   | { type: "phase"; phase: Exclude<SearchPhase, "condition"> }
@@ -135,6 +136,7 @@ export function ResultsScreen() {
     Set<CompareVisibilityGroup>
   >(new Set());
   const [isEditingConditions, setIsEditingConditions] = useState(false);
+  const [mobileView, setMobileView] = useState<MobileResultsView>("list");
   const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
@@ -168,6 +170,7 @@ export function ResultsScreen() {
     setActiveStoreId(storeId);
     setSelectedStoreId(storeId);
     setScrollTarget({ storeId });
+    setMobileView("map");
   }, []);
 
   const handleSelectStore = useCallback((storeId: string) => {
@@ -207,6 +210,7 @@ export function ResultsScreen() {
         setActiveStoreId(null);
         setSelectedStoreId(null);
         setIsCompareOpen(false);
+        setMobileView("list");
       } else {
         setIsLoadingMore(true);
       }
@@ -479,19 +483,41 @@ export function ResultsScreen() {
         phaseRestaurantCount={phaseRestaurantCount}
       />
 
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
+        <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
+          {(["list", "map"] as const).map((view) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setMobileView(view)}
+              aria-pressed={mobileView === view}
+              className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
+            >
+              {view === "list" ? "一覧" : "地図"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative flex-1 flex overflow-hidden min-h-0">
         {shouldShowInitialSkeleton ? (
           <>
-            <StoreListSkeleton />
-            <ResultsMap
-              stores={[]}
-              bookingSummary={chatBookingSummary}
-              hiddenTiers={hiddenTiers}
-              onToggleTier={toggleHiddenTier}
-              compareIds={state.compareIds}
-              hiddenCompareGroups={hiddenCompareGroups}
-              onToggleCompareGroup={toggleHiddenCompareGroup}
+            <StoreListSkeleton
+              className={mobileView === "list" ? "" : "hidden md:flex"}
             />
+            <div
+              className={`${mobileView === "map" ? "block" : "hidden"} min-w-0 flex-1 md:block`}
+            >
+              <ResultsMap
+                stores={[]}
+                bookingSummary={chatBookingSummary}
+                hiddenTiers={hiddenTiers}
+                onToggleTier={toggleHiddenTier}
+                compareIds={state.compareIds}
+                hiddenCompareGroups={hiddenCompareGroups}
+                onToggleCompareGroup={toggleHiddenCompareGroup}
+              />
+            </div>
           </>
         ) : searchError && !hasVisibleStores ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
@@ -528,6 +554,7 @@ export function ResultsScreen() {
               onSelectStore={handleSelectStore}
               scrollTarget={scrollTarget}
               hiddenTiers={hiddenTiers}
+              className={mobileView === "list" ? "" : "hidden md:flex"}
               banner={
                 searchError && hasVisibleStores ? (
                   <div
@@ -562,7 +589,9 @@ export function ResultsScreen() {
                 </>
               }
             />
-            <div className="relative min-w-0 flex-1">
+            <div
+              className={`relative min-w-0 flex-1 ${mobileView === "map" ? "block" : "hidden"} md:block`}
+            >
               <ResultsMap
                 stores={restaurants}
                 bookingSummary={chatBookingSummary}
@@ -578,6 +607,24 @@ export function ResultsScreen() {
                 hiddenCompareGroups={hiddenCompareGroups}
                 onToggleCompareGroup={toggleHiddenCompareGroup}
               />
+              <div className="hidden md:block">
+                {selectedStore && (
+                  <StoreDetailPanel
+                    key={selectedStore.id}
+                    store={selectedStore}
+                    onClose={() => setSelectedStoreId(null)}
+                  />
+                )}
+                {(canCompare || isCompareOpen) && (
+                  <ComparePanel
+                    stores={compareStores}
+                    counterpartId={query.counterpart}
+                    isOpen={isCompareOpen}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="md:hidden">
               {selectedStore && (
                 <StoreDetailPanel
                   key={selectedStore.id}

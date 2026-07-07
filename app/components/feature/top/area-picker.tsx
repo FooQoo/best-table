@@ -28,7 +28,7 @@ export function AreaPicker() {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex-[2] min-w-[260px] box-border flex items-center flex-wrap gap-2 px-3 py-2 border-[1.5px] border-[#d8d2c0] rounded-md bg-white cursor-pointer text-[15px] text-[#20201c] min-h-6 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] focus-visible:border-[#c8a24a]"
+          className="box-border flex min-h-6 w-full min-w-[260px] flex-[2] flex-wrap items-center gap-2 rounded-md border-[1.5px] border-[#d8d2c0] bg-white px-3 py-2 text-[15px] text-[#20201c] cursor-pointer focus-visible:border-[#c8a24a] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] sm:w-auto"
         >
           <span style={{ color: GOLD }}>📍</span>
           {query.selectedAreas.length > 0 ? (
@@ -58,7 +58,7 @@ export function AreaPicker() {
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[460px] h-[420px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="flex h-[min(420px,calc(100vh-96px))] w-[min(calc(100vw-32px),460px)] flex-col gap-0 overflow-hidden p-0"
       >
         <div className="flex-1 overflow-hidden relative">
           <div

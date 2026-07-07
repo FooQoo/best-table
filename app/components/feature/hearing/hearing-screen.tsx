@@ -45,21 +45,21 @@ export function HearingScreen() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] flex justify-center items-start px-6 py-8 box-border overflow-y-auto">
-      <div className="w-[720px] max-w-full max-h-full flex flex-col">
+    <div className="box-border flex min-h-[calc(100vh-64px)] justify-center overflow-y-auto px-4 py-5 sm:h-[calc(100vh-64px)] sm:items-start sm:px-6 sm:py-8">
+      <div className="flex w-[720px] max-w-full flex-col sm:max-h-full">
         <StepProgress step={step} />
 
-        <h1 className="font-serif font-bold text-[22px] my-2.5 mb-3.5 flex-none">
+        <h1 className="my-2.5 mb-3.5 flex-none font-serif text-[20px] font-bold leading-snug sm:text-[22px]">
           今回の会食について、少しだけ教えてください
         </h1>
 
-        <div className="bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] px-[42px] py-9 overflow-y-auto h-[600px] box-border flex-none">
+        <div className="box-border flex-none overflow-y-auto rounded-md border-[1.5px] border-[#e4ded0] bg-white px-4 py-5 shadow-[0_1px_3px_rgba(20,20,20,.06),0_1px_2px_rgba(20,20,20,.04)] sm:h-[600px] sm:px-[42px] sm:py-9">
           {step === 0 && <CounterpartStep />}
           {step === 1 && <BudgetStep />}
           {step === 2 && <PriorityStep />}
         </div>
 
-        <div className="flex justify-between items-center mt-3.5 flex-none">
+        <div className="mt-3.5 flex flex-none items-center justify-between gap-3">
           <button
             type="button"
             onClick={handleBack}
@@ -71,7 +71,7 @@ export function HearingScreen() {
             type="button"
             onClick={handlePrimary}
             disabled={!primaryEnabled}
-            className="px-8 py-3.5 border-none rounded-md shadow-[0_1px_3px_rgba(20,20,20,.12),0_1px_2px_rgba(20,20,20,.06)] font-bold text-[15px] cursor-pointer transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)]"
+            className="min-w-[9em] rounded-md border-none px-5 py-3.5 text-[15px] font-bold shadow-[0_1px_3px_rgba(20,20,20,.12),0_1px_2px_rgba(20,20,20,.06)] transition-colors cursor-pointer disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.45)] sm:px-8"
             style={
               primaryEnabled
                 ? { background: "#12202f", color: "#f7f4ee" }

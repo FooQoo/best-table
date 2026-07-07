@@ -242,7 +242,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
         data-results-ai-chat
         onClick={() => setOpen(true)}
         disabled={stores.length === 0}
-        className={`absolute bottom-5 right-5 ${Z_INDEX.aiChatButton} flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c] disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`absolute bottom-4 right-4 ${Z_INDEX.aiChatButton} flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c] disabled:cursor-not-allowed disabled:opacity-50 md:bottom-5 md:right-5`}
         aria-label="AIに地図上の店舗を相談する"
       >
         <MessageCircle className="size-4" aria-hidden="true" />
@@ -253,7 +253,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
         aria-label="地図上の店舗をAIに相談"
         data-results-ai-chat
         data-open={open ? "true" : "false"}
-        className={`absolute bottom-4 right-4 top-4 ${Z_INDEX.aiChatPanel} flex w-[390px] max-w-[calc(100%-32px)] flex-col overflow-hidden rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_14px_36px_rgba(20,20,20,.24)] transition-transform duration-300 data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0`}
+        className={`absolute inset-x-3 bottom-3 top-3 ${Z_INDEX.aiChatPanel} flex flex-col overflow-hidden rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_14px_36px_rgba(20,20,20,.24)] transition-transform duration-300 data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0 md:inset-x-auto md:bottom-4 md:right-4 md:top-4 md:w-[390px] md:max-w-[calc(100%-32px)]`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#e4ded0] px-4 py-3">
           <div className="min-w-0">

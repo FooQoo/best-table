@@ -1,6 +1,14 @@
-export function StoreListSkeleton({ count = 6 }: { count?: number }) {
+export function StoreListSkeleton({
+  count = 6,
+  className,
+}: {
+  count?: number;
+  className?: string;
+}) {
   return (
-    <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
+    <div
+      className={`w-full flex-none overflow-y-auto bg-[#f7f4ee] p-4 flex flex-col gap-4 md:w-[400px] md:p-6 ${className ?? ""}`}
+    >
       <div className="h-5 w-40 rounded bg-[#e4ded0] animate-pulse" />
       <StoreListSkeletonItems count={count} />
     </div>

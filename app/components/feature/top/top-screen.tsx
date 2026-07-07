@@ -25,21 +25,21 @@ export function TopScreen() {
     <div>
       <TopHero />
 
-      <div className="max-w-[760px] mx-auto -mt-[52px] relative bg-white border-[1.5px] border-[#e4ded0] rounded-md shadow-[0_6px_20px_rgba(20,20,20,.14)] px-8 py-7">
-        <div className="flex gap-3 flex-wrap relative">
+      <div className="relative mx-4 -mt-[44px] max-w-[760px] rounded-md border-[1.5px] border-[#e4ded0] bg-white px-4 py-5 shadow-[0_6px_20px_rgba(20,20,20,.14)] sm:mx-auto sm:-mt-[52px] sm:px-8 sm:py-7">
+        <div className="flex flex-col gap-3 relative sm:flex-row sm:flex-wrap">
           <AreaPicker />
 
           <Input
             type="date"
             value={query.date}
             onChange={(e) => query.setDate(e.target.value)}
-            className="flex-none w-auto h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px]"
+            className="h-auto w-full rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px] sm:w-auto sm:flex-none"
           />
           <Input
             type="time"
             value={query.time}
             onChange={(e) => query.setTime(e.target.value)}
-            className="flex-none w-auto h-auto rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px]"
+            className="h-auto w-full rounded-md border-[1.5px] border-[#d8d2c0] px-2.5 py-2 text-[15px] sm:w-auto sm:flex-none"
           />
 
           <QuantityStepper
@@ -50,13 +50,13 @@ export function TopScreen() {
           />
         </div>
 
-        <div className="border-t border-[#eee6d6] mt-6 pt-5 flex justify-end">
+        <div className="mt-6 flex justify-stretch border-t border-[#eee6d6] pt-5 sm:justify-end">
           <button
             type="button"
             onClick={() =>
               navigate({ pathname: "/hearing", search: location.search })
             }
-            className="flex-none px-[30px] py-[15px] border-none rounded-md shadow-[0_1px_3px_rgba(20,20,20,.2)] font-bold text-[15px] text-[#20201c] cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.65)]"
+            className="w-full rounded-md border-none px-[30px] py-[15px] text-[15px] font-bold text-[#20201c] shadow-[0_1px_3px_rgba(20,20,20,.2)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-[rgba(200,162,74,.65)] sm:w-auto sm:flex-none"
             style={{ background: GOLD }}
           >
             AIに相談してお店を選ぶ
@@ -70,7 +70,7 @@ export function TopScreen() {
 function TopHero() {
   return (
     <div
-      className="relative h-[300px] overflow-hidden"
+      className="relative h-[260px] overflow-hidden sm:h-[300px]"
       style={{
         background:
           "repeating-linear-gradient(45deg,#3a3226,#3a3226 12px,#332b20 12px,#332b20 24px)",
@@ -85,12 +85,12 @@ function TopHero() {
       />
       <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
         <div
-          className="font-serif font-bold text-[32px] mb-3"
+          className="mb-3 max-w-[12em] font-serif text-[27px] font-bold leading-tight sm:max-w-none sm:text-[32px]"
           style={{ color: GOLD }}
         >
           大切な会食を、失敗しない選択に。
         </div>
-        <div className="text-[15px] text-[#e4ded0]">
+        <div className="text-[14px] text-[#e4ded0] sm:text-[15px]">
           接待・会食に強い、お店選びのAIサービス
         </div>
       </div>

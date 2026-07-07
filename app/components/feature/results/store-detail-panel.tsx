@@ -53,7 +53,7 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
     <aside
       ref={panelRef}
       aria-label={`${store.name}の詳細`}
-      className={`absolute top-4 left-4 bottom-4 ${Z_INDEX.storeDetailPanel} w-[420px] max-w-[calc(100%-32px)] overflow-y-auto rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_10px_30px_rgba(20,20,20,.22)] duration-150 animate-in fade-in-0 slide-in-from-left-2`}
+      className={`absolute inset-x-3 top-3 bottom-3 ${Z_INDEX.storeDetailPanel} overflow-y-auto rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_10px_30px_rgba(20,20,20,.22)] duration-150 animate-in fade-in-0 slide-in-from-left-2 md:inset-x-auto md:left-4 md:top-4 md:bottom-4 md:w-[420px] md:max-w-[calc(100%-32px)]`}
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#e4ded0] bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
         <div className="min-w-0">
@@ -76,9 +76,9 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
         </button>
       </div>
 
-      <div className="flex flex-col gap-5 p-5 pb-7">
-        <div className="flex gap-4">
-          <StorePhoto store={store} className="h-28 w-28 flex-none" />
+      <div className="flex flex-col gap-5 p-4 pb-7 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <StorePhoto store={store} className="h-36 w-full flex-none sm:h-28 sm:w-28" />
           <div className="min-w-0 flex-1 space-y-2 text-[13px] text-[#79726a]">
             <div className="flex items-center gap-2">
               <MatchTierBadge tier={store.matchTier} />

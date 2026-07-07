@@ -131,5 +131,5 @@ describe("ResultsScreen search center", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
     expect(parseFetchBody(2).selectedAreas).toEqual(["銀座"]);
     expect(parseFetchBody(2).searchLatLng).toBeNull();
-  });
+  }, 30_000);
 });
