@@ -19,7 +19,7 @@ describe("StoreDetailPanel", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("店舗カード以外の外側 pointerdown では閉じる", () => {
+  it("店舗カード以外の外側をタップ（pointerdown+pointerup）すると閉じる", () => {
     const onClose = vi.fn();
     render(
       <>
@@ -28,9 +28,27 @@ describe("StoreDetailPanel", () => {
       </>,
     );
 
-    fireEvent.pointerDown(screen.getByText("外側"));
+    const outside = screen.getByText("外側");
+    fireEvent.pointerDown(outside, { clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(outside, { clientX: 100, clientY: 100 });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("外側でスクロール操作（一定距離動いてから指を離す）をしても閉じない", () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <div>外側</div>
+        <StoreDetailPanel store={STORES[0]} onClose={onClose} />
+      </>,
+    );
+
+    const outside = screen.getByText("外側");
+    fireEvent.pointerDown(outside, { clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(outside, { clientX: 100, clientY: 250 });
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("店舗名を term にした一休.comの検索URLへの送客リンクを表示する", () => {

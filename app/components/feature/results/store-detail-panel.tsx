@@ -24,14 +24,37 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
   const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (panelRef.current?.contains(target)) return;
+    // タップ開始位置からの移動量が小さい場合のみ「外側タップ」とみなして閉じる。
+    // pointerdown だけで判定すると、地図のスクロール/パン操作の指を置いた瞬間に
+    // 発火してしまい、スクロールしようとしただけでカードが閉じてしまう。
+    const TAP_MOVE_THRESHOLD_PX = 10;
+    let pointerDownPosition: { x: number; y: number } | null = null;
+
+    const isOutsideTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Node)) return false;
+      if (panelRef.current?.contains(target)) return false;
       const element =
         target instanceof Element ? target : target.parentElement;
-      if (element?.closest("[data-store-card]")) return;
-      if (element?.closest("[data-results-ai-chat]")) return;
+      if (element?.closest("[data-store-card]")) return false;
+      if (element?.closest("[data-results-ai-chat]")) return false;
+      return true;
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      pointerDownPosition = { x: event.clientX, y: event.clientY };
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const start = pointerDownPosition;
+      pointerDownPosition = null;
+      if (!isOutsideTarget(event.target)) return;
+      if (start) {
+        const distance = Math.hypot(
+          event.clientX - start.x,
+          event.clientY - start.y,
+        );
+        if (distance > TAP_MOVE_THRESHOLD_PX) return;
+      }
       onClose();
     };
 
@@ -42,9 +65,11 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
     };
 
     document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("pointerup", handlePointerUp);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("pointerup", handlePointerUp);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
