@@ -66,6 +66,7 @@ function buildStore(overrides: Partial<Restaurant> = {}): Restaurant {
     evidence: [],
     confidence: null,
     generatedAt: null,
+    ikyu: null,
     ...overrides,
   };
 }

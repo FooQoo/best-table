@@ -1,5 +1,7 @@
+import type { IkyuListing } from "~/domain/models/ikyu-listing";
 import type { Restaurant } from "~/domain/models/restaurant";
 import { resolveAreaLatLng } from "~/constants/area-coordinates";
+import { matchIkyuListing } from "~/domain/services/ikyu-matching";
 import {
   searchPlacesByText,
   type PlaceSearchCandidate,
@@ -10,6 +12,7 @@ import {
   streamRestaurantEvaluations,
 } from "~/server/clients/gemini-evaluation";
 import type { RestaurantEvaluationResult } from "~/domain/models/restaurant-evaluation-schema";
+import { getIkyuListingRepository } from "~/server/repositories/ikyu-listing-repository";
 import { computeMatchTier } from "~/utils/scoring";
 import {
   buildBookingConditionSummary,
@@ -52,6 +55,9 @@ export type RestaurantSearchDeps = {
   searchCandidates: typeof searchPlacesByText;
   evaluateCandidates: typeof evaluateRestaurantCandidates;
   streamEvaluations: typeof streamRestaurantEvaluations;
+  // 一休掲載店マスタの取得。読み込みに失敗しても検索自体は失敗させない
+  // （docs/RELIABILITY.md）ため、呼び出し側で例外を握りつぶし空配列にフォールバックする。
+  listIkyuListings: () => Promise<IkyuListing[]>;
   logger?: Pick<Console, "info" | "warn" | "error">;
 };
 
@@ -59,8 +65,25 @@ const defaultDeps: RestaurantSearchDeps = {
   searchCandidates: searchPlacesByText,
   evaluateCandidates: evaluateRestaurantCandidates,
   streamEvaluations: streamRestaurantEvaluations,
+  listIkyuListings: () => getIkyuListingRepository().list(),
   logger: console,
 };
+
+// 一休掲載店マスタの読み込み。repository 自体も失敗時に空配列を返す実装だが、
+// 将来 repository 実装が例外を投げるケースに備えて呼び出し側でも防御する。
+async function loadIkyuListingsSafely(
+  deps: RestaurantSearchDeps,
+  logger: RestaurantSearchDeps["logger"],
+): Promise<IkyuListing[]> {
+  try {
+    return await deps.listIkyuListings();
+  } catch (error) {
+    logger?.warn("[restaurant-search] ikyu-listings-load-failed", {
+      error: summarizeError(error),
+    });
+    return [];
+  }
+}
 
 // 店舗 id のフォールバック生成にのみ使う条件キー（キャッシュキーではない）。
 // 選択順序に意味を持たせないよう、配列項目はソートしてから結合する。
@@ -176,8 +199,10 @@ function buildRestaurant(input: {
   searchKey: string;
   absoluteIndex: number;
   generatedAt: string;
+  ikyuListings: IkyuListing[];
 }): Restaurant {
-  const { candidate, evaluation, condition, searchKey, absoluteIndex } = input;
+  const { candidate, evaluation, condition, searchKey, absoluteIndex, ikyuListings } =
+    input;
   return {
     // placeId は "places/ChIJ..." のように "/" を含むことがあるため、
     // URL や画面状態で扱いやすい形に変換する。
@@ -190,6 +215,17 @@ function buildRestaurant(input: {
     location: candidate.location,
     phone: candidate.phone,
     photoUrl: candidate.photoName ? buildStorePhotoProxyPath(candidate.photoName) : null,
+    // 一休掲載店マスタとの店舗同定（照合）。マスタ読み込み失敗時は ikyuListings が
+    // 空配列になり、結果として全候補 ikyu: null になる（除外はしない）。
+    ikyu: matchIkyuListing(
+      {
+        placeId: candidate.placeId,
+        phone: candidate.phone,
+        name: candidate.name,
+        address: candidate.address,
+      },
+      ikyuListings,
+    ),
     matchTier: evaluation
       ? computeMatchTier({
           restaurant: evaluation,
@@ -273,6 +309,8 @@ export async function searchRestaurants(
   const newCandidates = excludeExistingCandidates(candidates, existingRestaurantKeys);
   const pageCandidates = newCandidates.slice(offset, offset + limit);
 
+  const ikyuListings = await loadIkyuListingsSafely(deps, logger);
+
   let evaluations;
   try {
     const evaluationStartedAt = performance.now();
@@ -309,6 +347,7 @@ export async function searchRestaurants(
       searchKey,
       absoluteIndex,
       generatedAt,
+      ikyuListings,
     });
   });
 
@@ -387,6 +426,11 @@ export async function* streamRestaurants(
   const pageCandidates = newCandidates.slice(offset, offset + limit);
   const generatedAt = new Date().toISOString();
 
+  // 一休掲載店マスタとの照合は、施設検索の直後・AI 評価の前に行う
+  // （docs/ARCHITECTURE.md「一休掲載店の店舗同定」）。これにより、最初に届く
+  // "restaurant" イベントの時点で ikyu が確定した状態になる。
+  const ikyuListings = await loadIkyuListingsSafely(deps, logger);
+
   // 施設検索の結果はここで確定しているため、AI評価を待たずに基本形をまとめて
   // 先に届ける（同期ループなので実質1回のNDJSON書き込みバーストになる）。
   for (const [index, candidate] of pageCandidates.entries()) {
@@ -397,6 +441,7 @@ export async function* streamRestaurants(
       searchKey,
       absoluteIndex: offset + index,
       generatedAt,
+      ikyuListings,
     });
     yield { type: "restaurant", restaurant };
   }
@@ -430,6 +475,7 @@ export async function* streamRestaurants(
         searchKey,
         absoluteIndex: offset + candidateIndex,
         generatedAt,
+        ikyuListings,
       });
       evaluated.add(candidate.name);
       yield { type: "restaurant-evaluated", restaurant };

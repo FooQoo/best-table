@@ -5,8 +5,8 @@
 
 ## 現在地
 
-- **現行サイクル**: `docs/plans/mvp-cycle-5/`
-- **着手中の UoW**: なし（mvp-cycle-5 は完了）
+- **現行サイクル**: `docs/plans/mvp-cycle-6/`
+- **着手中の UoW**: なし（mvp-cycle-6 の UoW-1〜4 は完了）
 - **次のアクション**: 次サイクルを開始する場合は `docs/plans/` 配下に新しいサイクル計画を作成する。
 
 ## ステータス一覧
@@ -40,6 +40,10 @@
 | mvp-cycle-5 | UoW-1 | URL query state のモデル化 | 完了 | 1-2 | [docs/plans/mvp-cycle-5/uow-1-plan.md](plans/mvp-cycle-5/uow-1-plan.md) | `nuqs` を導入し、`booking-query-state.ts` に parser / serializer / normalize / condition 変換を実装。URL 更新は React Router の `useSearchParams` を使用。不正 query 値、固定語彙、上限、初期値復元をテストで固定 |
 | mvp-cycle-5 | UoW-2 | トップ・ヒアリングの query 同期 | 完了 | 2-3 | [docs/plans/mvp-cycle-5/uow-2-plan.md](plans/mvp-cycle-5/uow-2-plan.md) | `/` と `/hearing` の入力を `useBookingQuery()` に接続し、遷移時に query を維持。hook テストで URL 更新・復元を確認 |
 | mvp-cycle-5 | UoW-3 | 検索結果の query 復元と再検索 | 完了 | 3-3 | [docs/plans/mvp-cycle-5/uow-3-plan.md](plans/mvp-cycle-5/uow-3-plan.md) | `/results` の検索条件・サマリー・AIチャット summary を query 由来に変更。検索条件 key 変更時に取得済み店舗・比較候補をクリアして再検索し、「条件を変更」は query を維持して戻る |
+| mvp-cycle-6 | UoW-1 | 一休掲載店マスタ repository | 完了 | 1-1, 1-2 | `app/domain/models/ikyu-listing.ts`（`IkyuListing`/`isIkyuListing`）、`app/mocks/ikyu-listings.ts`（5件のモック fixture）、`app/server/repositories/ikyu-listing-repository.ts`（`createIkyuListingRepository`、読込失敗・不正形状は空配列にフォールバック）を実装 |
+| mvp-cycle-6 | UoW-2 | 店舗同定（照合）ロジック | 完了 | 2-1 | `app/domain/services/ikyu-matching.ts` に `matchIkyuListing` を実装。placeId → 電話番号（正規化） → 店名+住所の優先順、強いキーが矛盾する場合は弱いキーの一致を採用しない |
+| mvp-cycle-6 | UoW-3 | 検索パイプラインへの統合 | 完了 | 3-1, 3-2 | `Restaurant.ikyu` を必須化（`isRestaurant` がフィールド欠落を拒否）。`restaurant-search.ts` の `buildRestaurant()`・`searchRestaurants`・`streamRestaurants` に一休掲載店マスタの照合を統合し、`restaurant` イベント（AI評価前）の時点で `ikyu` が確定する。マスタ読込失敗時は全候補 `ikyu: null` で検索続行 |
+| mvp-cycle-6 | UoW-4 | 送客リンク UI の実データ接続と境界確認 | 完了 | 4-1 | `store-list`/`store-detail-panel`/`compare-panel` に `ikyu` が `null` の場合バッジ・リンクを表示しない境界テストを追加。`STORES`（s3/s5/s6）に `ikyu: null` を明示し、mock fixture を再生成 |
 
 ## 更新履歴
 
@@ -62,3 +66,5 @@
 | 2026-07-07 | mvp-cycle-5 UoW-1〜3 を実装完了。`nuqs` の parser / serializer と React Router `useSearchParams` により、トップ・ヒアリング・検索結果の検索・会食条件を URL query state から復元するよう変更。比較候補・取得済み店舗は画面内一時状態のまま維持し、query 条件変更時はクリアして再検索する。`pnpm test` / `pnpm run typecheck` / `pnpm build` と主要ルート（`/`, `/hearing?...`, `/results?...`）の HTTP 200 を確認済み。 |
 | 2026-07-07 | URL query の検索条件（エリア・日付・時刻・人数）を `nuqs` の `.withDefault()` に任せず明示管理するよう変更。`selectedAreas`/`date`/`time`/`people` の parser から `.withDefault()` を外し、既定値は `DEFAULT_BOOKING_QUERY`（`app/state/booking-query-state.ts`、旧 `initialBookingState` の検索条件部分を分離）に一本化。`TopScreen` は初回マウント時に URL query が空なら `DEFAULT_BOOKING_QUERY` を明示的に URL へ書き込む。これに伴い Jotai の `BookingState`（`app/state/booking-context.tsx`）から検索・会食条件フィールドと対応する互換セッター（`toggleCity`/`setDate`/`setCounterpart` 等）を全て削除し、`compareIds`/`restaurants` のみを持つ状態に整理。`docs/MODEL.md`・`docs/ARCHITECTURE.md`・`AGENTS.md` の記述（`initialBookingState` 参照、bookingAtom の「既存コンポーネントの互換レイヤー」表記）を実装に合わせて同期。 |
 | 2026-07-07 | 検索結果地図で、店舗カードをクリックして詳細パネルを表示したとき（マーカークリック時も同様）に地図の中心を対象店舗のピン位置へ `panTo` するよう変更。`app/components/feature/maps/restaurant-map.tsx` に `focusRestaurantId` prop と `MapCenterOnFocus`（`useMap()` を使う `<Map>` の子コンポーネント）を追加し、`results-map.tsx`・`results-screen.tsx` の `selectedStoreId` から中継。当初 `useEffect` の依存に `restaurants` 配列（AI評価到着のたびに参照が変わる）を含めていたため、パン中に評価が届くとアニメーションが中断され「パネル表示後にピン移動が止まる」不具合があり、依存を対象店舗の緯度経度プリミティブのみに絞って修正。`docs/DESIGN.md`・`docs/ARCHITECTURE.md` を同期。`pnpm test` / `pnpm run typecheck`（既存の無関係な `booking-query-state.ts` の型エラー1件を除く）/ `pnpm build` を確認済み。検証は `nuqs` 導入済みのため `/hearing` を経由せず次の URL に直接遷移して行った: `pnpm dev` 起動後 `http://localhost:5173/results?areas=%E9%8A%80%E5%BA%A7&date=2026-07-15&time=19:00&people=4&counterpart=important-client`（店舗カードを連続クリックし、詳細パネル表示と地図パンが同時に発生し中断しないことを実機確認）。 |
+| 2026-07-07 | 新サイクル `mvp-cycle-6`（プロダクトゴールの定義、一休.com / Google Maps への送客設計）を計画。ゴールを「比較→納得した候補を予約手段へ送客する。一休掲載店は一休.comの店舗詳細ページへ、それ以外は Google Maps の場所ページへ送客する」と定義し、`docs/DESIGN.md`・`docs/MODEL.md`・`docs/ARCHITECTURE.md`・`docs/RELIABILITY.md`・`docs/SECURITY.md` に反映。`docs/plans/mvp-cycle-6/PLANS.md` に一休掲載店マスタ・Google Places API・YOLP・バリューコマースの調査メモを記録。mock UI（店舗カードの「一休.com掲載」バッジ、詳細パネル・比較サイドパネルの「一休.comで空席を確認」「Google Mapで空席・予約を確認」リンク）を実機確認。`docs/plans/mvp-cycle-6/UNIT_OF_WORK.md` に UoW-1〜4（一休掲載店マスタ repository、店舗同定ロジック、検索パイプラインへの統合、送客リンク UI の実データ接続）を「計画済み」として追加。 |
+| 2026-07-07 | mvp-cycle-6 UoW-1〜4 を実装完了。`IkyuListing` 型・モック fixture・`IkyuListingRepository`（UoW-1）、`matchIkyuListing`（placeId→電話番号→店名+住所の優先順、UoW-2）、`streamRestaurants`/`searchRestaurants` への照合統合と `Restaurant.ikyu` の必須化（UoW-3）、送客リンク UI の `ikyu: null` 境界テスト（UoW-4）を実装。`app/mocks/data.ts` の `STORES` 全6件に `ikyu`（3件はダミー一休リンク、3件は `null`）を明示し、`restaurants-search.json` fixture を再生成。`pnpm test`（236件 green）/ `pnpm run typecheck` / `pnpm build` / `/`, `/hearing`, `/results` の実機確認（一休掲載店バッジ・送客リンクの出し分け）を確認済み。 |

@@ -47,6 +47,7 @@ function buildRestaurant(id: string): Restaurant {
     evidence: [],
     confidence: null,
     generatedAt: null,
+    ikyu: null,
   };
 }
 

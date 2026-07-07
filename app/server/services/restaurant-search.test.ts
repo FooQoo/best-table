@@ -28,6 +28,7 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
     searchCandidates: vi.fn(async () => []),
     evaluateCandidates: vi.fn(async () => []),
     streamEvaluations: vi.fn(async function* () {}),
+    listIkyuListings: vi.fn(async () => []),
     ...overrides,
   };
 }
@@ -511,5 +512,125 @@ describe("searchRestaurants", () => {
     expect(second.restaurants.map((r) => r.name)).toEqual(
       candidates.slice(10, 12).map((c) => c.name),
     );
+  });
+
+  it("attaches ikyu when a candidate matches the ikyu listing master by placeId", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "一休掲載店",
+          placeId: "places/ikyu-1",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      listIkyuListings: vi.fn(async () => [
+        {
+          url: "https://restaurant.ikyu.com/999999/",
+          name: "一休掲載店",
+          address: null,
+          phone: null,
+          placeId: "places/ikyu-1",
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants[0].ikyu).toEqual({
+      url: "https://restaurant.ikyu.com/999999/",
+      matchedBy: "placeId",
+    });
+  });
+
+  it("sets ikyu to null (not excluded) when a candidate does not match any ikyu listing", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "一休非掲載店",
+          placeId: "places/not-ikyu",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      listIkyuListings: vi.fn(async () => [
+        {
+          url: "https://restaurant.ikyu.com/999999/",
+          name: "別の店",
+          address: null,
+          phone: null,
+          placeId: "places/ikyu-1",
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants).toHaveLength(1);
+    expect(result.restaurants[0].ikyu).toBeNull();
+  });
+
+  it("does not fail the search when loading the ikyu listing master throws, and treats all candidates as ikyu: null", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "候補",
+          placeId: "places/abc",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      listIkyuListings: vi.fn(async () => {
+        throw new Error("master load failed");
+      }),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants).toHaveLength(1);
+    expect(result.restaurants[0].ikyu).toBeNull();
+  });
+
+  it("attaches ikyu to the base restaurant event, before AI evaluation arrives", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "一休掲載の逐次店",
+          placeId: "places/ikyu-stream",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+        },
+      ]),
+      listIkyuListings: vi.fn(async () => [
+        {
+          url: "https://restaurant.ikyu.com/888888/",
+          name: "一休掲載の逐次店",
+          address: null,
+          phone: null,
+          placeId: "places/ikyu-stream",
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {}),
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    const restaurantEvent = events.find((event) => event.type === "restaurant");
+    expect(restaurantEvent).toMatchObject({
+      restaurant: {
+        ikyu: { url: "https://restaurant.ikyu.com/888888/", matchedBy: "placeId" },
+      },
+    });
   });
 });

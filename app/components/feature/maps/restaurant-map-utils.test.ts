@@ -24,6 +24,7 @@ const baseRestaurant: Restaurant = {
   evidence: [],
   confidence: null,
   generatedAt: null,
+  ikyu: null,
 };
 
 describe("getMappableRestaurants", () => {

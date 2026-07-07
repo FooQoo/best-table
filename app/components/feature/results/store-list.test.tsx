@@ -65,6 +65,27 @@ describe("StoreList の相手種別に応じた強調表示", () => {
   });
 });
 
+describe("StoreList の一休掲載表示", () => {
+  it("ikyu を持つ店舗には「一休.com掲載」バッジを表示する", () => {
+    const ikyuStore = STORES[0];
+    expect(ikyuStore.ikyu).not.toBeNull();
+    setup(null, { stores: [ikyuStore] });
+
+    expect(screen.getByTestId(`ikyu-listed-${ikyuStore.id}`)).toHaveTextContent(
+      "一休.com掲載",
+    );
+  });
+
+  it("ikyu が null の店舗には「一休.com掲載」バッジを表示しない", () => {
+    const nonIkyuStore = STORES.find((s) => s.ikyu === null)!;
+    setup(null, { stores: [nonIkyuStore] });
+
+    expect(
+      screen.queryByTestId(`ikyu-listed-${nonIkyuStore.id}`),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("StoreList の地図連動", () => {
   it("activeStoreId と一致する店舗カードを強調する", () => {
     setup(null, { activeStoreId: store.id });

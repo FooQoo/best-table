@@ -47,6 +47,7 @@ const restaurant: Restaurant = {
   evidence: [],
   confidence: null,
   generatedAt: null,
+  ikyu: null,
 };
 
 describe("RestaurantMap", () => {

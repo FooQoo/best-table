@@ -24,6 +24,7 @@ const store: Restaurant = {
   evidence: [],
   confidence: null,
   generatedAt: null,
+  ikyu: null,
 };
 
 describe("buildGoogleMapsUrl", () => {

@@ -30,6 +30,7 @@ function buildValidRestaurant(overrides: Partial<Restaurant> = {}): Restaurant {
     evidence: ["review", "photo"],
     confidence: "high",
     generatedAt: "2026-07-05T00:00:00.000Z",
+    ikyu: null,
     ...overrides,
   };
 }
@@ -118,5 +119,31 @@ describe("isRestaurant", () => {
   it("id が空文字の場合は false", () => {
     const invalid = buildValidRestaurant({ id: "" });
     expect(isRestaurant(invalid)).toBe(false);
+  });
+
+  it("ikyu が null の場合は true（一休掲載店マスタと照合できなかった通常状態）", () => {
+    const unresolved = buildValidRestaurant({ ikyu: null });
+    expect(isRestaurant(unresolved)).toBe(true);
+  });
+
+  it("ikyu が正しい形状（url・matchedBy）を持つ場合は true", () => {
+    const matched = buildValidRestaurant({
+      ikyu: { url: "https://restaurant.ikyu.com/100001/", matchedBy: "phone" },
+    });
+    expect(isRestaurant(matched)).toBe(true);
+  });
+
+  it("ikyu.matchedBy が固定語彙にない値の場合は false", () => {
+    const invalid = buildValidRestaurant({
+      ikyu: { url: "https://restaurant.ikyu.com/100001/", matchedBy: "guess" as never },
+    });
+    expect(isRestaurant(invalid)).toBe(false);
+  });
+
+  it("ikyu フィールド自体が欠落している場合は false（必須フィールド）", () => {
+    const restaurant = buildValidRestaurant();
+    const withoutIkyu = { ...restaurant } as Partial<Restaurant>;
+    delete withoutIkyu.ikyu;
+    expect(isRestaurant(withoutIkyu)).toBe(false);
   });
 });

@@ -76,8 +76,7 @@ export type Restaurant = {
 
   // 一休掲載店マスタ由来。施設検索直後の店舗同定（照合）で一致した場合だけ埋める。
   // 照合できない店舗・マスタ読込失敗時は null のまま表示を続ける（除外しない）。
-  // mvp-cycle-6 の mock UI 段階では optional。照合パイプライン実装（UoW）で必須化する。
-  ikyu?: IkyuReferral | null;
+  ikyu: IkyuReferral | null;
 
   // AI 生成部分。未生成・生成失敗時は null。
   genre: Genre | null;
@@ -177,8 +176,9 @@ export function isRestaurant(value: unknown): value is Restaurant {
     return false;
   }
 
-  // ikyu は mock UI 段階では optional（undefined / null を許容）。値がある場合だけ形状を検証する。
-  if (r.ikyu !== undefined && r.ikyu !== null) {
+  // ikyu は必須フィールド（照合できない場合は null）。欠落は不正な形状として扱う。
+  if (!("ikyu" in r)) return false;
+  if (r.ikyu !== null) {
     if (typeof r.ikyu !== "object") return false;
     const ikyu = r.ikyu as Record<string, unknown>;
     if (typeof ikyu.url !== "string" || ikyu.url.length === 0) return false;

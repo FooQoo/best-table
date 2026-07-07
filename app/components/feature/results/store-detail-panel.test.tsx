@@ -31,4 +31,24 @@ describe("StoreDetailPanel", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("ikyu を持つ店舗には一休.comの送客リンクを、マスタ由来のURLで表示する", () => {
+    const ikyuStore = STORES[0];
+    expect(ikyuStore.ikyu).not.toBeNull();
+    render(<StoreDetailPanel store={ikyuStore} onClose={() => {}} />);
+
+    const link = screen.getByTestId("ikyu-referral-link");
+    expect(link).toHaveTextContent("一休.comで空席を確認");
+    expect(link).toHaveAttribute("href", ikyuStore.ikyu!.url);
+  });
+
+  it("ikyu が null の店舗には一休.comの送客リンクを表示しない", () => {
+    const nonIkyuStore = STORES.find((s) => s.ikyu === null)!;
+    render(<StoreDetailPanel store={nonIkyuStore} onClose={() => {}} />);
+
+    expect(screen.queryByTestId("ikyu-referral-link")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Google Mapで空席・予約を確認" }),
+    ).toBeInTheDocument();
+  });
 });
