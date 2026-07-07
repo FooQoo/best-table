@@ -218,30 +218,11 @@ export function ComparePanel({
                   <StorePhoto store={store} className="w-full h-20 max-w-40" />
                 </div>
                 <div className="font-bold text-sm">{store.name}</div>
-                <div className="flex items-center justify-between gap-2 text-[11px] text-[#79726a]">
-                  <span>
-                    {store.genre
-                      ? GENRE_LABELS[store.genre]
-                      : "ジャンル情報なし"}
-                  </span>
-                  <a
-                    href={buildGoogleMapsUrl(store)}
-                    target="_blank"
-                    rel="noopener"
-                    className="flex-none text-[#8a6a1f] underline underline-offset-2"
-                  >
-                    Google Mapで空席・予約を確認
-                  </a>
+                <div className="text-[11px] text-[#79726a]">
+                  {store.genre
+                    ? GENRE_LABELS[store.genre]
+                    : "ジャンル情報なし"}
                 </div>
-                <a
-                  href={buildIkyuSearchUrl(store)}
-                  target="_blank"
-                  rel="noopener"
-                  data-testid={`compare-ikyu-referral-${store.id}`}
-                  className="self-start text-[11px] font-bold text-[#8a6a1f] underline underline-offset-2"
-                >
-                  一休.comで空席を確認
-                </a>
               </div>
             ))}
 
@@ -251,7 +232,7 @@ export function ComparePanel({
                 <Fragment key={row.label}>
                   <div
                     data-emphasized={emphasized}
-                    className={`p-3.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
+                    className={`px-3.5 py-2.5 font-bold text-[13px] border-b border-[#eee] ${row.shaded ? "bg-[#faf8f3]" : ""}`}
                     style={emphasized ? { color: "#8a6a1a" } : undefined}
                   >
                     {row.label}
@@ -267,7 +248,7 @@ export function ComparePanel({
                   {stores.map((store) => (
                     <div
                       key={`${row.label}-${store.id}`}
-                      className="p-3.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
+                      className="px-3.5 py-2.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
                       style={{
                         ...(row.key === "concerns"
                           ? {
@@ -298,6 +279,45 @@ export function ComparePanel({
                 </Fragment>
               );
             })}
+
+            <div className="px-3.5 py-2.5 font-bold text-[13px] border-b border-[#eee] bg-[#faf8f3]">
+              一休.com
+            </div>
+            {stores.map((store) => (
+              <div
+                key={`ikyu-referral-${store.id}`}
+                className="px-3.5 py-2.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px] bg-[#faf8f3]"
+              >
+                <a
+                  href={buildIkyuSearchUrl(store)}
+                  target="_blank"
+                  rel="noopener"
+                  data-testid={`compare-ikyu-referral-${store.id}`}
+                  className="font-bold text-[#8a6a1f] underline underline-offset-2"
+                >
+                  一休.comで空席を確認
+                </a>
+              </div>
+            ))}
+
+            <div className="px-3.5 py-2.5 font-bold text-[13px] border-b border-[#eee]">
+              Google Map
+            </div>
+            {stores.map((store) => (
+              <div
+                key={`google-maps-referral-${store.id}`}
+                className="px-3.5 py-2.5 text-center border-b border-[#eee] border-l border-[#e4ded0] text-[13px]"
+              >
+                <a
+                  href={buildGoogleMapsUrl(store)}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-[#8a6a1f] underline underline-offset-2"
+                >
+                  Google Mapで空席・予約を確認
+                </a>
+              </div>
+            ))}
           </div>
         )}
       </div>

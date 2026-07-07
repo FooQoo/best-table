@@ -135,10 +135,7 @@ export function StoreList({
               </div>
             )}
             <ConcernTags storeId={store.id} concerns={store.concerns} />
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-[13px] text-[#8a6a1a] underline">
-                クリックで詳細を表示
-              </div>
+            <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 disabled={disabled}

@@ -155,6 +155,7 @@ export function ResultsScreen() {
     setSelectedStoreId((currentStoreId) =>
       toggleSelectedStoreId(currentStoreId, storeId),
     );
+    setIsCompareOpen(false);
   }, []);
 
   const searchConditionKey = getSearchConditionKey(query);
