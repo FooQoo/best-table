@@ -191,7 +191,7 @@ export function ResultsScreen() {
     async (
       mode: FetchMode,
       offset: number,
-      searchCenter = activeSearchCenter,
+      searchCenter: MapSearchCenter | null,
       options: SubmitSearchOptions = {},
     ) => {
       abortControllerRef.current?.abort();
@@ -313,7 +313,6 @@ export function ResultsScreen() {
       }
     },
     [
-      activeSearchCenter,
       appendRestaurants,
       query,
       restaurants,
@@ -335,7 +334,7 @@ export function ResultsScreen() {
     setHiddenTiers(new Set());
     hasReceivedInitialMapCenterRef.current = false;
     committedMapCenterRef.current = null;
-    submitSearch("initial", 0);
+    submitSearch("initial", 0, null);
     // 検索条件は URL query state を正とし、正規化済み condition key が変わったときだけ再検索する。
     // StrictMode の開発時二重実行では mount→cleanup→mountが同一インスタンスに対して起こり、
     // ここで abort すると2回目の mount は key 記録により再実行されず、
@@ -348,8 +347,8 @@ export function ResultsScreen() {
   const loadMore = useCallback(() => {
     if (!canRequestMoreResults({ isLoadingMore, hasMore, nextOffset })) return;
     if (nextOffset === null) return;
-    submitSearch("more", nextOffset);
-  }, [hasMore, isLoadingMore, nextOffset, submitSearch]);
+    submitSearch("more", nextOffset, activeSearchCenter);
+  }, [activeSearchCenter, hasMore, isLoadingMore, nextOffset, submitSearch]);
 
   const handleMapCenterChanged = useCallback((center: MapSearchCenter) => {
     setLatestMapCenter(center);
@@ -452,7 +451,7 @@ export function ResultsScreen() {
     hasReceivedInitialMapCenterRef.current = false;
     committedMapCenterRef.current = null;
     submittedSearchKeyRef.current = searchConditionKey;
-    submitSearch("initial", 0);
+    submitSearch("initial", 0, null);
   }, [clearCompareIds, clearTransientResultsState, searchConditionKey, submitSearch]);
 
   const cancelConditions = useCallback(() => {
