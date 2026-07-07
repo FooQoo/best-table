@@ -165,6 +165,26 @@ function excludeExistingCandidates(
   );
 }
 
+export function resolveRestaurantAreaFromAddress(address: string | null): string | null {
+  if (!address) return null;
+  const normalized = address
+    .replace(/^日本、?/, "")
+    .replace(/〒\d{3}-?\d{4}/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+  if (!normalized) return null;
+
+  const areaPrefix = normalized.split(/[0-9０-９]/)[0];
+  let area = areaPrefix.replace(/^[^都道府県]+[都道府県]/, "");
+  let previous = "";
+  while (area && area !== previous) {
+    previous = area;
+    area = area.replace(/^[^市区町村]+[市区町村]/, "");
+  }
+
+  return area.length > 0 ? area : null;
+}
+
 function buildRestaurant(input: {
   candidate: PlaceSearchCandidate;
   evaluation: RestaurantEvaluationResult | null;
@@ -181,7 +201,7 @@ function buildRestaurant(input: {
     placeId: candidate.placeId,
     name: candidate.name,
     genre: candidate.genre,
-    area: condition.selectedAreas[0] ?? "",
+    area: resolveRestaurantAreaFromAddress(candidate.address) ?? condition.selectedAreas[0] ?? "",
     address: candidate.address,
     location: candidate.location,
     phone: candidate.phone,

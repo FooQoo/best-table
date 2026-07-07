@@ -51,6 +51,8 @@ export type Restaurant = {
   id: string;
   placeId: string | null;
   name: string;
+  // Places API の formattedAddress から導出した表示用エリア。
+  // 住所から導出できない場合は検索条件のエリア名をフォールバックとして入れる。
   area: string;
   address: string | null;
   location: { lat: number; lng: number } | null;

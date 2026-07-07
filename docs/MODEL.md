@@ -135,7 +135,7 @@ type Restaurant = {
   id: string; // アプリ内部の一意ID。placeId から "/" を "_" に置換して作る（URL に使うため。詳細は docs/ARCHITECTURE.md）
   placeId: string | null; // 施設検索の `id` を "places/{id}" 形式に正規化したもの。Google発行の不透明な文字列
   name: string; // 店舗名。固有名詞のため自由文字列
-  area: string; // ヒアリングで選んだエリア名をそのまま使う自由文字列
+  area: string; // 表示用エリア。施設検索の `formattedAddress` から町名相当を導出し、導出できない場合はヒアリングで選んだエリア名にフォールバックする自由文字列
   address: string | null; // 住所。施設検索の `formattedAddress`。含まれなければ null
   location: { lat: number; lng: number } | null; // MAP表示に使う実座標。施設検索の `location`。含まれなければ null
   phone: string | null; // 連絡先。施設検索の `nationalPhoneNumber`。含まれなければ null
@@ -179,13 +179,13 @@ Places API 施設検索（Text Search）のフィールドマスクは `id` / `d
 
 生成時に満たすべき制約（`Restaurant` 型自体は自己強制しない。生成サービスと zod スキーマが担保する）の詳細は `docs/AI.md`「生成対象フィールドと制約」を参照。簡潔には:
 
-- Google 由来フィールド（`placeId` / `address` / `location` / `phone` / `photoUrl` / `genre`）は、Places API のレスポンスに含まれていた値だけを埋め、含まれない場合は `null` のまま（捏造しない）。
+- Google 由来フィールド（`placeId` / `address` / `location` / `phone` / `photoUrl` / `genre`）は、Places API のレスポンスに含まれていた値だけを埋め、含まれない場合は `null` のまま（捏造しない）。`area` は `formattedAddress` から導出し、導出できない場合だけ検索条件のエリア名にフォールバックする。
 - AI 生成フィールドは zod スキーマで構造化し、`evidence` / `confidence` を伴わせる。
 - 生成失敗時は AI フィールドを `null` のままにし、Google 由来フィールドのみで一覧表示が成立するようにする（段階的表示の方針、`docs/RELIABILITY.md` 参照）。
 
 ### ドメインサービス
 
-- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Places API 施設検索呼び出し（`searchPlacesByText`、`app/server/clients/google-places.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を実行し、評価結果と `BookingRequest` から `computeMatchTier`（`app/utils/scoring.ts`）でマッチ度を算出して `Restaurant[]` を生成する。座標・住所・代表写真は施設検索のレスポンスから直接得るため、`placeId` を使って別途解決する専用サービスは存在しない。解決できない値（レスポンスに含まれない）は `null` のままにし、UI はマーカー非表示・写真プレースホルダーにフォールバックする。施設検索は AI 評価を待たずに先に完了させ、`Restaurant[]` の基本形（Google 由来フィールドのみ）を先に返せるようにする（詳細は `docs/ARCHITECTURE.md`）。
+- `RestaurantDiscoveryService`（概念、実装は `app/server/services/restaurant-search.ts`）: `BookingRequest` から Places API 施設検索呼び出し（`searchPlacesByText`、`app/server/clients/google-places.ts`）と構造化評価呼び出し（`app/server/clients/gemini-evaluation.ts`）を実行し、評価結果と `BookingRequest` から `computeMatchTier`（`app/utils/scoring.ts`）でマッチ度を算出して `Restaurant[]` を生成する。座標・住所・代表写真は施設検索のレスポンスから直接得るため、`placeId` を使って別途解決する専用サービスは存在しない。表示用エリアは住所から町名相当を導出する。解決できない値（レスポンスに含まれない）は `null` のままにし、UI はマーカー非表示・写真プレースホルダーにフォールバックする。施設検索は AI 評価を待たずに先に完了させ、`Restaurant[]` の基本形（Google 由来フィールドのみ）を先に返せるようにする（詳細は `docs/ARCHITECTURE.md`）。
 
 ### リポジトリ
 

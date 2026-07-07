@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  resolveRestaurantAreaFromAddress,
   searchRestaurants,
   streamRestaurants,
   type RestaurantSearchDeps,
@@ -31,6 +32,25 @@ function buildDeps(overrides: Partial<RestaurantSearchDeps> = {}): RestaurantSea
     ...overrides,
   };
 }
+
+describe("resolveRestaurantAreaFromAddress", () => {
+  it("extracts the neighborhood from a Japanese formatted address", () => {
+    expect(resolveRestaurantAreaFromAddress("東京都中央区銀座5-5-11")).toBe(
+      "銀座",
+    );
+    expect(
+      resolveRestaurantAreaFromAddress("日本、〒105-0001 東京都港区虎ノ門2丁目6-3"),
+    ).toBe("虎ノ門");
+    expect(resolveRestaurantAreaFromAddress("大阪府大阪市北区梅田3-1-1")).toBe(
+      "梅田",
+    );
+  });
+
+  it("returns null when the address cannot provide a display area", () => {
+    expect(resolveRestaurantAreaFromAddress(null)).toBeNull();
+    expect(resolveRestaurantAreaFromAddress("東京都中央区")).toBeNull();
+  });
+});
 
 describe("searchRestaurants", () => {
   it("returns an empty result without calling the AI when the area has no known coordinates", async () => {
@@ -96,6 +116,7 @@ describe("searchRestaurants", () => {
       placeId: "places/abc",
       name: "桂",
       genre: "japanese",
+      area: "銀座",
       address: "東京都中央区銀座5-5-11",
       location: { lat: 35.6717, lng: 139.7639 },
       photoUrl: "/api/photos/places/abc/photos/photo-1",
@@ -106,6 +127,52 @@ describe("searchRestaurants", () => {
       matchingSummary: "接待に適した候補です。",
     });
     expect(result.restaurants[0].generatedAt).not.toBeNull();
+  });
+
+  it("uses the Places formattedAddress to populate the card display area", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "丸の内の店",
+          placeId: "places/marunouchi",
+          address: "東京都千代田区丸の内1-1-1",
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: "japanese" as const,
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants[0]).toMatchObject({
+      name: "丸の内の店",
+      area: "丸の内",
+    });
+  });
+
+  it("falls back to the selected search area when the Places address has no display area", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "住所不明の店",
+          placeId: "places/no-address",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants[0]).toMatchObject({
+      name: "住所不明の店",
+      area: "銀座",
+    });
   });
 
   it("distinguishes candidates that share the same name by their candidateIndex, not by name", async () => {

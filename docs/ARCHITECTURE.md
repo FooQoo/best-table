@@ -150,7 +150,7 @@ AI 処理はすべてサーバー側で完結させ、ブラウザに API キー
 
 `docs/DESIGN.md` の店舗カード・比較表の表示項目（店舗名、ジャンル、エリア、予算、個室・席、代表写真、個室有無、AI マッチングポイント要約）を、`app/domain/models/restaurant.ts` のひとつのフラットな `Restaurant` 型として置く。店舗データは Places API による施設検索と Gemini による AI 評価をまとめて一度に生成するだけなので、生データと AI 派生評価を型として分離しない。検索結果一覧、MAP、比較表はすべてこの型を参照し、画面ごとに別の形へ作り替えない。
 
-`Restaurant` の型定義（フィールド、固定語彙 vs 自由記述の区別、null の意味）は `docs/MODEL.md` の「コンテキスト2: 店舗探索・評価」を正とする。このドキュメントでは実装配置とクライアント/サーバー境界だけを扱う。
+`Restaurant` の型定義（フィールド、固定語彙 vs 自由記述の区別、null の意味）は `docs/MODEL.md` の「コンテキスト2: 店舗探索・評価」を正とする。このドキュメントでは実装配置とクライアント/サーバー境界だけを扱う。`area` は Places API の `formattedAddress` から表示用の町名相当を導出し、導出できない場合だけ検索条件のエリア名にフォールバックする。
 
 当初は `AREA_REGIONS` / `BUDGET_STEPS`（相手種別・重視条件と同様、`app/mocks/data.ts` に定義されている）を `app/constants/` へ移設してから `Restaurant` 型の `area` / `budgetLabel` をそこから導出する型にする計画だったが、実装時には見送り、`area: string` / `budgetLabel: string | null` という素直な文字列型にした。`AREA_REGIONS` 等は現在も `app/mocks/data.ts` に置かれたままで、この移設は未実施。検索時のエリア→緯度経度変換だけを担う `app/constants/area-coordinates.ts` が、この `app/mocks/data.ts` の `AREA_REGIONS` を参照している。
 
@@ -181,7 +181,7 @@ AI 処理はすべてサーバー側で完結させ、ブラウザに API キー
 
 - `places.id`: `placeId` として保持し、`Restaurant.id` 生成や Google Maps リンクに使う。
 - `places.displayName`: 店舗名（`Restaurant.name`）。Text Search では候補の名称そのものをここから取得する（探索自体を AI に依頼しないため必須）。
-- `places.formattedAddress`: 店舗カード・詳細の住所表示用。
+- `places.formattedAddress`: 店舗カード・詳細の住所表示用。カード等に表示する `Restaurant.area` もこの住所から町名相当を導出する。
 - `places.location`: 地図マーカー用の緯度経度。
 - `places.nationalPhoneNumber`: 店舗カードの電話表示に使う（AI評価プロンプトには渡さない。`docs/AI.md`「AI評価プロンプトの入力範囲」参照）。
 - `places.photos`: photo resource name を得るためのメタデータ。実画像取得は Place Photos の別呼び出しになる。
