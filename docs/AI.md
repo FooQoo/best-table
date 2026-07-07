@@ -39,111 +39,61 @@ AI 応答速度を上げるため、次の方針を取る。
 
 これらの応答速度方針が支える段階的表示・想定される失敗時の振る舞いは `docs/RELIABILITY.md` を参照。
 
-## 処理フロー図
+## AI評価シーケンス
 
-### 1. 検索・評価型フロー（ヒアリング → 検索結果）
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as ユーザー
+    participant UI as results-screen.tsx
+    participant Route as /api/restaurants/search/stream
+    participant Service as streamRestaurants
+    participant Places as Places API Text Search
+    participant Gemini as Gemini 構造化評価
 
-```
-┌─────────────────────────┐
-│   ヒアリング完了        │
-│ (相手・予算・重視条件)   │
-└────────────┬────────────┘
-             │
-             ▼
-┌─────────────────────────────────────────────────────────────┐
-│          POST /api/restaurants/search/stream                │
-│        (BookingRequest を body に含める)                     │
-└────────────┬────────────────────────────────────────────────┘
-             │
-        (NDJSON ストリーム)
-             │
-       ┌─────▼─────┐
-       │    a.    │
-       │ 施設検索  │  (Places API Text Search)
-       │(決定的)   │  → `{ "type": "phase", "phase": "searching" }`
-       └─────┬─────┘  → `{ "type": "restaurant", ... }` × N
-             │        (Google由来フィールドのみ。AI生成フィールドはnull)
-             │
-        【表示時点】
-        一覧に店舗カード先行表示
-        ← AI評価を待たずに見える
-             │
-       ┌─────▼──────┐
-       │     b.     │
-       │構造化評価   │  (Gemini generateObject)
-       │(品質優先)   │  → `{ "type": "phase", "phase": "evaluating" }`
-       └─────┬──────┘  → `{ "type": "restaurant-evaluated", ... }` × N
-             │        (AI生成フィールドが埋まった状態)
-             │
-        【反映時点】
-        既存カードの内容を店舗単位で更新
-        ← マッチ度・懸念点・要約が後から反映される
-             │
-       ┌─────▼──────────┐
-       │  完了通知      │
-       │ { "type":      │
-       │   "done", ... }│
-       └────────────────┘
-```
+    User->>UI: ヒアリング完了後に検索結果画面へ遷移
+    UI->>Route: POST 検索条件(URL query stateから復元)
+    Route->>Service: streamRestaurants(condition, pagination)
+    Service-->>UI: NDJSON phase: searching
+    UI->>UI: 候補探索中だけスケルトン表示
 
-**特徴**
-- a. と b. は直列実行（探索が完了してから評価を開始）
-- 一覧は AI 評価を待たずに先に表示される（段階的表示）
-- 並び順は施設検索結果の順のまま固定（AI評価の到着順では並び替えない）
+    Service->>Places: searchPlacesByText(textQuery, latLng, pageSize)
+    Places-->>Service: 店舗候補(名前・placeId・住所・座標・写真参照など)
 
----
+    loop 店舗候補ごと
+        Service-->>UI: NDJSON restaurant(AI生成フィールドはnull)
+        UI->>UI: appendRestaurantsで一覧へ先行表示
+    end
 
-### 2. オンデマンド型フロー（地図上での質問応答）
+    Service-->>UI: NDJSON phase: evaluating
+    UI->>UI: スケルトンを増やさず評価中ステータスを表示
 
-```
-┌──────────────────────────────┐
-│    ユーザーが地図で質問      │
-│  (表示中店舗に対する相談)    │
-└────────────┬─────────────────┘
-             │
-             ▼
-┌──────────────────────────────────────────────┐
-│    POST /api/results/chat                   │
-│ • 表示中Restaurant[]                        │
-│ • ヒアリング条件の要約                       │
-│ • 質問文（短い自由入力またはFAQ）           │
-└────────────┬──────────────────────────────────┘
-             │
-        (テキスト ストリーム)
-             │
-       ┌─────▼──────────┐
-       │  AI回答        │
-       │ (Gemini        │
-       │  streamText)   │
-       │  低レイテンシ  │
-       │  優先モデル    │
-       └─────┬──────────┘
-             │
-        【逐次表示】
-        回答本文を流れる字で表示
-        ← 全文生成完了を待たない
-             │
-       ┌─────▼──────────────────┐
-       │ POST /api/results/chat/ │
-       │        suggestions      │
-       │ (回答が完了した後)       │
-       └─────┬──────────────────┘
-             │
-       ┌─────▼──────────┐
-       │ おすすめ質問   │
-       │ 4件を生成      │
-       │ (失敗時は      │
-       │  deterministic │
-       │  フォールバック)│
-       └────────────────┘
+    Service->>Service: buildEvaluationPrompt(店舗名 + ヒアリング条件のみ)
+    Service->>Gemini: streamRestaurantEvaluations(prompt, zod schema)
+
+    loop AI評価が到着した店舗ごと
+        Gemini-->>Service: 構造化評価(candidateIndex, room, concerns, evidence...)
+        Service->>Service: buildRestaurant + computeMatchTier
+        Service-->>UI: NDJSON restaurant-evaluated(同じid、AI生成フィールドあり)
+        UI->>UI: updateRestaurantで既存カードを差し替え
+    end
+
+    alt AI評価が一部または全体で失敗
+        Service-->>UI: NDJSON error
+        UI->>UI: 基本情報だけ残し、評価失敗バナーを表示
+    else 正常完了
+        Service-->>UI: NDJSON done(fromCache, hasMore, nextOffset)
+        UI->>UI: 完了状態と追加取得可否を反映
+    end
 ```
 
-**特徴**
-- 質問は短く、AI ファーストではない（FAQ / おすすめ質問から選ぶのが主体）
-- 回答は `streamText` で逐次表示（ユーザーが最後まで待たない）
-- おすすめ質問生成は低優先度（遅い場合は固定候補に即フォールバック）
+要点:
 
----
+- 施設検索と AI 評価は直列実行する。
+- 一覧は AI 評価を待たず、Google 由来フィールドだけの基本カードを先に表示する。
+- AI 評価は同じ `id` の `restaurant-evaluated` として後から届き、既存カードを店舗単位で更新する。
+- 並び順は施設検索結果の順のまま固定し、AI評価の到着順では並び替えない。
+- 地図コンテキスト AI チャットの流れは、後述の「オンデマンド型」に文章で定義する。
 
 ## ユースケース別の使い方
 
