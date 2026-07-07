@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
+import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
@@ -19,6 +20,7 @@ function setup(
     stores?: Restaurant[];
     scrollTarget?: StoreListScrollTarget | null;
     hiddenTiers?: ReadonlySet<TierFilterKey>;
+    banner?: ReactNode;
   } = {},
 ) {
   return render(
@@ -34,6 +36,7 @@ function setup(
         onSelectStore={options.onSelectStore}
         scrollTarget={options.scrollTarget}
         hiddenTiers={options.hiddenTiers}
+        banner={options.banner}
       />
     </MemoryRouter>,
   );
@@ -138,5 +141,13 @@ describe("StoreList の地図連動", () => {
     const targetCard = screen.getByText(STORES[1].name).closest("[data-active]");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(scrollIntoView.mock.instances[0]).toBe(targetCard);
+  });
+
+  it("banner が渡されると店舗一覧の上に表示される（一部評価失敗などの非破壊的な警告用）", () => {
+    setup(null, { banner: <div>一部の店舗の評価取得に失敗しました。</div> });
+
+    expect(
+      screen.getByText("一部の店舗の評価取得に失敗しました。"),
+    ).toBeInTheDocument();
   });
 });

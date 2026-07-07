@@ -22,8 +22,8 @@ describe("evaluateRestaurantCandidates", () => {
   it("returns the structured evaluations produced by the model", async () => {
     const model = mockModelReturning([
       {
+        candidateIndex: 1,
         candidateName: "桂",
-        genre: "japanese",
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",
@@ -41,8 +41,8 @@ describe("evaluateRestaurantCandidates", () => {
 
     expect(result).toEqual([
       {
+        candidateIndex: 1,
         candidateName: "桂",
-        genre: "japanese",
         room: "個室あり",
         quiet: "◎",
         prestige: "◎",

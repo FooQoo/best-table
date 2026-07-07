@@ -41,9 +41,7 @@ type RestaurantSearchStreamRequest = RestaurantSearchQueryCondition & {
   existingRestaurantKeys?: unknown;
 };
 
-type StreamEvent =
-  | RestaurantSearchStreamEvent
-  | { type: "error"; message: string };
+type StreamEvent = RestaurantSearchStreamEvent;
 
 const encoder = new TextEncoder();
 

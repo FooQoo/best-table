@@ -4,7 +4,6 @@ import { ConcernTags } from "~/components/ui/concern-tags";
 import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
 import type { Restaurant } from "~/domain/models/restaurant";
-import { getAvailabilityMessage } from "~/utils/availability-message";
 import {
   CONFIDENCE_LABELS,
   EVIDENCE_LABELS,
@@ -89,9 +88,6 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
             <div>予算目安：{store.budgetLabel ?? "情報なし"}</div>
             <div>アクセス：{store.access ?? "情報なし"}</div>
             <div>連絡先：{store.phone ?? "情報なし"}</div>
-            <div data-testid="results-detail-availability">
-              空席状況：{getAvailabilityMessage()}
-            </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <a
                 href={buildIkyuSearchUrl(store)}

@@ -1,7 +1,16 @@
+import type { Genre } from "~/domain/models/restaurant";
+
 // docs/ARCHITECTURE.md「検索・評価型 a. 施設検索」の薄いラッパー。
 // Places API (New) の Text Search で候補店舗を探索する。1回のレスポンスで
-// name/placeId/address/location/phone/photo をまとめて取得できるため、
+// name/placeId/address/location/phone/photo/genre をまとめて取得できるため、
 // 候補ごとの Place Details 呼び出しは行わない。
+// primaryType/types は nationalPhoneNumber と同じ Pro/Enterprise SKU 内なので、
+// 既にリクエストしている nationalPhoneNumber（Enterprise SKU）に対して追加課金は発生しない。
+// rating/userRatingCount/reviews/reviewSummary は意図的に取得しない。Google Maps
+// Platform利用規約上、reviewSummary（口コミ要約）はGoogleが定める帰属表示（"Summarized
+// with Gemini"の開示 + reviewsUriへのリンク）を伴う「表示」用途を前提にしており、
+// 別のAIモデルへの入力として加工し、帰属表示なしで独自の評価文として表示することへの
+// 明示的な許可が見当たらないため撤回した（要否を再検討する場合は法務確認必須）。
 export const GOOGLE_PLACES_SEARCH_FIELD_MASK = [
   "places.id",
   "places.displayName",
@@ -9,7 +18,67 @@ export const GOOGLE_PLACES_SEARCH_FIELD_MASK = [
   "places.location",
   "places.nationalPhoneNumber",
   "places.photos",
+  "places.primaryType",
+  "places.types",
 ].join(",");
+
+// Google Places の type 語彙を Restaurant.genre の固定語彙へ決定的に変換する。
+// 対応関係が無い・未知の type は "other" にし、AI 同様に存在しないジャンルを捏造しない。
+// 参照: https://developers.google.com/maps/documentation/places/web-service/place-types
+const PLACE_TYPE_TO_GENRE: Record<string, Genre> = {
+  japanese_restaurant: "japanese",
+  japanese_curry_restaurant: "japanese",
+  tonkatsu_restaurant: "japanese",
+  sushi_restaurant: "sushi",
+  yakiniku_restaurant: "yakiniku",
+  yakitori_restaurant: "yakiniku",
+  ramen_restaurant: "noodles",
+  udon_restaurant: "noodles",
+  soba_restaurant: "noodles",
+  chinese_restaurant: "chinese",
+  chinese_noodle_restaurant: "chinese",
+  dim_sum_restaurant: "chinese",
+  cantonese_restaurant: "chinese",
+  taiwanese_restaurant: "chinese",
+  italian_restaurant: "western",
+  french_restaurant: "western",
+  spanish_restaurant: "western",
+  german_restaurant: "western",
+  british_restaurant: "western",
+  american_restaurant: "western",
+  steak_house: "western",
+  bar: "bar",
+  pub: "bar",
+  bar_and_grill: "bar",
+  japanese_izakaya_restaurant: "bar",
+  cocktail_bar: "bar",
+  sports_bar: "bar",
+  wine_bar: "bar",
+  hookah_bar: "bar",
+  beer_garden: "bar",
+  lounge_bar: "bar",
+  coffee_shop: "cafe",
+  cafe: "cafe",
+  tea_house: "cafe",
+  bakery: "bakery",
+  donut_shop: "bakery",
+  pastry_shop: "bakery",
+};
+
+export function mapPlaceTypesToGenre(
+  primaryType: string | null,
+  types: string[],
+): Genre | null {
+  if (primaryType && PLACE_TYPE_TO_GENRE[primaryType]) {
+    return PLACE_TYPE_TO_GENRE[primaryType];
+  }
+  for (const type of types) {
+    const genre = PLACE_TYPE_TO_GENRE[type];
+    if (genre) return genre;
+  }
+  if (primaryType || types.length > 0) return "other";
+  return null;
+}
 
 const PLACES_API_BASE_URL = "https://places.googleapis.com/v1";
 const DEFAULT_PHOTO_MAX_HEIGHT_PX = 640;
@@ -31,6 +100,7 @@ export type PlaceSearchCandidate = {
   location: { lat: number; lng: number } | null;
   phone: string | null;
   photoName: string | null;
+  genre: Genre | null;
 };
 
 export type PlaceSearchInput = {
@@ -95,6 +165,11 @@ export function toPlaceSearchCandidate(place: unknown): PlaceSearchCandidate | n
       ? { lat: latitude, lng: longitude }
       : null;
 
+  const types = Array.isArray(p.types)
+    ? p.types.filter((type): type is string => typeof type === "string")
+    : [];
+  const primaryType = typeof p.primaryType === "string" ? p.primaryType : null;
+
   return {
     placeId: normalizePlaceResourceName(p.id),
     name,
@@ -102,6 +177,7 @@ export function toPlaceSearchCandidate(place: unknown): PlaceSearchCandidate | n
     location: resolvedLocation,
     phone: firstNonEmptyString(p.nationalPhoneNumber),
     photoName: extractFirstPhotoName(p.photos),
+    genre: mapPlaceTypesToGenre(primaryType, types),
   };
 }
 

@@ -28,6 +28,7 @@ type StoreListProps = {
   scrollTarget?: StoreListScrollTarget | null;
   hiddenTiers?: ReadonlySet<TierFilterKey>;
   footer?: ReactNode;
+  banner?: ReactNode;
 };
 
 export function StoreList({
@@ -42,6 +43,7 @@ export function StoreList({
   scrollTarget,
   hiddenTiers,
   footer,
+  banner,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
@@ -56,6 +58,7 @@ export function StoreList({
 
   return (
     <div className="w-[400px] flex-none overflow-y-auto p-6 flex flex-col gap-4 bg-[#f7f4ee]">
+      {banner}
       <div className="font-bold text-[15px]">{stores.length}件</div>
       {stores.map((store) => {
         const selected = compareIds.includes(store.id);

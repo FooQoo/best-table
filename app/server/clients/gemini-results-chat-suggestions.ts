@@ -2,7 +2,7 @@ import { google } from "@ai-sdk/google";
 import { generateObject, type LanguageModel } from "ai";
 import { resultsChatSuggestionsSchema } from "~/domain/models/results-chat-suggestions-schema";
 import {
-  DEFAULT_GEMINI_MODEL_ID,
+  GEMINI_CHAT_MODEL_ID,
   GEMINI_SUGGESTIONS_SETTINGS,
 } from "./gemini-models";
 
@@ -15,7 +15,7 @@ export type ResultsChatSuggestionsInput = {
 export async function generateResultsChatSuggestions(
   input: ResultsChatSuggestionsInput,
 ): Promise<string[]> {
-  const model = input.model ?? google(DEFAULT_GEMINI_MODEL_ID);
+  const model = input.model ?? google(GEMINI_CHAT_MODEL_ID);
   const { object } = await generateObject({
     model,
     ...GEMINI_SUGGESTIONS_SETTINGS,

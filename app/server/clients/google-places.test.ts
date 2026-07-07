@@ -3,12 +3,13 @@ import {
   GOOGLE_PLACES_SEARCH_FIELD_MASK,
   buildStorePhotoProxyPath,
   fetchPlacePhotoMedia,
+  mapPlaceTypesToGenre,
   searchPlacesByText,
   toPlaceSearchCandidate,
 } from "./google-places";
 
 describe("GOOGLE_PLACES_SEARCH_FIELD_MASK", () => {
-  it("only requests fields needed for the restaurant list, map, and representative photo", () => {
+  it("only requests fields needed for the restaurant list, map, representative photo, and genre", () => {
     const fields = GOOGLE_PLACES_SEARCH_FIELD_MASK.split(",");
 
     expect(fields).toEqual([
@@ -18,10 +19,34 @@ describe("GOOGLE_PLACES_SEARCH_FIELD_MASK", () => {
       "places.location",
       "places.nationalPhoneNumber",
       "places.photos",
+      "places.primaryType",
+      "places.types",
     ]);
     expect(fields).not.toContain("places.rating");
+    expect(fields).not.toContain("places.userRatingCount");
     expect(fields).not.toContain("places.priceLevel");
     expect(fields).not.toContain("places.reviews");
+    expect(fields).not.toContain("places.reviewSummary");
+  });
+});
+
+describe("mapPlaceTypesToGenre", () => {
+  it("maps a known primaryType directly", () => {
+    expect(mapPlaceTypesToGenre("sushi_restaurant", [])).toBe("sushi");
+  });
+
+  it("falls back to scanning types when primaryType is unmapped", () => {
+    expect(
+      mapPlaceTypesToGenre("restaurant", ["restaurant", "yakiniku_restaurant", "food"]),
+    ).toBe("yakiniku");
+  });
+
+  it("returns other instead of fabricating a genre when no known type matches", () => {
+    expect(mapPlaceTypesToGenre("restaurant", ["restaurant", "food"])).toBe("other");
+  });
+
+  it("returns null when no type information is available at all", () => {
+    expect(mapPlaceTypesToGenre(null, [])).toBeNull();
   });
 });
 
@@ -34,6 +59,8 @@ describe("toPlaceSearchCandidate", () => {
       location: { latitude: 35.6717, longitude: 139.7639 },
       nationalPhoneNumber: "03-1234-5678",
       photos: [{ name: "places/abc123/photos/photo-1", widthPx: 1200, heightPx: 800 }],
+      primaryType: "japanese_restaurant",
+      types: ["japanese_restaurant", "restaurant", "food"],
     });
 
     expect(result).toEqual({
@@ -43,6 +70,7 @@ describe("toPlaceSearchCandidate", () => {
       location: { lat: 35.6717, lng: 139.7639 },
       phone: "03-1234-5678",
       photoName: "places/abc123/photos/photo-1",
+      genre: "japanese",
     });
   });
 
@@ -70,6 +98,7 @@ describe("toPlaceSearchCandidate", () => {
       location: null,
       phone: null,
       photoName: null,
+      genre: null,
     });
   });
 
@@ -136,6 +165,7 @@ describe("searchPlacesByText", () => {
         location: { lat: 35.6717, lng: 139.7639 },
         phone: null,
         photoName: null,
+        genre: null,
       },
     ]);
   });

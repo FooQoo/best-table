@@ -6,7 +6,7 @@ import {
   type RestaurantEvaluationResult,
 } from "~/domain/models/restaurant-evaluation-schema";
 import {
-  DEFAULT_GEMINI_MODEL_ID,
+  GEMINI_EVALUATION_MODEL_ID,
   GEMINI_STRUCTURED_SETTINGS,
 } from "./gemini-models";
 
@@ -20,7 +20,7 @@ export type EvaluationInput = {
 export async function evaluateRestaurantCandidates(
   input: EvaluationInput,
 ): Promise<RestaurantEvaluationResult[]> {
-  const model = input.model ?? google(DEFAULT_GEMINI_MODEL_ID);
+  const model = input.model ?? google(GEMINI_EVALUATION_MODEL_ID);
   const { object } = await generateObject({
     model,
     ...GEMINI_STRUCTURED_SETTINGS,
@@ -33,7 +33,7 @@ export async function evaluateRestaurantCandidates(
 export function streamRestaurantEvaluations(
   input: EvaluationInput,
 ): AsyncIterable<RestaurantEvaluationResult> {
-  const model = input.model ?? google(DEFAULT_GEMINI_MODEL_ID);
+  const model = input.model ?? google(GEMINI_EVALUATION_MODEL_ID);
   const { elementStream } = streamText({
     model,
     ...GEMINI_STRUCTURED_SETTINGS,

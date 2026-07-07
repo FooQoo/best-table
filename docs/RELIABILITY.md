@@ -54,7 +54,7 @@ AI 回答で行わないこと:
 
 AI 応答速度を上げるため、次の方針を取る。
 
-- Gemini は `app/server/clients/gemini-models.ts` で `gemini-3-flash-preview` に集約し、検索・評価・地図チャットの既定モデルを Flash 系にそろえる。
+- Gemini のモデル ID は `app/server/clients/gemini-models.ts` に集約する。検索結果の構造化評価（`GEMINI_EVALUATION_MODEL_ID`）は `gemini-3.5-flash` で判断品質を優先し、地図コンテキスト AI チャット（回答本文・おすすめ質問、`GEMINI_CHAT_MODEL_ID`）は `gemini-3.1-flash-lite` で低レイテンシ・低コストを優先する。両方とも Flash 系だが、用途に応じて別モデルを使い分ける。
 - 地図コンテキスト AI チャットは `streamText` のままにし、全文生成完了を待たずに逐次表示する。
 - チャット回答は `maxOutputTokens` と prompt 上の行数制限で短く保つ。長文回答より、比較・懸念・次アクションに絞った回答を優先する。
 - 回答後のおすすめ質問生成は `timeout` と `maxRetries: 0` を設定し、遅い場合は deterministic な候補に即フォールバックする。

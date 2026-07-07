@@ -18,35 +18,17 @@ const concernItemSchema = z.object({
   evidence: z.array(evidenceCategorySchema),
 });
 
-// app/domain/models/restaurant.ts の Genre と対応させる固定語彙。自由文にせず
-// 判断が付かない場合は "other" にする（存在しないジャンルを捏造させない）。
-const genreSchema = z
-  .enum([
-    "japanese",
-    "sushi",
-    "yakiniku",
-    "noodles",
-    "chinese",
-    "western",
-    "bar",
-    "cafe",
-    "bakery",
-    "other",
-  ])
-  .nullable()
-  .describe(
-    "料理ジャンル。japanese: 和食・会席・懐石・割烹・京料理、sushi: 鮨・寿司、" +
-      "yakiniku: 焼肉・焼鳥・鉄板焼・炭火焼、noodles: 蕎麦・うどん・ラーメン、" +
-      "chinese: 中華、western: イタリアン・フレンチ・洋食・ステーキ、bar: バー・居酒屋、" +
-      "cafe: カフェ・喫茶、bakery: パン・ベーカリー。" +
-      "上記のどれにも当てはまらない、または判断できない場合は other。根拠がなければ null。",
-  );
-
 export const restaurantEvaluationItemSchema = z.object({
+  // 候補名の文字列一致に頼ると、AIが表記を微妙に変えて返した場合や同名店舗が
+  // 複数ある場合に取りこぼす（サーバー側の突合バグの原因になっていた）。
+  // 入力プロンプトの番号（1始まり）をそのまま返させ、インデックスで突合する。
+  candidateIndex: z
+    .number()
+    .int()
+    .describe("評価対象の候補番号。入力候補一覧の番号（1始まり）とそのまま一致させる。"),
   candidateName: z
     .string()
-    .describe("評価対象の店舗名。入力候補一覧の名称と完全に一致させる。"),
-  genre: genreSchema,
+    .describe("評価対象の店舗名。ログ・デバッグ用途。突合には candidateIndex を使う。"),
   room: z
     .enum(["個室あり", "半個室あり", "カウンターのみ", "個室なし", "情報なし"])
     .nullable(),

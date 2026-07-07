@@ -41,6 +41,7 @@ export type RestaurantSearchStreamEvent =
   | { type: "phase"; phase: "searching" | "evaluating" }
   | { type: "restaurant"; restaurant: Restaurant }
   | { type: "restaurant-evaluated"; restaurant: Restaurant }
+  | { type: "error"; message: string }
   | {
       type: "done";
       fromCache: boolean;
@@ -123,29 +124,24 @@ export function buildRestaurantId(
   return placeId.replace(/\//g, "_");
 }
 
+// AI評価の根拠は店名とヒアリング条件のみにする。Places API由来の住所・電話・評価点・
+// 口コミ要約は Google Maps Platform 利用規約上の帰属表示義務が及ぶため、自社AIの
+// 評価プロンプトへの入力（＝表示以外の用途）には使わない判断とした。
 function buildEvaluationPrompt(
   condition: RestaurantSearchQueryCondition,
   candidates: PlaceSearchCandidate[],
 ): string {
   const names = candidates
-    .map((candidate, index) => {
-      const context = [
-        candidate.address ? `住所: ${candidate.address}` : null,
-        candidate.phone ? `電話: ${candidate.phone}` : null,
-      ]
-        .filter(Boolean)
-        .join(" / ");
-      return `${index + 1}. ${candidate.name}${context ? ` / ${context}` : ""}`;
-    })
+    .map((candidate, index) => `${index + 1}. ${candidate.name}`)
     .join("\n");
   return [
     buildBookingConditionSummary(condition),
     "",
     "以下の候補について、上記の会食条件への適性を評価してください。",
+    "candidateIndex には下記候補一覧の番号（1始まり）をそのまま入れてください。",
     "candidateName は候補名を翻訳・補正せず、下記の文字列と完全一致させてください。",
     names,
-    "access は住所やエリアの一般的な知識から根拠がある場合のみ生成してください。徒歩分数など未確認の数値は作らないでください。",
-    "genre は指定された分類から選び、当てはまらない・判断できない場合は other にしてください。",
+    "access は店名から特定できる一般的な知識に根拠がある場合のみ生成してください。徒歩分数など未確認の数値は作らないでください。",
     "根拠が不足する項目は null または空配列にし、確認できない事実を作らないでください。",
   ].join("\n");
 }
@@ -184,7 +180,7 @@ function buildRestaurant(input: {
     id: buildRestaurantId(candidate.placeId, searchKey, absoluteIndex),
     placeId: candidate.placeId,
     name: candidate.name,
-    genre: evaluation?.genre ?? null,
+    genre: candidate.genre,
     area: condition.selectedAreas[0] ?? "",
     address: candidate.address,
     location: candidate.location,
@@ -294,13 +290,15 @@ export async function searchRestaurants(
     throw error;
   }
 
-  const evaluationByName = new Map(
-    evaluations.map((evaluation) => [evaluation.candidateName, evaluation]),
+  // candidateIndex は buildEvaluationPrompt が振った1始まりの番号。文字列の店名一致に
+  // 頼ると、AIの表記揺れや同名店舗の重複で取りこぼすため、番号で突合する。
+  const evaluationByIndex = new Map(
+    evaluations.map((evaluation) => [evaluation.candidateIndex - 1, evaluation]),
   );
 
   const generatedAt = new Date().toISOString();
   const restaurants: Restaurant[] = pageCandidates.map((candidate, index) => {
-    const evaluation = evaluationByName.get(candidate.name) ?? null;
+    const evaluation = evaluationByIndex.get(index) ?? null;
     const absoluteIndex = offset + index;
     return buildRestaurant({
       candidate,
@@ -403,25 +401,25 @@ export async function* streamRestaurants(
 
   yield { type: "phase", phase: "evaluating" };
 
-  const evaluated = new Set<string>();
+  const evaluated = new Set<number>();
 
   try {
     for await (const evaluation of deps.streamEvaluations({
       prompt: buildEvaluationPrompt(condition, pageCandidates),
     })) {
-      const candidateIndex = pageCandidates.findIndex(
-        (candidate) => candidate.name === evaluation.candidateName,
-      );
-      if (candidateIndex === -1) {
-        logger?.warn("[restaurant-search-stream] evaluation-name-unmatched", {
+      // candidateIndex は buildEvaluationPrompt が振った1始まりの番号。文字列の店名一致に
+      // 頼ると、AIの表記揺れや同名店舗の重複で取りこぼすため、番号で突合する。
+      const candidateIndex = evaluation.candidateIndex - 1;
+      const candidate = pageCandidates[candidateIndex];
+      if (!candidate) {
+        logger?.warn("[restaurant-search-stream] evaluation-index-unmatched", {
           logId,
+          candidateIndex: evaluation.candidateIndex,
           candidateName: evaluation.candidateName,
         });
         continue;
       }
-
-      const candidate = pageCandidates[candidateIndex];
-      if (evaluated.has(candidate.name)) continue;
+      if (evaluated.has(candidateIndex)) continue;
 
       const restaurant = buildRestaurant({
         candidate,
@@ -431,7 +429,7 @@ export async function* streamRestaurants(
         absoluteIndex: offset + candidateIndex,
         generatedAt,
       });
-      evaluated.add(candidate.name);
+      evaluated.add(candidateIndex);
       yield { type: "restaurant-evaluated", restaurant };
     }
   } catch (error) {
@@ -440,6 +438,13 @@ export async function* streamRestaurants(
       error: summarizeError(error),
       elapsedMs: elapsedMs(startedAt),
     });
+    // 施設検索の基本形は既に送信済みのため検索自体は失敗にしない。評価だけが
+    // 欠けたことをクライアントに伝え、UIで非破壊的な警告として表示できるようにする
+    // （docs/ARCHITECTURE.md「評価呼び出しが失敗した場合は結果画面にエラー状態を明示する」）。
+    yield {
+      type: "error",
+      message: "一部の店舗のAI評価取得に失敗しました。表示中の情報は基本情報のみです。",
+    };
   }
   // 評価が届かなかった候補（ストリーム失敗・取りこぼし）は、上で送った基本形の
   // ままにする。手順の先頭で全候補分の "restaurant" イベントを保証しているため、

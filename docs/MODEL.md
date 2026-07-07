@@ -141,9 +141,9 @@ type Restaurant = {
   location: { lat: number; lng: number } | null; // MAP表示に使う実座標。施設検索の `location`。含まれなければ null
   phone: string | null; // 連絡先。施設検索の `nationalPhoneNumber`。含まれなければ null
   photoUrl: string | null; // 代表写真。施設検索の `photos` から得た photo resource name をプロキシ経由の URL に変換。含まれなければ null
+  genre: Genre | null; // 料理ジャンル。施設検索の `primaryType`/`types` から決定的に変換する（`app/server/clients/google-places.ts` の `mapPlaceTypesToGenre`）。対応する type が無い場合は "other"、type 自体が含まれない場合は null。AI 生成ではない
 
   // AI 生成部分。ヒアリング条件を踏まえた1回の生成でまとめて埋める。生成前・失敗時は null。
-  genre: Genre | null; // 料理ジャンル。施設検索の出力には含まれないため、構造化評価で AI が固定語彙から生成する
   matchTier: MatchTier | null; // マッチ度。AI 評価フィールドとヒアリング条件から決定的に算出する（下記参照）。判定できるフィールドが1つも無い場合は null
   room: RoomAvailability | null; // 個室・席の状況（個室有無の表示も兼ねる）。固定語彙
   quiet: RatingSymbol | null; // 固定語彙
@@ -159,7 +159,7 @@ type Restaurant = {
 };
 ```
 
-Places API 施設検索（Text Search）のフィールドマスクは `id` / `displayName` / `formattedAddress` / `location` / `nationalPhoneNumber` / `photos` に絞る（`app/server/clients/google-places.ts` の `GOOGLE_PLACES_SEARCH_FIELD_MASK`）。`rating` / `userRatingCount` / `priceLevel` など追加のフィールドを取得する場合は、SKU ティアが上がらないか実装時に確認してから追加する。
+Places API 施設検索（Text Search）のフィールドマスクは `id` / `displayName` / `formattedAddress` / `location` / `nationalPhoneNumber` / `photos` / `primaryType` / `types` に絞る（`app/server/clients/google-places.ts` の `GOOGLE_PLACES_SEARCH_FIELD_MASK`）。`primaryType` / `types` は `nationalPhoneNumber` と同じ Pro/Enterprise SKU に含まれるため追加課金は無い。`rating` / `userRatingCount` / `priceLevel` / `reviews` / `reviewSummary` など更に上のSKUのフィールドは取得しない。SKUティアに加えて、`rating`/`reviews`/`reviewSummary` はAI評価プロンプトへの入力として使う用途だとGoogle Maps Platform利用規約の帰属表示義務に抵触するおそれがあるため（`docs/ARCHITECTURE.md`「AI評価プロンプトの入力範囲」）。
 
 ### マッチ度（MatchTier）の算出方法
 
@@ -176,12 +176,12 @@ Places API 施設検索（Text Search）のフィールドマスクは `id` / `d
 
 - **自由記述**にするフィールド: `id` / `placeId` / `name` / `area` / `address` / `phone` / `photoUrl` / `access` / `budgetLabel` / `concerns[].text` / `matchingSummary` / `generatedAt`。実世界の値の種類が多い、または固有名詞・URL・タイムスタンプなど値そのものに意味があるため、決め打ちの語彙で表現できない。`area` / `budgetLabel` は当初 `AREA_REGIONS` / `BUDGET_STEPS` から導出する固定語彙型にする計画だったが、実装時にその移設を見送ったため（下記「現行実装との対応」）、素直な `string` にしている。
 - **固定語彙として型定義**するフィールド: `genre`（`Genre`）、`room`（`RoomAvailability`）、`quiet` / `prestige` / `service`（`RatingSymbol`）、`evidence`（`EvidenceCategory`）、`confidence`。いずれもアプリ側で選択肢が決まっている、または3〜10段階程度の小さな語彙に正規化できる。
-  - `genre` / `room` / `quiet` / `prestige` / `service` / `evidence` / `confidence` は、`generateObject` の zod スキーマ（`app/domain/models/restaurant-evaluation-schema.ts`）側で `z.enum([...])` として同じ語彙を強制し、AI がこの型に無い値を生成しないようにしている。
+  - `room` / `quiet` / `prestige` / `service` / `evidence` / `confidence` は、`generateObject` の zod スキーマ（`app/domain/models/restaurant-evaluation-schema.ts`）側で `z.enum([...])` として同じ語彙を強制し、AI がこの型に無い値を生成しないようにしている。`genre` は AI 生成ではないため、この zod スキーマには含まれない（Places API の type 語彙から `app/server/clients/google-places.ts` の `mapPlaceTypesToGenre` が決定的に変換する。対応が無い type は `GENRES` の `"other"` にし、AI 同様に存在しないジャンルを捏造しない）。
 
 生成時に満たすべき制約（`Restaurant` 型自体は自己強制しない。生成サービスと zod スキーマが担保する）:
 
-- Google 由来のフィールド（`placeId` / `address` / `location` / `phone` / `photoUrl`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。これらは Places API 施設検索（Text Search）のレスポンスから直接取得し、店舗ごとにレスポンスに含まれていた値だけを埋める（含まれない場合は捏造せず `null` のまま）。`genre` は施設検索側の値ではなく、構造化評価（AI 生成フィールド）として別途生成する。
-- AI 生成フィールド（`genre` 以下、`matchTier` を除く）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。`matchTier` は AI 生成フィールドではなく、それらの生成結果を使ってアプリ側で決定的に算出する（前述「マッチ度の算出方法」）。
+- Google 由来のフィールド（`placeId` / `address` / `location` / `phone` / `photoUrl` / `genre`）は、値が確認できない場合 `null` のままにし、AI や UI 側で埋め合わせない（`docs/RELIABILITY.md`）。これらは Places API 施設検索（Text Search）のレスポンスから直接取得し、店舗ごとにレスポンスに含まれていた値だけを埋める（含まれない場合は捏造せず `null` のまま）。
+- AI 生成フィールド（`matchTier` を除く `Restaurant` 型の残りのフィールド）は、候補探索で得た店舗情報とヒアリング条件をもとに1回の生成でまとめて埋める。`evidence` / `confidence` を持たせ、`docs/RELIABILITY.md` の根拠カテゴリ・不確実性の明示方針に対応させる。zod スキーマとして定義し、`generateObject` の出力スキーマとそのまま対応させる。`matchTier` は AI 生成フィールドではなく、それらの生成結果を使ってアプリ側で決定的に算出する（前述「マッチ度の算出方法」）。
 - 未生成・生成失敗時は AI 生成フィールドと `matchTier` を `null` のままにし、Google 由来のフィールドだけで一覧・MAP表示が成立するようにする（`docs/RELIABILITY.md` の段階的表示）。
 - `evidence` / `confidence` を伴わない AI 評価文言を生成しない（`docs/RELIABILITY.md` の根拠付け方針）。
 

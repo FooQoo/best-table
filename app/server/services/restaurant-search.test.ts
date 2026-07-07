@@ -57,7 +57,7 @@ describe("searchRestaurants", () => {
     expect(deps.evaluateCandidates).not.toHaveBeenCalled();
   });
 
-  it("merges search candidates with their evaluation by matching candidate name", async () => {
+  it("merges search candidates with their evaluation by matching candidateIndex", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
@@ -67,12 +67,13 @@ describe("searchRestaurants", () => {
           location: { lat: 35.6717, lng: 139.7639 },
           phone: "03-1234-5678",
           photoName: "places/abc/photos/photo-1",
+          genre: "japanese" as const,
         },
       ]),
       evaluateCandidates: vi.fn(async () => [
         {
+          candidateIndex: 1,
           candidateName: "桂",
-          genre: "japanese" as const,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
@@ -107,6 +108,73 @@ describe("searchRestaurants", () => {
     expect(result.restaurants[0].generatedAt).not.toBeNull();
   });
 
+  it("distinguishes candidates that share the same name by their candidateIndex, not by name", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "串焼き 大将",
+          placeId: "places/branch-1",
+          address: "東京都中央区銀座1-1-1",
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+        {
+          name: "串焼き 大将",
+          placeId: "places/branch-2",
+          address: "東京都中央区銀座2-2-2",
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+      ]),
+      evaluateCandidates: vi.fn(async () => [
+        {
+          candidateIndex: 1,
+          candidateName: "串焼き 大将",
+          room: "個室あり" as const,
+          quiet: "◎" as const,
+          prestige: "○" as const,
+          service: "◎" as const,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: "1号店です。",
+          evidence: [],
+          confidence: "medium" as const,
+        },
+        {
+          candidateIndex: 2,
+          candidateName: "串焼き 大将",
+          room: "個室なし" as const,
+          quiet: "△" as const,
+          prestige: "△" as const,
+          service: "○" as const,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: "2号店です。",
+          evidence: [],
+          confidence: "medium" as const,
+        },
+      ]),
+    });
+
+    const result = await searchRestaurants(condition, {}, deps);
+
+    expect(result.restaurants).toHaveLength(2);
+    expect(result.restaurants[0]).toMatchObject({
+      placeId: "places/branch-1",
+      matchingSummary: "1号店です。",
+    });
+    expect(result.restaurants[1]).toMatchObject({
+      placeId: "places/branch-2",
+      matchingSummary: "2号店です。",
+    });
+  });
+
   it("builds an id without '/' from a placeId, so it is safe to use in URL state", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
@@ -117,6 +185,7 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
       ]),
     });
@@ -136,6 +205,7 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
       ]),
       evaluateCandidates: vi.fn(async () => []),
@@ -152,7 +222,7 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("always keeps the search candidate name as-is, without AI-based translation", async () => {
+  it("keeps the search candidate name as-is even when the AI echoes a different candidateName", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
         {
@@ -162,12 +232,13 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: "western" as const,
         },
       ]),
       evaluateCandidates: vi.fn(async () => [
         {
-          candidateName: "Dominique Bouchet Tokyo",
-          genre: "western" as const,
+          candidateIndex: 1,
+          candidateName: "Dominique Bouchet",
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
@@ -191,7 +262,7 @@ describe("searchRestaurants", () => {
     });
   });
 
-  it("takes address, location, and photo URL directly from the Text Search candidate (no separate Place Details call)", async () => {
+  it("takes address, location, photo URL, and genre directly from the Text Search candidate (no separate Place Details call)", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) => ({
       name: `候補${index + 1}`,
       placeId: `places/place-${index + 1}`,
@@ -199,6 +270,7 @@ describe("searchRestaurants", () => {
       location: index === 0 ? { lat: 35.6717, lng: 139.7639 } : null,
       phone: null,
       photoName: index === 0 ? "places/place-1/photos/photo-1" : null,
+      genre: index === 0 ? ("japanese" as const) : null,
     }));
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => candidates),
@@ -213,12 +285,14 @@ describe("searchRestaurants", () => {
       address: "東京都中央区銀座1-1-1",
       location: { lat: 35.6717, lng: 139.7639 },
       photoUrl: "/api/photos/places/place-1/photos/photo-1",
+      genre: "japanese",
     });
     expect(result.restaurants[1]).toMatchObject({
       name: "候補2",
       address: null,
       location: null,
       photoUrl: null,
+      genre: null,
     });
   });
 
@@ -230,6 +304,7 @@ describe("searchRestaurants", () => {
       location: null,
       phone: null,
       photoName: null,
+      genre: null,
     }));
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => candidates),
@@ -264,6 +339,7 @@ describe("searchRestaurants", () => {
       location: null,
       phone: null,
       photoName: null,
+      genre: null,
     }));
     const evaluateCandidates: RestaurantSearchDeps["evaluateCandidates"] = vi.fn(
       async () => [],
@@ -282,6 +358,33 @@ describe("searchRestaurants", () => {
     expect(prompt).not.toContain("候補10");
   });
 
+  it("grounds the AI evaluation prompt only in the store name and booking condition, not Places-sourced address/phone", async () => {
+    const evaluateCandidates: RestaurantSearchDeps["evaluateCandidates"] = vi.fn(
+      async () => [],
+    );
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "桂",
+          placeId: "places/abc",
+          address: "東京都中央区銀座5-5-11",
+          location: null,
+          phone: "03-1234-5678",
+          photoName: null,
+          genre: null,
+        },
+      ]),
+      evaluateCandidates,
+    });
+
+    await searchRestaurants(condition, {}, deps);
+
+    const prompt = vi.mocked(evaluateCandidates).mock.calls[0][0].prompt;
+    expect(prompt).toContain("1. 桂");
+    expect(prompt).not.toContain("東京都中央区銀座5-5-11");
+    expect(prompt).not.toContain("03-1234-5678");
+  });
+
   it("emits the base restaurant immediately after search, before AI evaluation starts", async () => {
     const deps = buildDeps({
       searchCandidates: vi.fn(async () => [
@@ -292,12 +395,13 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: "japanese" as const,
         },
       ]),
       streamEvaluations: vi.fn(async function* () {
         yield {
+          candidateIndex: 1,
           candidateName: "逐次返却の店",
-          genre: "japanese" as const,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "○" as const,
@@ -322,6 +426,7 @@ describe("searchRestaurants", () => {
       type: "restaurant",
       restaurant: {
         name: "逐次返却の店",
+        genre: "japanese",
         matchTier: null,
         matchingSummary: null,
       },
@@ -353,6 +458,7 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
         {
           name: "評価が届かない店",
@@ -361,12 +467,13 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
       ]),
       streamEvaluations: vi.fn(async function* () {
         yield {
+          candidateIndex: 1,
           candidateName: "評価が届く店",
-          genre: "japanese" as const,
           room: "個室あり" as const,
           quiet: "◎" as const,
           prestige: "◎" as const,
@@ -401,13 +508,118 @@ describe("searchRestaurants", () => {
     });
   });
 
+  it("distinguishes streamed evaluations for candidates that share the same name by their candidateIndex", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "串焼き 大将",
+          placeId: "places/branch-1",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+        {
+          name: "串焼き 大将",
+          placeId: "places/branch-2",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {
+        yield {
+          candidateIndex: 1,
+          candidateName: "串焼き 大将",
+          room: "個室あり" as const,
+          quiet: "◎" as const,
+          prestige: "○" as const,
+          service: "◎" as const,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: "1号店です。",
+          evidence: [],
+          confidence: "medium" as const,
+        };
+        yield {
+          candidateIndex: 2,
+          candidateName: "串焼き 大将",
+          room: "個室なし" as const,
+          quiet: "△" as const,
+          prestige: "△" as const,
+          service: "○" as const,
+          access: null,
+          budgetLabel: null,
+          concerns: [],
+          matchingSummary: "2号店です。",
+          evidence: [],
+          confidence: "medium" as const,
+        };
+      }),
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    const evaluatedEvents = events.filter((e) => e.type === "restaurant-evaluated");
+    expect(evaluatedEvents).toHaveLength(2);
+    expect(evaluatedEvents[0]).toMatchObject({
+      restaurant: { placeId: "places/branch-1", matchingSummary: "1号店です。" },
+    });
+    expect(evaluatedEvents[1]).toMatchObject({
+      restaurant: { placeId: "places/branch-2", matchingSummary: "2号店です。" },
+    });
+  });
+
+  it("emits an error event but keeps the already-sent base restaurants when the evaluation stream fails entirely", async () => {
+    const deps = buildDeps({
+      searchCandidates: vi.fn(async () => [
+        {
+          name: "評価に失敗する店",
+          placeId: "places/failing",
+          address: null,
+          location: null,
+          phone: null,
+          photoName: null,
+          genre: null,
+        },
+      ]),
+      streamEvaluations: vi.fn(async function* () {
+        throw new Error("quota exceeded");
+        // eslint-disable-next-line no-unreachable
+        yield {} as never;
+      }),
+    });
+
+    const events = [];
+    for await (const event of streamRestaurants(condition, {}, deps)) {
+      events.push(event);
+    }
+
+    expect(
+      events.some((event) => event.type === "restaurant" && event.restaurant.name === "評価に失敗する店"),
+    ).toBe(true);
+    expect(events.some((event) => event.type === "error")).toBe(true);
+    expect(events.at(-1)).toMatchObject({
+      type: "done",
+      hasMore: false,
+      nextOffset: null,
+    });
+  });
+
   it("excludes already displayed restaurants before streaming AI evaluation", async () => {
     const streamEvaluations = vi.fn(async function* (input: { prompt: string }) {
       expect(input.prompt).not.toContain("既存の店");
       expect(input.prompt).toContain("追加の店");
       yield {
+        candidateIndex: 1,
         candidateName: "追加の店",
-        genre: "japanese" as const,
         room: "個室あり" as const,
         quiet: "◎" as const,
         prestige: "◎" as const,
@@ -429,6 +641,7 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
         {
           name: "追加の店",
@@ -437,6 +650,7 @@ describe("searchRestaurants", () => {
           location: null,
           phone: null,
           photoName: null,
+          genre: null,
         },
       ]),
       streamEvaluations,
@@ -497,6 +711,7 @@ describe("searchRestaurants", () => {
       location: null,
       phone: null,
       photoName: null,
+      genre: null,
     }));
     const searchCandidates = vi.fn(async () => candidates);
     const deps = buildDeps({ searchCandidates });

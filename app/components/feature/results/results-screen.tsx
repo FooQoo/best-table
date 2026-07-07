@@ -529,6 +529,16 @@ export function ResultsScreen() {
               onSelectStore={handleSelectStore}
               scrollTarget={scrollTarget}
               hiddenTiers={hiddenTiers}
+              banner={
+                searchError && hasVisibleStores ? (
+                  <div
+                    data-testid="evaluation-error-banner"
+                    className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
+                  >
+                    {searchError}
+                  </div>
+                ) : null
+              }
               footer={
                 <>
                   {shouldShowStoreSkeleton && (
