@@ -229,9 +229,20 @@ export function ComparePanel({
                     rel="noopener"
                     className="flex-none text-[#8a6a1f] underline underline-offset-2"
                   >
-                    Google Mapで開く
+                    Google Mapで空席・予約を確認
                   </a>
                 </div>
+                {store.ikyu && (
+                  <a
+                    href={store.ikyu.url}
+                    target="_blank"
+                    rel="noopener"
+                    data-testid={`compare-ikyu-referral-${store.id}`}
+                    className="self-start text-[11px] font-bold text-[#8a6a1f] underline underline-offset-2"
+                  >
+                    一休.comで空席を確認
+                  </a>
+                )}
               </div>
             ))}
 

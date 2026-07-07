@@ -76,7 +76,7 @@ describe("ComparePanel の境界状態", () => {
   it("各店舗のジャンルの右にGoogle Mapのリンクを表示する", () => {
     setup(null);
 
-    const links = screen.getAllByRole("link", { name: "Google Mapで開く" });
+    const links = screen.getAllByRole("link", { name: "Google Mapで空席・予約を確認" });
     expect(links).toHaveLength(stores.length);
     links.forEach((link, i) => {
       expect(link).toHaveAttribute("href", buildGoogleMapsUrl(stores[i]));

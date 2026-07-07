@@ -45,6 +45,22 @@ export type ConcernItem = {
   evidence: EvidenceCategory[];
 };
 
+// docs/MODEL.md「コンテキスト2」: 一休掲載店マスタとの店舗同定（照合）に使ったキー種別。
+export type IkyuMatchKey = "placeId" | "phone" | "name-address";
+
+export const IKYU_MATCH_KEYS: readonly IkyuMatchKey[] = [
+  "placeId",
+  "phone",
+  "name-address",
+];
+
+// 一休.comレストランへの送客リンク。URL は一休掲載店マスタ由来の値のみを使い、
+// AI・自由入力・文字列組み立てで生成しない（docs/SECURITY.md）。
+export type IkyuReferral = {
+  url: string;
+  matchedBy: IkyuMatchKey;
+};
+
 // docs/MODEL.md: 店舗候補は Google マップによるグラウンディングと AI 評価をまとめて
 // 一度に生成するため、生データと AI 派生評価を型として分離しない。
 export type Restaurant = {
@@ -57,6 +73,11 @@ export type Restaurant = {
   location: { lat: number; lng: number } | null;
   phone: string | null;
   photoUrl: string | null;
+
+  // 一休掲載店マスタ由来。施設検索直後の店舗同定（照合）で一致した場合だけ埋める。
+  // 照合できない店舗・マスタ読込失敗時は null のまま表示を続ける（除外しない）。
+  // mvp-cycle-6 の mock UI 段階では optional。照合パイプライン実装（UoW）で必須化する。
+  ikyu?: IkyuReferral | null;
 
   // AI 生成部分。未生成・生成失敗時は null。
   genre: Genre | null;
@@ -154,6 +175,16 @@ export function isRestaurant(value: unknown): value is Restaurant {
 
   if (r.generatedAt !== null && Number.isNaN(Date.parse(r.generatedAt as string))) {
     return false;
+  }
+
+  // ikyu は mock UI 段階では optional（undefined / null を許容）。値がある場合だけ形状を検証する。
+  if (r.ikyu !== undefined && r.ikyu !== null) {
+    if (typeof r.ikyu !== "object") return false;
+    const ikyu = r.ikyu as Record<string, unknown>;
+    if (typeof ikyu.url !== "string" || ikyu.url.length === 0) return false;
+    if (!(IKYU_MATCH_KEYS as readonly string[]).includes(ikyu.matchedBy as string)) {
+      return false;
+    }
   }
 
   return true;

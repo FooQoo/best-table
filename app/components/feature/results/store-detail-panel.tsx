@@ -90,14 +90,27 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
             <div data-testid="results-detail-availability">
               空席状況：{getAvailabilityMessage()}
             </div>
-            <a
-              href={buildGoogleMapsUrl(store)}
-              target="_blank"
-              rel="noopener"
-              className="inline-block text-[#8a6a1f] underline underline-offset-2"
-            >
-              Google Mapで開く
-            </a>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {store.ikyu && (
+                <a
+                  href={store.ikyu.url}
+                  target="_blank"
+                  rel="noopener"
+                  data-testid="ikyu-referral-link"
+                  className="inline-block font-bold text-[#8a6a1f] underline underline-offset-2"
+                >
+                  一休.comで空席を確認
+                </a>
+              )}
+              <a
+                href={buildGoogleMapsUrl(store)}
+                target="_blank"
+                rel="noopener"
+                className="inline-block text-[#8a6a1f] underline underline-offset-2"
+              >
+                Google Mapで空席・予約を確認
+              </a>
+            </div>
           </div>
         </div>
 
