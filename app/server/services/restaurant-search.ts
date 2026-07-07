@@ -201,7 +201,10 @@ function buildRestaurant(input: {
     placeId: candidate.placeId,
     name: candidate.name,
     genre: candidate.genre,
-    area: resolveRestaurantAreaFromAddress(candidate.address) ?? condition.selectedAreas[0] ?? "",
+    area:
+      resolveRestaurantAreaFromAddress(candidate.address) ??
+      condition.selectedAreas[0] ??
+      "",
     address: candidate.address,
     location: candidate.location,
     phone: candidate.phone,
