@@ -6,6 +6,7 @@ import { StorePhoto } from "~/components/ui/store-photo";
 import { MATCH_TIERS, type Restaurant } from "~/domain/models/restaurant";
 import { GOLD, NAVY } from "~/mocks/data";
 import { getTheme } from "~/styles/theme";
+import { Z_INDEX } from "~/styles/z-index";
 import { GENRE_LABELS } from "~/utils/evidence-labels";
 import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
@@ -144,7 +145,7 @@ export function ComparePanel({
       ref={panelRef}
       aria-label="比較"
       data-open={isOpen ? "true" : "false"}
-      className="absolute inset-0 z-40 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[-10px_0_24px_rgba(20,20,20,.16)] transition-transform duration-300 data-[open=false]:pointer-events-none data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0"
+      className={`absolute inset-0 ${Z_INDEX.comparePanel} flex flex-col overflow-hidden bg-[#fffdf8] shadow-[-10px_0_24px_rgba(20,20,20,.16)] transition-transform duration-300 data-[open=false]:pointer-events-none data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0`}
     >
       <div className="flex-none border-b border-[#e4ded0] px-5 py-4 flex items-center justify-between gap-3">
         <h2 className="m-0 font-serif text-lg font-bold text-[#20201c]">

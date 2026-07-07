@@ -5,6 +5,7 @@ import remarkBreaks from "remark-breaks";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
 import { INITIAL_RESULTS_CHAT_QUESTIONS } from "~/utils/results-chat-suggestions";
+import { Z_INDEX } from "~/styles/z-index";
 
 // Gemini の回答は Markdown（箇条書き・強調）で返ることがあるため、
 // アシスタントの本文だけ react-markdown で描画する。生 HTML は解釈しないため XSS の心配はない。
@@ -241,7 +242,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
         data-results-ai-chat
         onClick={() => setOpen(true)}
         disabled={stores.length === 0}
-        className="absolute bottom-5 right-5 z-20 flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c] disabled:cursor-not-allowed disabled:opacity-50"
+        className={`absolute bottom-5 right-5 ${Z_INDEX.aiChatButton} flex items-center gap-2 rounded-full border border-[#b08424] bg-[#20201c] px-4 py-3 text-[13px] font-bold text-[#fffdf8] shadow-[0_10px_24px_rgba(20,20,20,.28)] transition-colors hover:bg-[#3a352c] disabled:cursor-not-allowed disabled:opacity-50`}
         aria-label="AIに地図上の店舗を相談する"
       >
         <MessageCircle className="size-4" aria-hidden="true" />
@@ -252,7 +253,7 @@ export function ResultsAiChat({ stores, bookingSummary }: ResultsAiChatProps) {
         aria-label="地図上の店舗をAIに相談"
         data-results-ai-chat
         data-open={open ? "true" : "false"}
-        className="absolute bottom-4 right-4 top-4 z-30 flex w-[390px] max-w-[calc(100%-32px)] flex-col overflow-hidden rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_14px_36px_rgba(20,20,20,.24)] transition-transform duration-300 data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0"
+        className={`absolute bottom-4 right-4 top-4 ${Z_INDEX.aiChatPanel} flex w-[390px] max-w-[calc(100%-32px)] flex-col overflow-hidden rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_14px_36px_rgba(20,20,20,.24)] transition-transform duration-300 data-[open=false]:translate-x-[calc(100%+32px)] data-[open=true]:translate-x-0`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-[#e4ded0] px-4 py-3">
           <div className="min-w-0">

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
@@ -9,6 +8,7 @@ import {
   toRestaurantSearchCondition,
   toResultsChatBookingSummary,
   useBookingQuery,
+  type BookingQueryState,
 } from "~/state/booking-query-state";
 import { getPriorityLabel } from "~/domain/services/booking-summary-format";
 import type { ResultsChatBookingSummary } from "~/domain/models/results-chat";
@@ -96,8 +96,6 @@ function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
 }
 
 export function ResultsScreen() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const {
     state,
     toggleCompare,
@@ -136,6 +134,8 @@ export function ResultsScreen() {
   const [hiddenCompareGroups, setHiddenCompareGroups] = useState<
     Set<CompareVisibilityGroup>
   >(new Set());
+  const [isEditingConditions, setIsEditingConditions] = useState(false);
+  const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
@@ -323,6 +323,9 @@ export function ResultsScreen() {
   );
 
   useEffect(() => {
+    // ヘッダで条件を編集中は、入力のたびに URL query state（＝searchConditionKey）が
+    // 変化してもここでは再検索しない。編集完了時に confirmConditions が明示的に再検索する。
+    if (isEditingConditions) return;
     if (submittedSearchKeyRef.current === searchConditionKey) return;
     submittedSearchKeyRef.current = searchConditionKey;
     clearTransientResultsState();
@@ -340,7 +343,7 @@ export function ResultsScreen() {
     // submitSearch 自身が次回呼び出し時に前回のコントローラーを abort するため、
     // ここでの明示的な cleanup abort は行わない。
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchConditionKey]);
+  }, [searchConditionKey, isEditingConditions]);
 
   const loadMore = useCallback(() => {
     if (!canRequestMoreResults({ isLoadingMore, hasMore, nextOffset })) return;
@@ -418,10 +421,48 @@ export function ResultsScreen() {
     state.compareIds.includes(store.id),
   );
 
-  const changeConditions = () => {
-    clearCompareIds();
-    navigate({ pathname: "/", search: location.search });
+  const startEditingConditions = () => {
+    conditionsSnapshotRef.current = {
+      selectedAreas: query.selectedAreas,
+      date: query.date,
+      time: query.time,
+      people: query.people,
+      counterpart: query.counterpart,
+      counterpartOtherText: query.counterpartOtherText,
+      budgetMin: query.budgetMin,
+      budgetMax: query.budgetMax,
+      budgetOtherOn: query.budgetOtherOn,
+      budgetOtherText: query.budgetOtherText,
+      priorities: query.priorities,
+      priorityOtherOn: query.priorityOtherOn,
+      priorityOtherText: query.priorityOtherText,
+    };
+    setIsEditingConditions(true);
   };
+
+  const confirmConditions = useCallback(() => {
+    setIsEditingConditions(false);
+    conditionsSnapshotRef.current = null;
+    clearCompareIds();
+    clearTransientResultsState();
+    setActiveSearchCenter(null);
+    setLatestMapCenter(null);
+    setShowSearchThisArea(false);
+    setHiddenTiers(new Set());
+    hasReceivedInitialMapCenterRef.current = false;
+    committedMapCenterRef.current = null;
+    submittedSearchKeyRef.current = searchConditionKey;
+    submitSearch("initial", 0);
+  }, [clearCompareIds, clearTransientResultsState, searchConditionKey, submitSearch]);
+
+  const cancelConditions = useCallback(() => {
+    setIsEditingConditions(false);
+    const snapshot = conditionsSnapshotRef.current;
+    conditionsSnapshotRef.current = null;
+    if (snapshot) {
+      query.setQueryState(snapshot);
+    }
+  }, [query]);
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden box-border">
@@ -431,7 +472,10 @@ export function ResultsScreen() {
         people={query.people}
         recapBudget={recapBudget}
         recapPriorities={recapPriorities}
-        onChangeConditions={changeConditions}
+        isEditingConditions={isEditingConditions}
+        onStartEditingConditions={startEditingConditions}
+        onConfirmConditions={confirmConditions}
+        onCancelConditions={cancelConditions}
         searchPhase={isInitialSearching || isLoadingMore ? searchPhase : null}
         phaseRestaurantCount={phaseRestaurantCount}
       />
@@ -455,7 +499,7 @@ export function ResultsScreen() {
             <div>{searchError}</div>
             <button
               type="button"
-              onClick={changeConditions}
+              onClick={startEditingConditions}
               className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
             >
               条件を変更する
@@ -466,7 +510,7 @@ export function ResultsScreen() {
             <div>条件に合う店舗が見つかりませんでした。</div>
             <button
               type="button"
-              onClick={changeConditions}
+              onClick={startEditingConditions}
               className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
             >
               条件を変更する

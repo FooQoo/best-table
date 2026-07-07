@@ -13,6 +13,7 @@ import {
 import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
 import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
 import { buildStoreQA } from "~/utils/store-qa";
+import { Z_INDEX } from "~/styles/z-index";
 
 type StoreDetailPanelProps = {
   store: Restaurant;
@@ -53,7 +54,7 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
     <aside
       ref={panelRef}
       aria-label={`${store.name}の詳細`}
-      className="absolute top-4 left-4 bottom-4 z-20 w-[420px] max-w-[calc(100%-32px)] overflow-y-auto rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_10px_30px_rgba(20,20,20,.22)] duration-150 animate-in fade-in-0 slide-in-from-left-2"
+      className={`absolute top-4 left-4 bottom-4 ${Z_INDEX.storeDetailPanel} w-[420px] max-w-[calc(100%-32px)] overflow-y-auto rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_10px_30px_rgba(20,20,20,.22)] duration-150 animate-in fade-in-0 slide-in-from-left-2`}
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#e4ded0] bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
         <div className="min-w-0">
