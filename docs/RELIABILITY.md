@@ -52,13 +52,7 @@ AI 回答で行わないこと:
 
 ## 応答速度
 
-AI 応答速度を上げるため、次の方針を取る。
-
-- Gemini のモデル ID は `app/server/clients/gemini-models.ts` に集約する。検索結果の構造化評価（`GEMINI_EVALUATION_MODEL_ID`）は `gemini-3.5-flash` で判断品質を優先し、地図コンテキスト AI チャット（回答本文・おすすめ質問、`GEMINI_CHAT_MODEL_ID`）は `gemini-3.1-flash-lite` で低レイテンシ・低コストを優先する。両方とも Flash 系だが、用途に応じて別モデルを使い分ける。
-- 地図コンテキスト AI チャットは `streamText` のままにし、全文生成完了を待たずに逐次表示する。
-- チャット回答は `maxOutputTokens` と prompt 上の行数制限で短く保つ。長文回答より、比較・懸念・次アクションに絞った回答を優先する。
-- 回答後のおすすめ質問生成は `timeout` と `maxRetries: 0` を設定し、遅い場合は deterministic な候補に即フォールバックする。
-- クライアントが回答生成を中断した場合は `request.signal` を AI SDK に渡し、不要な生成を続けない。
+AI 応答速度を上げるための方針（モデル選定、ストリーミング、タイムアウト、フォールバック）は `docs/AI.md`「モデル選定とレイテンシ方針」を参照。簡潔には、検索結果の評価は `gemini-3.5-flash`（品質優先）、チャットは `gemini-3.1-flash-lite`（速度優先）を使い、チャットはストリーミングで逐次表示し、回答は短く保つ方針です。
 
 ## 想定される失敗
 
