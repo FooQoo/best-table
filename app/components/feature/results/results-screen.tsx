@@ -34,6 +34,7 @@ import {
 } from "~/components/feature/results/store-list-skeleton";
 import type { SearchPhase } from "~/utils/search-phase-message";
 import { resolveSwipeDirection, type SwipePoint } from "~/utils/swipe";
+import { cn } from "~/utils/cn";
 import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 const PAGE_SIZE = 10;
@@ -509,6 +510,13 @@ export function ResultsScreen() {
     }
   }, [query]);
 
+  // モバイルでは一覧/地図を横並びのトラックに載せ、translateX でスライド切り替えする。
+  // PC(md:) ではトラックを無効化し、従来どおり左右分割レイアウトに戻す。
+  const carouselTrackClass = cn(
+    "flex w-[200%] flex-none transition-transform duration-300 ease-out will-change-transform md:w-full md:translate-x-0",
+    mobileView === "map" ? "-translate-x-1/2" : "translate-x-0",
+  );
+
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden box-border">
       <ResultsSummaryBar
@@ -547,13 +555,11 @@ export function ResultsScreen() {
 
       <div className="relative flex-1 flex overflow-hidden min-h-0">
         {shouldShowInitialSkeleton ? (
-          <>
-            <StoreListSkeleton
-              className={mobileView === "list" ? "" : "hidden md:flex"}
-            />
-            <div
-              className={`${mobileView === "map" ? "block" : "hidden"} min-w-0 flex-1 md:block`}
-            >
+          <div className={carouselTrackClass}>
+            <div className="flex w-1/2 flex-none md:w-[400px]">
+              <StoreListSkeleton />
+            </div>
+            <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
               <ResultsMap
                 stores={[]}
                 bookingSummary={chatBookingSummary}
@@ -564,7 +570,7 @@ export function ResultsScreen() {
                 onToggleCompareGroup={toggleHiddenCompareGroup}
               />
             </div>
-          </>
+          </div>
         ) : searchError && !hasVisibleStores ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>{searchError}</div>
@@ -589,87 +595,88 @@ export function ResultsScreen() {
           </div>
         ) : (
           <>
-            <StoreList
-              stores={restaurants}
-              compareIds={state.compareIds}
-              onToggleCompare={toggleCompare}
-              counterpartId={query.counterpart}
-              activeStoreId={activeStoreId}
-              selectedStoreId={selectedStoreId}
-              onActivateStore={setActiveStoreId}
-              onSelectStore={handleSelectStore}
-              scrollTarget={scrollTarget}
-              hiddenTiers={hiddenTiers}
-              className={mobileView === "list" ? "" : "hidden md:flex"}
-              onTouchStart={handleSwipeTouchStart}
-              onTouchEnd={handleListSwipeEnd}
-              banner={
-                searchError && hasVisibleStores ? (
-                  <div
-                    data-testid="evaluation-error-banner"
-                    className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
-                  >
-                    {searchError}
-                  </div>
-                ) : null
-              }
-              footer={
-                <>
-                  {shouldShowStoreSkeleton && (
-                    <StoreListSkeletonItems count={3} />
-                  )}
-                  {loadMoreError && (
-                    <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
-                      <div>{loadMoreError}</div>
-                      <button
-                        type="button"
-                        onClick={loadMore}
-                        className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+            <div className={carouselTrackClass}>
+              <div className="flex w-1/2 flex-none md:w-[400px]">
+                <StoreList
+                  stores={restaurants}
+                  compareIds={state.compareIds}
+                  onToggleCompare={toggleCompare}
+                  counterpartId={query.counterpart}
+                  activeStoreId={activeStoreId}
+                  selectedStoreId={selectedStoreId}
+                  onActivateStore={setActiveStoreId}
+                  onSelectStore={handleSelectStore}
+                  scrollTarget={scrollTarget}
+                  hiddenTiers={hiddenTiers}
+                  onTouchStart={handleSwipeTouchStart}
+                  onTouchEnd={handleListSwipeEnd}
+                  banner={
+                    searchError && hasVisibleStores ? (
+                      <div
+                        data-testid="evaluation-error-banner"
+                        className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
                       >
-                        もう一度読み込む
-                      </button>
-                    </div>
+                        {searchError}
+                      </div>
+                    ) : null
+                  }
+                  footer={
+                    <>
+                      {shouldShowStoreSkeleton && (
+                        <StoreListSkeletonItems count={3} />
+                      )}
+                      {loadMoreError && (
+                        <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
+                          <div>{loadMoreError}</div>
+                          <button
+                            type="button"
+                            onClick={loadMore}
+                            className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+                          >
+                            もう一度読み込む
+                          </button>
+                        </div>
+                      )}
+                      <div
+                        ref={loadMoreRef}
+                        data-testid="results-load-more-sentinel"
+                      />
+                    </>
+                  }
+                />
+              </div>
+              <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+                <ResultsMap
+                  stores={restaurants}
+                  bookingSummary={chatBookingSummary}
+                  activeStoreId={activeStoreId}
+                  focusStoreId={selectedStoreId}
+                  onMarkerClick={handleMarkerClick}
+                  onCenterChanged={handleMapCenterChanged}
+                  showSearchThisArea={showSearchThisArea}
+                  onSearchThisArea={searchThisArea}
+                  hiddenTiers={hiddenTiers}
+                  onToggleTier={toggleHiddenTier}
+                  compareIds={state.compareIds}
+                  hiddenCompareGroups={hiddenCompareGroups}
+                  onToggleCompareGroup={toggleHiddenCompareGroup}
+                />
+                <div className="hidden md:block">
+                  {selectedStore && (
+                    <StoreDetailPanel
+                      key={selectedStore.id}
+                      store={selectedStore}
+                      onClose={() => setSelectedStoreId(null)}
+                    />
                   )}
-                  <div
-                    ref={loadMoreRef}
-                    data-testid="results-load-more-sentinel"
-                  />
-                </>
-              }
-            />
-            <div
-              className={`relative min-w-0 flex-1 ${mobileView === "map" ? "block" : "hidden"} md:block`}
-            >
-              <ResultsMap
-                stores={restaurants}
-                bookingSummary={chatBookingSummary}
-                activeStoreId={activeStoreId}
-                focusStoreId={selectedStoreId}
-                onMarkerClick={handleMarkerClick}
-                onCenterChanged={handleMapCenterChanged}
-                showSearchThisArea={showSearchThisArea}
-                onSearchThisArea={searchThisArea}
-                hiddenTiers={hiddenTiers}
-                onToggleTier={toggleHiddenTier}
-                compareIds={state.compareIds}
-                hiddenCompareGroups={hiddenCompareGroups}
-                onToggleCompareGroup={toggleHiddenCompareGroup}
-              />
-              <div className="hidden md:block">
-                {selectedStore && (
-                  <StoreDetailPanel
-                    key={selectedStore.id}
-                    store={selectedStore}
-                    onClose={() => setSelectedStoreId(null)}
-                  />
-                )}
-                {(canCompare || isCompareOpen) && (
-                  <ComparePanel
-                    stores={compareStores}
-                    counterpartId={query.counterpart}
-                    isOpen={isCompareOpen}
-                  />
-                )}
+                  {(canCompare || isCompareOpen) && (
+                    <ComparePanel
+                      stores={compareStores}
+                      counterpartId={query.counterpart}
+                      isOpen={isCompareOpen}
+                    />
+                  )}
+                </div>
               </div>
             </div>
             <div className="md:hidden">
