@@ -765,11 +765,23 @@ export function ResultsScreen() {
             </div>
             <div className="md:hidden">
               {selectedStore && (
-                <StoreDetailPanel
-                  key={selectedStore.id}
-                  store={selectedStore}
-                  onClose={() => setSelectedStoreId(null)}
-                />
+                <>
+                  {/* 一覧表示中は、パネルの inset 余白にスクロール中のカードがはみ出すことがあり、
+                      そこをタップすると閉じずにカードへ貫通してしまう。全面バックドロップを敷いて
+                      確実に閉じられるようにする（地図表示中はマーカー間の直接切り替えを妨げないよう対象外）。 */}
+                  {mobileView === "list" && (
+                    <div
+                      className={cn("absolute inset-0", Z_INDEX.storeDetailBackdrop)}
+                      onClick={() => setSelectedStoreId(null)}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <StoreDetailPanel
+                    key={selectedStore.id}
+                    store={selectedStore}
+                    onClose={() => setSelectedStoreId(null)}
+                  />
+                </>
               )}
               {(canCompare || isCompareOpen) && (
                 <ComparePanel
