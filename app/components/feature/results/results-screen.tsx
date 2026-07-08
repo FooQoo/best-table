@@ -46,7 +46,7 @@ type MapSearchCenter = { lat: number; lng: number };
 type MobileResultsView = "list" | "map";
 
 type SearchStreamEvent =
-  | { type: "phase"; phase: Exclude<SearchPhase, "condition"> }
+  | { type: "phase"; phase: SearchPhase }
   | { type: "restaurant"; restaurant: Restaurant }
   | { type: "restaurant-evaluated"; restaurant: Restaurant }
   | {
@@ -372,7 +372,7 @@ export function ResultsScreen() {
         setIsLoadingMore(true);
       }
       setLoadMoreError(null);
-      setSearchPhase("condition");
+      setSearchPhase(null);
       setPhaseRestaurantCount(0);
 
       try {
