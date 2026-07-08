@@ -42,6 +42,12 @@ describe("pumpRestaurantSearchStream", () => {
         hasMore: false,
         nextOffset: null,
       })),
+      searchBase: vi.fn(async () => ({
+        restaurants: [],
+        fromCache: false,
+        hasMore: false,
+        nextOffset: null,
+      })),
     };
     const chunks: string[] = [];
     const writer = {

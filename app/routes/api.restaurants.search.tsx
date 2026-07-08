@@ -40,7 +40,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
   const repository = getRestaurantSearchRepository();
   try {
-    const result = await repository.search(condition, { limit, offset });
+    const result = await repository.searchBase(condition, { limit, offset });
     console.info("[restaurants-search-route] complete", {
       count: result.restaurants.length,
       fromCache: result.fromCache,

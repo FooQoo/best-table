@@ -61,6 +61,13 @@ type SubmitSearchOptions = {
   excludeExistingRestaurants?: boolean;
 };
 
+type RestaurantSearchResponse = {
+  restaurants: Restaurant[];
+  fromCache: boolean;
+  hasMore: boolean;
+  nextOffset: number | null;
+};
+
 export function canRequestMoreResults(input: {
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -376,7 +383,8 @@ export function ResultsScreen() {
       setPhaseRestaurantCount(0);
 
       try {
-        const response = await fetch("/api/restaurants/search/stream", {
+        setSearchPhase("searching");
+        const searchResponse = await fetch("/api/restaurants/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -396,11 +404,52 @@ export function ResultsScreen() {
           }),
           signal: controller.signal,
         });
-        if (!response.ok || !response.body) {
-          throw new Error("Restaurant search stream failed.");
+        if (!searchResponse.ok) {
+          throw new Error("Restaurant search failed.");
         }
 
-        const reader = response.body.getReader();
+        const searchResult =
+          (await searchResponse.json()) as RestaurantSearchResponse;
+        if (!Array.isArray(searchResult.restaurants)) {
+          throw new Error("Restaurant search response is invalid.");
+        }
+
+        if (mode === "initial") {
+          setRestaurants(searchResult.restaurants);
+        } else {
+          appendRestaurants(searchResult.restaurants);
+        }
+        setHasMore(searchResult.hasMore);
+        setNextOffset(searchResult.nextOffset);
+        setHasSearched(true);
+
+        if (searchResult.restaurants.length === 0) {
+          return;
+        }
+
+        setSearchPhase("evaluating");
+        const evaluationResponse = await fetch(
+          "/api/restaurants/evaluate/stream",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...toRestaurantSearchCondition(
+                query,
+                searchCenter
+                  ? { latitude: searchCenter.lat, longitude: searchCenter.lng }
+                  : null,
+              ),
+              restaurants: searchResult.restaurants,
+            }),
+            signal: controller.signal,
+          },
+        );
+        if (!evaluationResponse.ok || !evaluationResponse.body) {
+          throw new Error("Restaurant evaluation stream failed.");
+        }
+
+        const reader = evaluationResponse.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
 
@@ -427,10 +476,6 @@ export function ResultsScreen() {
             if (parsed.type === "phase") {
               setSearchPhase(parsed.phase);
             }
-            if (parsed.type === "restaurant") {
-              appendRestaurants([parsed.restaurant]);
-              setHasSearched(true);
-            }
             if (parsed.type === "restaurant-evaluated") {
               updateRestaurant(parsed.restaurant);
               setPhaseRestaurantCount((count) => count + 1);
@@ -441,11 +486,6 @@ export function ResultsScreen() {
               } else {
                 setLoadMoreError(parsed.message);
               }
-            }
-            if (parsed.type === "done") {
-              setHasMore(parsed.hasMore);
-              setNextOffset(parsed.nextOffset);
-              setHasSearched(true);
             }
           }
         }
