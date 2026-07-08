@@ -12,7 +12,7 @@ export function AppLayout() {
   };
 
   return (
-    <div className="h-screen bg-[#f7f4ee] flex flex-col overflow-hidden">
+    <div className="h-dvh bg-[#f7f4ee] flex flex-col overflow-hidden">
       <div className="h-16 flex-none bg-[#12202f] flex items-center justify-between gap-3 px-4 shadow-[0_1px_0_rgba(200,162,74,.35)] sm:px-8">
         <button
           type="button"

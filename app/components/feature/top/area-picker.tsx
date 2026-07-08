@@ -58,7 +58,7 @@ export function AreaPicker() {
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="flex h-[min(420px,calc(100vh-96px))] w-[min(calc(100vw-32px),460px)] flex-col gap-0 overflow-hidden p-0"
+        className="flex h-[min(420px,calc(100dvh-96px))] w-[min(calc(100vw-32px),460px)] flex-col gap-0 overflow-hidden p-0"
       >
         <div className="flex-1 overflow-hidden relative">
           <div

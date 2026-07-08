@@ -45,7 +45,7 @@ export function HearingScreen() {
   };
 
   return (
-    <div className="box-border flex min-h-[calc(100vh-64px)] justify-center overflow-y-auto px-4 py-5 sm:h-[calc(100vh-64px)] sm:items-start sm:px-6 sm:py-8">
+    <div className="box-border flex min-h-[calc(100dvh-64px)] justify-center overflow-y-auto px-4 py-5 sm:h-[calc(100dvh-64px)] sm:items-start sm:px-6 sm:py-8">
       <div className="flex w-[720px] max-w-full flex-col sm:max-h-full">
         <StepProgress step={step} />
 
