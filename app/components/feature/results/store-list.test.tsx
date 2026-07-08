@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
+import type { CompareVisibilityGroup } from "~/components/feature/maps/map-filter-panel";
 import { STORES } from "~/mocks/data";
 import { StoreList, type StoreListScrollTarget } from "./store-list";
 
@@ -20,6 +21,8 @@ function setup(
     stores?: Restaurant[];
     scrollTarget?: StoreListScrollTarget | null;
     hiddenTiers?: ReadonlySet<TierFilterKey>;
+    hiddenCompareGroups?: ReadonlySet<CompareVisibilityGroup>;
+    compareIds?: string[];
     banner?: ReactNode;
   } = {},
 ) {
@@ -27,7 +30,7 @@ function setup(
     <MemoryRouter>
       <StoreList
         stores={options.stores ?? [store]}
-        compareIds={[]}
+        compareIds={options.compareIds ?? []}
         onToggleCompare={() => {}}
         counterpartId={counterpartId}
         activeStoreId={options.activeStoreId}
@@ -36,6 +39,7 @@ function setup(
         onSelectStore={options.onSelectStore}
         scrollTarget={options.scrollTarget}
         hiddenTiers={options.hiddenTiers}
+        hiddenCompareGroups={options.hiddenCompareGroups}
         banner={options.banner}
       />
     </MemoryRouter>,
@@ -73,19 +77,17 @@ describe("StoreList の地図連動", () => {
   it("activeStoreId と一致する店舗カードを強調する", () => {
     setup(null, { activeStoreId: store.id });
 
-    expect(screen.getByText(store.name).closest("[data-active]")).toHaveAttribute(
-      "data-active",
-      "true",
-    );
+    expect(
+      screen.getByText(store.name).closest("[data-active]"),
+    ).toHaveAttribute("data-active", "true");
   });
 
   it("selectedStoreId と一致する店舗カードにパネルON状態のリングを付ける", () => {
     setup(null, { selectedStoreId: store.id });
 
-    expect(screen.getByText(store.name).closest("[data-selected]")).toHaveAttribute(
-      "data-selected",
-      "true",
-    );
+    expect(
+      screen.getByText(store.name).closest("[data-selected]"),
+    ).toHaveAttribute("data-selected", "true");
   });
 
   it("地図凡例で非表示にしたマッチ度の店舗カードをグレー表示にする", () => {
@@ -95,10 +97,24 @@ describe("StoreList の地図連動", () => {
       hiddenTiers: new Set(["high"]),
     });
 
-    expect(screen.getByText(store.name).closest("[data-dimmed-by-legend]")).toHaveAttribute(
-      "data-dimmed-by-legend",
-      "true",
-    );
+    expect(
+      screen.getByText(store.name).closest("[data-dimmed-by-legend]"),
+    ).toHaveAttribute("data-dimmed-by-legend", "true");
+  });
+
+  it("地図フィルタで非表示にした比較グループの店舗カードをグレー表示にする", () => {
+    setup(null, {
+      stores: [store, STORES[1]],
+      compareIds: [store.id],
+      hiddenCompareGroups: new Set(["excluded"]),
+    });
+
+    expect(
+      screen.getByText(store.name).closest("[data-dimmed-by-legend]"),
+    ).toHaveAttribute("data-dimmed-by-legend", "false");
+    expect(
+      screen.getByText(STORES[1].name).closest("[data-dimmed-by-legend]"),
+    ).toHaveAttribute("data-dimmed-by-legend", "true");
   });
 
   it("店舗カードに hover すると active 店舗を通知する", async () => {
@@ -116,7 +132,9 @@ describe("StoreList の地図連動", () => {
     const onSelectStore = vi.fn();
     setup(null, { onSelectStore });
 
-    await user.click(screen.getByRole("button", { name: `${store.name}の詳細を表示` }));
+    await user.click(
+      screen.getByRole("button", { name: `${store.name}の詳細を表示` }),
+    );
 
     expect(onSelectStore).toHaveBeenCalledWith(store.id);
   });
@@ -138,7 +156,9 @@ describe("StoreList の地図連動", () => {
 
     setup(null, { stores, scrollTarget: { storeId: STORES[1].id } });
 
-    const targetCard = screen.getByText(STORES[1].name).closest("[data-active]");
+    const targetCard = screen
+      .getByText(STORES[1].name)
+      .closest("[data-active]");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     expect(scrollIntoView.mock.instances[0]).toBe(targetCard);
   });
