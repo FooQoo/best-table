@@ -165,6 +165,48 @@ function excludeExistingCandidates(
   );
 }
 
+function toPlaceSearchCandidate(restaurant: Restaurant): PlaceSearchCandidate {
+  return {
+    placeId: restaurant.placeId ?? restaurant.id,
+    name: restaurant.name,
+    address: restaurant.address,
+    location: restaurant.location,
+    phone: restaurant.phone,
+    photoName: null,
+    genre: restaurant.genre,
+  };
+}
+
+function applyEvaluationToRestaurant(input: {
+  restaurant: Restaurant;
+  evaluation: RestaurantEvaluationResult;
+  condition: RestaurantSearchQueryCondition;
+  generatedAt: string;
+}): Restaurant {
+  const { restaurant, evaluation, condition, generatedAt } = input;
+  return {
+    ...restaurant,
+    matchTier: computeMatchTier({
+      restaurant: evaluation,
+      counterpartId: condition.counterpart,
+      priorities: condition.priorities,
+      budgetMin: condition.budgetMin,
+      budgetMax: condition.budgetMax,
+    }),
+    room: evaluation.room,
+    quiet: evaluation.quiet,
+    prestige: evaluation.prestige,
+    service: evaluation.service,
+    access: evaluation.access,
+    budgetLabel: evaluation.budgetLabel,
+    concerns: evaluation.concerns,
+    matchingSummary: evaluation.matchingSummary,
+    evidence: evaluation.evidence,
+    confidence: evaluation.confidence,
+    generatedAt,
+  };
+}
+
 export function resolveRestaurantAreaFromAddress(address: string | null): string | null {
   if (!address) return null;
   const normalized = address
@@ -350,6 +392,143 @@ export async function searchRestaurants(
     hasMore,
     nextOffset: hasMore ? offset + restaurants.length : null,
   };
+}
+
+export async function searchBaseRestaurants(
+  condition: RestaurantSearchQueryCondition,
+  pagination: RestaurantSearchPagination = {},
+  deps: RestaurantSearchDeps = defaultDeps,
+): Promise<RestaurantSearchResult> {
+  const logId = createSearchLogId();
+  const startedAt = performance.now();
+  const logger = deps.logger;
+  const limit = Math.max(1, Math.min(pagination.limit ?? 10, 20));
+  const offset = Math.max(0, pagination.offset ?? 0);
+  const existingRestaurantKeys = pagination.existingRestaurantKeys ?? [];
+  const searchKey = `${buildSearchConditionKey(condition)}|limit=${limit}|offset=${offset}`;
+  logger?.info("[restaurant-search-base] start", {
+    logId,
+    condition: summarizeRestaurantSearchCondition(condition),
+    limit,
+    offset,
+  });
+
+  const latLng = condition.searchLatLng ?? resolveAreaLatLng(condition.selectedAreas);
+  if (!latLng) {
+    logger?.warn("[restaurant-search-base] area-not-resolved", {
+      logId,
+      areas: condition.selectedAreas,
+      elapsedMs: elapsedMs(startedAt),
+    });
+    return { restaurants: [], fromCache: false, hasMore: false, nextOffset: null };
+  }
+
+  const candidates = await resolvePlaceCandidates({
+    condition,
+    latLng,
+    pageSize: offset + limit,
+    deps,
+    logId,
+    startedAt,
+    logPrefix: "restaurant-search-base",
+  });
+
+  if (candidates.length === 0) {
+    return { restaurants: [], fromCache: false, hasMore: false, nextOffset: null };
+  }
+
+  const newCandidates = excludeExistingCandidates(candidates, existingRestaurantKeys);
+  const pageCandidates = newCandidates.slice(offset, offset + limit);
+  const generatedAt = new Date().toISOString();
+  const restaurants = pageCandidates.map((candidate, index) =>
+    buildRestaurant({
+      candidate,
+      evaluation: null,
+      condition,
+      searchKey,
+      absoluteIndex: offset + index,
+      generatedAt,
+    }),
+  );
+  const hasMore = offset + restaurants.length < newCandidates.length;
+
+  logger?.info("[restaurant-search-base] complete", {
+    logId,
+    returned: restaurants.length,
+    candidateCount: candidates.length,
+    newCandidateCount: newCandidates.length,
+    hasMore,
+    nextOffset: hasMore ? offset + restaurants.length : null,
+    elapsedMs: elapsedMs(startedAt),
+  });
+
+  return {
+    restaurants,
+    fromCache: false,
+    hasMore,
+    nextOffset: hasMore ? offset + restaurants.length : null,
+  };
+}
+
+export async function* streamEvaluationsForRestaurants(
+  condition: RestaurantSearchQueryCondition,
+  restaurants: Restaurant[],
+  deps: RestaurantSearchDeps = defaultDeps,
+): AsyncGenerator<RestaurantSearchStreamEvent> {
+  const logId = createSearchLogId();
+  const startedAt = performance.now();
+  const logger = deps.logger;
+  const candidates = restaurants.map(toPlaceSearchCandidate);
+  const generatedAt = new Date().toISOString();
+  yield { type: "phase", phase: "evaluating" };
+
+  const evaluated = new Set<number>();
+  try {
+    for await (const evaluation of deps.streamEvaluations({
+      prompt: buildEvaluationPrompt(condition, candidates),
+    })) {
+      const candidateIndex = evaluation.candidateIndex - 1;
+      const restaurant = restaurants[candidateIndex];
+      if (!restaurant) {
+        logger?.warn("[restaurant-evaluation-stream] evaluation-index-unmatched", {
+          logId,
+          candidateIndex: evaluation.candidateIndex,
+          candidateName: evaluation.candidateName,
+        });
+        continue;
+      }
+      if (evaluated.has(candidateIndex)) continue;
+
+      evaluated.add(candidateIndex);
+      yield {
+        type: "restaurant-evaluated",
+        restaurant: applyEvaluationToRestaurant({
+          restaurant,
+          evaluation,
+          condition,
+          generatedAt,
+        }),
+      };
+    }
+  } catch (error) {
+    logger?.error("[restaurant-evaluation-stream] failed", {
+      logId,
+      error: summarizeError(error),
+      elapsedMs: elapsedMs(startedAt),
+    });
+    yield {
+      type: "error",
+      message: "一部の店舗のAI評価取得に失敗しました。表示中の情報は基本情報のみです。",
+    };
+  }
+
+  logger?.info("[restaurant-evaluation-stream] complete", {
+    logId,
+    requested: restaurants.length,
+    evaluatedCount: evaluated.size,
+    elapsedMs: elapsedMs(startedAt),
+  });
+  yield { type: "done", fromCache: false, hasMore: false, nextOffset: null };
 }
 
 export async function* streamRestaurants(

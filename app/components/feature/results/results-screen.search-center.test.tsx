@@ -62,14 +62,25 @@ const restaurant: Restaurant = {
   generatedAt: null,
 };
 
-function streamResponse() {
+function searchResponse() {
+  return Promise.resolve(
+    Response.json({
+      restaurants: [restaurant],
+      fromCache: false,
+      hasMore: false,
+      nextOffset: null,
+    }),
+  );
+}
+
+function evaluationStreamResponse() {
   const encoder = new TextEncoder();
-  const body = [
-    { type: "restaurant", restaurant },
-    { type: "done", fromCache: false, hasMore: false, nextOffset: null },
-  ]
-    .map((event) => JSON.stringify(event))
-    .join("\n");
+  const body = JSON.stringify({
+    type: "done",
+    fromCache: false,
+    hasMore: false,
+    nextOffset: null,
+  });
 
   return Promise.resolve(
     new Response(
@@ -95,7 +106,14 @@ afterEach(() => {
 
 describe("ResultsScreen search center", () => {
   it("条件の再検索では直前の地図中心座標を持ち越さない", async () => {
-    vi.spyOn(globalThis, "fetch").mockImplementation(() => streamResponse());
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url === "/api/restaurants/search") return searchResponse();
+      if (url === "/api/restaurants/evaluate/stream") {
+        return evaluationStreamResponse();
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+    });
     const user = userEvent.setup();
 
     render(
@@ -110,15 +128,15 @@ describe("ResultsScreen search center", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(parseFetchBody(0).searchLatLng).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "initial center" }));
     await user.click(screen.getByRole("button", { name: "moved center" }));
     await user.click(screen.getByRole("button", { name: "このエリアを検索" }));
 
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    expect(parseFetchBody(1).searchLatLng).toEqual({
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    expect(parseFetchBody(2).searchLatLng).toEqual({
       latitude: 35.6812,
       longitude: 139.7671,
     });
@@ -128,8 +146,8 @@ describe("ResultsScreen search center", () => {
       screen.getByRole("button", { name: "条件の変更を完了する" }),
     );
 
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
-    expect(parseFetchBody(2).selectedAreas).toEqual(["銀座"]);
-    expect(parseFetchBody(2).searchLatLng).toBeNull();
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(6));
+    expect(parseFetchBody(4).selectedAreas).toEqual(["銀座"]);
+    expect(parseFetchBody(4).searchLatLng).toBeNull();
   }, 30_000);
 });

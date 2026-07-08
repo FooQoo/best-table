@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isRestaurant, type Restaurant } from "~/domain/models/restaurant";
 import {
+  searchBaseRestaurants,
   searchRestaurants,
   type RestaurantSearchPagination,
   type RestaurantSearchResult,
@@ -16,10 +17,15 @@ export type RestaurantSearchRepository = {
     condition: RestaurantSearchQueryCondition,
     pagination: RestaurantSearchPagination,
   ): Promise<RestaurantSearchResult>;
+  searchBase(
+    condition: RestaurantSearchQueryCondition,
+    pagination: RestaurantSearchPagination,
+  ): Promise<RestaurantSearchResult>;
 };
 
 export const realRestaurantSearchRepository: RestaurantSearchRepository = {
   search: searchRestaurants,
+  searchBase: searchBaseRestaurants,
 };
 
 // 実際に `/api/restaurants/search` を1回叩いた結果をディスク上の JSON として保存し、
@@ -89,6 +95,45 @@ export function createMockRestaurantSearchRepository(
   const delayMs = options.delayMs ?? 1000;
 
   return {
+    async searchBase(_condition, pagination) {
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+
+      const limit = pagination.limit ?? 10;
+      const offset = pagination.offset ?? 0;
+      const all = loadRestaurants();
+      const restaurants = all.slice(offset, offset + limit).map((restaurant) => ({
+        ...restaurant,
+        matchTier: null,
+        room: null,
+        quiet: null,
+        prestige: null,
+        service: null,
+        access: null,
+        budgetLabel: null,
+        concerns: [],
+        matchingSummary: null,
+        evidence: [],
+        confidence: null,
+        generatedAt: null,
+      }));
+      const hasMore = offset + restaurants.length < all.length;
+      console.info("[restaurant-search-base-mock] complete", {
+        total: all.length,
+        returned: restaurants.length,
+        limit,
+        offset,
+        hasMore,
+      });
+
+      return {
+        restaurants,
+        fromCache: false,
+        hasMore,
+        nextOffset: hasMore ? offset + restaurants.length : null,
+      };
+    },
     async search(_condition, pagination) {
       if (delayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
