@@ -1,12 +1,10 @@
-export type SearchPhase = "condition" | "searching" | "evaluating";
+export type SearchPhase = "searching" | "evaluating";
 
 export function getSearchPhaseMessage(
   phase: SearchPhase,
   restaurantCount: number,
 ): string {
   switch (phase) {
-    case "condition":
-      return "検索条件を確認しています…";
     case "searching":
       return "周辺の候補店舗を検索しています…";
     case "evaluating":
