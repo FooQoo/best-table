@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode, type TouchEventHandler } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
@@ -30,9 +30,6 @@ type StoreListProps = {
   footer?: ReactNode;
   banner?: ReactNode;
   className?: string;
-  onTouchStart?: TouchEventHandler<HTMLDivElement>;
-  onTouchMove?: TouchEventHandler<HTMLDivElement>;
-  onTouchEnd?: TouchEventHandler<HTMLDivElement>;
 };
 
 export function StoreList({
@@ -49,9 +46,6 @@ export function StoreList({
   footer,
   banner,
   className,
-  onTouchStart,
-  onTouchMove,
-  onTouchEnd,
 }: StoreListProps) {
   const t = getTheme();
   const compareCount = compareIds.length;
@@ -67,9 +61,6 @@ export function StoreList({
   return (
     <div
       className={`w-full flex-none overflow-y-auto bg-[#f7f4ee] p-4 flex flex-col gap-4 md:w-[400px] md:p-6 ${className ?? ""}`}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
     >
       {banner}
       <div className="font-bold text-[15px]">{stores.length}件</div>

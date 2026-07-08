@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type TouchEvent as ReactTouchEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
@@ -146,12 +140,7 @@ export function ResultsScreen() {
   const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [mobileView, setMobileView] = useState<MobileResultsView>("list");
   const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
-  // スマホアプリ風に、スワイプ中も指へ 1:1 で追従させるためのドラッグ状態。
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const dragAxisRef = useRef<"horizontal" | "vertical" | null>(null);
-  const dragPanelWidthRef = useRef(0);
-  // トラックの transform を inline 制御するのはモバイル幅のときだけにし、PC では従来レイアウトを保つ。
+  // モバイル幅かどうか。一覧→地図の履歴プッシュはモバイルのタブ切り替えだけに限定する。
   const [isMobileLayout, setIsMobileLayout] = useState(false);
 
   useEffect(() => {
@@ -163,75 +152,55 @@ export function ResultsScreen() {
     return () => mql.removeEventListener("change", update);
   }, []);
 
-  const handleSwipeTouchStart = useCallback(
-    (event: ReactTouchEvent) => {
-      if (!isMobileLayout) return;
-      const touch = event.touches[0];
-      if (!touch) return;
-      dragStartRef.current = { x: touch.clientX, y: touch.clientY };
-      dragAxisRef.current = null;
-      const track = trackRef.current;
-      // トラック幅は 200%（=パネル2枚分）なので、半分が1画面（パネル1枚）の幅。
-      dragPanelWidthRef.current = track
-        ? track.clientWidth / 2
-        : window.innerWidth;
-    },
-    [isMobileLayout],
-  );
+  // モバイルで地図へ切り替えるとき、URL は変えずに履歴エントリを1つ積む。
+  // これにより端末の「戻る」操作（ジェスチャー/ボタン）が /results を離れず、
+  // 「地図→一覧に戻る」という無害な操作として扱える。
+  const goToMap = useCallback(() => {
+    if (mobileView === "map") return;
+    if (isMobileLayout) {
+      window.history.pushState(
+        { bestTableMapView: true },
+        "",
+        window.location.href,
+      );
+    }
+    setMobileView("map");
+  }, [mobileView, isMobileLayout]);
 
-  const handleSwipeTouchMove = useCallback(
-    (event: ReactTouchEvent) => {
-      const start = dragStartRef.current;
-      const track = trackRef.current;
-      if (!start || !track) return;
-      const touch = event.touches[0];
-      if (!touch) return;
-      const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
-      // 最初のわずかな移動で縦スクロールか横スワイプかを判定し、以後はその軸に固定する。
-      if (dragAxisRef.current === null) {
-        if (Math.hypot(dx, dy) < 8) return;
-        dragAxisRef.current =
-          Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
-        if (dragAxisRef.current === "horizontal") {
-          // ドラッグ中は transition を切って指へ 1:1 追従させる。
-          track.style.transition = "none";
-        }
-      }
-      if (dragAxisRef.current !== "horizontal") return;
-      const width = dragPanelWidthRef.current || 1;
-      const base = mobileView === "map" ? -width : 0;
-      const offset = Math.min(0, Math.max(-width, base + dx));
-      track.style.transform = `translateX(${offset}px)`;
-    },
-    [mobileView],
-  );
+  const goToList = useCallback(() => {
+    if (mobileView !== "map") return;
+    const state = isMobileLayout
+      ? (window.history.state as { bestTableMapView?: boolean } | null)
+      : null;
+    if (state?.bestTableMapView) {
+      // 積んだ履歴エントリを消費する。実際の切り替えは popstate ハンドラが行う。
+      window.history.back();
+      return;
+    }
+    setMobileView("list");
+  }, [mobileView, isMobileLayout]);
 
-  const handleSwipeTouchEnd = useCallback(
-    (event: ReactTouchEvent) => {
-      const start = dragStartRef.current;
-      const track = trackRef.current;
-      dragStartRef.current = null;
-      if (!start || !track) return;
-      const wasHorizontal = dragAxisRef.current === "horizontal";
-      dragAxisRef.current = null;
-      if (!wasHorizontal) return;
-      const touch = event.changedTouches[0];
-      const width = dragPanelWidthRef.current || 1;
-      const dx = touch ? touch.clientX - start.x : 0;
-      // 画面幅の 1/4 を超えて引いたらビューを切り替え、そうでなければ元へスナップして戻す。
-      const threshold = width * 0.25;
-      let target = mobileView;
-      if (mobileView === "list" && dx < -threshold) target = "map";
-      if (mobileView === "map" && dx > threshold) target = "list";
-      // transition を戻し、目標位置へアニメーションでスナップさせる。
-      track.style.transition = "";
-      track.style.transform =
-        target === "map" ? "translateX(-50%)" : "translateX(0%)";
-      setMobileView(target);
-    },
-    [mobileView],
-  );
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as { bestTableMapView?: boolean } | null;
+      setMobileView(state?.bestTableMapView ? "map" : "list");
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // 新規検索時は一覧へ強制的に戻す。積まれた履歴エントリが残っていると、後で
+  // 「戻る」を押したときにページを離れず無反応になってしまうため、あわせて無効化する。
+  const resetMobileViewForSearch = useCallback(() => {
+    if (
+      isMobileLayout &&
+      (window.history.state as { bestTableMapView?: boolean } | null)
+        ?.bestTableMapView
+    ) {
+      window.history.replaceState(null, "", window.location.href);
+    }
+    setMobileView("list");
+  }, [isMobileLayout]);
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
@@ -260,12 +229,15 @@ export function ResultsScreen() {
     [],
   );
 
-  const handleMarkerClick = useCallback((storeId: string) => {
-    setActiveStoreId(storeId);
-    setSelectedStoreId(storeId);
-    setScrollTarget({ storeId });
-    setMobileView("map");
-  }, []);
+  const handleMarkerClick = useCallback(
+    (storeId: string) => {
+      setActiveStoreId(storeId);
+      setSelectedStoreId(storeId);
+      setScrollTarget({ storeId });
+      goToMap();
+    },
+    [goToMap],
+  );
 
   const handleSelectStore = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -304,7 +276,7 @@ export function ResultsScreen() {
         setActiveStoreId(null);
         setSelectedStoreId(null);
         setIsCompareOpen(false);
-        setMobileView("list");
+        resetMobileViewForSearch();
       } else {
         setIsLoadingMore(true);
       }
@@ -413,6 +385,7 @@ export function ResultsScreen() {
     [
       appendRestaurants,
       query,
+      resetMobileViewForSearch,
       restaurants,
       setRestaurants,
       updateRestaurant,
@@ -561,14 +534,12 @@ export function ResultsScreen() {
     }
   }, [query]);
 
-  // モバイルでは一覧/地図を横並びのトラックに載せ、translateX でスライド切り替えする。
-  // 位置はモバイル幅のときだけ inline transform で制御し（ドラッグ中は指へ追従）、
-  // PC(md:) では inline transform を当てず、従来どおり左右分割レイアウトに戻す。
-  const carouselTrackClass =
-    "flex w-[200%] flex-none transition-transform duration-300 ease-out will-change-transform md:w-full";
-  const carouselTrackStyle = isMobileLayout
-    ? { transform: `translateX(${mobileView === "map" ? "-50%" : "0%"})` }
-    : undefined;
+  // モバイルでは一覧/地図を横並びのトラックに載せ、タブ切り替え時に translateX でスライドする。
+  // PC(md:) ではトラックを無効化し、従来どおり左右分割レイアウトに戻す。
+  const carouselTrackClass = cn(
+    "flex w-[200%] flex-none transition-transform duration-300 ease-out will-change-transform md:w-full md:translate-x-0",
+    mobileView === "map" ? "-translate-x-1/2" : "translate-x-0",
+  );
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden box-border">
@@ -586,18 +557,13 @@ export function ResultsScreen() {
         phaseRestaurantCount={phaseRestaurantCount}
       />
 
-      <div
-        className="flex-none touch-pan-y border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden"
-        onTouchStart={handleSwipeTouchStart}
-        onTouchMove={handleSwipeTouchMove}
-        onTouchEnd={handleSwipeTouchEnd}
-      >
+      <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
         <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
           {(["list", "map"] as const).map((view) => (
             <button
               key={view}
               type="button"
-              onClick={() => setMobileView(view)}
+              onClick={() => (view === "map" ? goToMap() : goToList())}
               aria-pressed={mobileView === view}
               className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
             >
@@ -609,25 +575,11 @@ export function ResultsScreen() {
 
       <div className="relative flex-1 flex overflow-hidden min-h-0">
         {shouldShowInitialSkeleton ? (
-          <div
-            ref={trackRef}
-            className={carouselTrackClass}
-            style={carouselTrackStyle}
-          >
+          <div className={carouselTrackClass}>
             <div className="flex w-1/2 flex-none md:w-[400px]">
               <StoreListSkeleton />
             </div>
             <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
-              <div
-                className={cn(
-                  "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
-                  Z_INDEX.mapSwipeEdge,
-                )}
-                onTouchStart={handleSwipeTouchStart}
-                onTouchMove={handleSwipeTouchMove}
-                onTouchEnd={handleSwipeTouchEnd}
-                aria-hidden="true"
-              />
               <ResultsMap
                 stores={[]}
                 bookingSummary={chatBookingSummary}
@@ -663,11 +615,7 @@ export function ResultsScreen() {
           </div>
         ) : (
           <>
-            <div
-              ref={trackRef}
-              className={carouselTrackClass}
-              style={carouselTrackStyle}
-            >
+            <div className={carouselTrackClass}>
               <div className="flex w-1/2 flex-none md:w-[400px]">
                 <StoreList
                   stores={restaurants}
@@ -680,10 +628,6 @@ export function ResultsScreen() {
                   onSelectStore={handleSelectStore}
                   scrollTarget={scrollTarget}
                   hiddenTiers={hiddenTiers}
-                  className="touch-pan-y"
-                  onTouchStart={handleSwipeTouchStart}
-                  onTouchMove={handleSwipeTouchMove}
-                  onTouchEnd={handleSwipeTouchEnd}
                   banner={
                     searchError && hasVisibleStores ? (
                       <div
@@ -720,16 +664,6 @@ export function ResultsScreen() {
                 />
               </div>
               <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
-                <div
-                  className={cn(
-                    "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
-                    Z_INDEX.mapSwipeEdge,
-                  )}
-                  onTouchStart={handleSwipeTouchStart}
-                  onTouchMove={handleSwipeTouchMove}
-                  onTouchEnd={handleSwipeTouchEnd}
-                  aria-hidden="true"
-                />
                 <ResultsMap
                   stores={restaurants}
                   bookingSummary={chatBookingSummary}

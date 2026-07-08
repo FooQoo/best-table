@@ -13,9 +13,6 @@
 html,
 body {
   @apply bg-[#f7f4ee];
-  /* 横スワイプでブラウザの「戻る/進む」ナビゲーションが発動しないようにする（主に Chrome/Android）。
-     スワイプでの一覧⇔地図切り替えと競合させないため、横方向のオーバースクロールを無効化する。 */
-  overscroll-behavior-x: none;
 }
 
 @theme inline {

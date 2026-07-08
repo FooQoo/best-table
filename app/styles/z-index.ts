@@ -1,7 +1,6 @@
 // /results 画面で重なり合うオーバーレイの積み順を一元管理する。
 // 値は Tailwind の z-* ユーティリティ名（文字列）で持ち、下から上へ並べる。
 export const Z_INDEX = {
-  mapSwipeEdge: "z-10",
   mapControls: "z-10",
   storeDetailBackdrop: "z-10",
   mapActionButton: "z-20",
