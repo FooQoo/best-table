@@ -186,7 +186,7 @@ export function ResultsScreen() {
     const track = trackRef.current;
     if (!track) return;
     track.style.transition = "";
-    track.style.transform = "";
+    track.style.translate = "";
   }, []);
 
   const handleSwipeTouchStart = useCallback((event: ReactTouchEvent) => {
@@ -223,7 +223,7 @@ export function ResultsScreen() {
       const width = dragPanelWidthRef.current || 1;
       const base = mobileView === "map" ? -width : 0;
       const offset = Math.min(0, Math.max(-width, base + dx));
-      track.style.transform = `translateX(${offset}px)`;
+      track.style.translate = `${offset}px`;
     },
     [mobileView],
   );
@@ -239,8 +239,9 @@ export function ResultsScreen() {
       const touch = event.changedTouches[0];
       const width = dragPanelWidthRef.current || 1;
       const dx = touch ? touch.clientX - start.x : 0;
-      // 画面幅の 1/4 を超えて引いたらビューを切り替え、そうでなければ元へスナップして戻す。
-      const threshold = width * 0.25;
+      // 画面幅の 4割を超えて引いたらビューを切り替え、そうでなければ元へスナップして戻す。
+      // やや大きめの閾値にして、軽く触れただけで意図せず切り替わらないようにする。
+      const threshold = width * 0.4;
       const target: MobileResultsView =
         mobileView === "list" && dx < -threshold
           ? "map"
@@ -248,9 +249,8 @@ export function ResultsScreen() {
             ? "list"
             : mobileView;
       track.style.transition = "";
-      track.style.transform =
-        target === "map" ? "translateX(-50%)" : "translateX(0%)";
-      // 遷移が終わったら inline style を外し、className ベースの transform
+      track.style.translate = target === "map" ? "-50%" : "0%";
+      // 遷移が終わったら inline style を外し、className ベースの translate
       // （タブタップでの切り替え）に制御を戻す。念のためタイムアウトでも保険をかける。
       let cleaned = false;
       const cleanup = () => {
