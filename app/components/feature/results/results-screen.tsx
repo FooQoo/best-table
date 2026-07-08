@@ -626,7 +626,7 @@ export function ResultsScreen() {
   );
 
   return (
-    <div className="h-[calc(100dvh-64px)] flex flex-col overflow-hidden box-border">
+    <div className="relative h-[calc(100dvh-64px)] flex flex-col overflow-hidden box-border">
       <ResultsSummaryBar
         recapKeyword={recapKeyword}
         recapDateTime={recapDateTime}
@@ -817,13 +817,6 @@ export function ResultsScreen() {
                   />
                 </>
               )}
-              {(canCompare || isCompareOpen) && (
-                <ComparePanel
-                  stores={compareStores}
-                  counterpartId={query.counterpart}
-                  isOpen={isCompareOpen}
-                />
-              )}
             </div>
           </>
         )}
@@ -837,6 +830,16 @@ export function ResultsScreen() {
           setIsCompareOpen((open) => (open ? false : canCompare))
         }
       />
+
+      <div className="md:hidden">
+        {(canCompare || isCompareOpen) && (
+          <ComparePanel
+            stores={compareStores}
+            counterpartId={query.counterpart}
+            isOpen={isCompareOpen}
+          />
+        )}
+      </div>
     </div>
   );
 }
