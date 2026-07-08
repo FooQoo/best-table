@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
+import { useSearchParams } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
@@ -138,69 +145,61 @@ export function ResultsScreen() {
     Set<CompareVisibilityGroup>
   >(new Set());
   const [isEditingConditions, setIsEditingConditions] = useState(false);
-  const [mobileView, setMobileView] = useState<MobileResultsView>("list");
   const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
-  // モバイル幅かどうか。一覧→地図の履歴プッシュはモバイルのタブ切り替えだけに限定する。
-  const [isMobileLayout, setIsMobileLayout] = useState(false);
 
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const mql = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobileLayout(mql.matches);
-    update();
-    mql.addEventListener("change", update);
-    return () => mql.removeEventListener("change", update);
-  }, []);
+  // 「今どちらの画面を見ているか」は URL の view パラメータで表現する。検索条件
+  // （areas/date/... 等）とは別のキーなので、切り替えても再検索・再評価は起きない
+  // （setQueryState は view を含まない URLSearchParams で置き換えるため、条件編集を
+  // 確定すると view は自然に消え一覧へ戻る）。ブラウザの「戻る」は通常のページ内
+  // ナビゲーションとして働くので、地図表示中の「戻る」は一覧に戻るだけで
+  // /results を離れない。
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mobileView: MobileResultsView =
+    searchParams.get("view") === "map" ? "map" : "list";
 
-  // モバイルで地図へ切り替えるとき、URL は変えずに履歴エントリを1つ積む。
-  // これにより端末の「戻る」操作（ジェスチャー/ボタン）が /results を離れず、
-  // 「地図→一覧に戻る」という無害な操作として扱える。
-  const goToMap = useCallback(() => {
+  const switchToMap = useCallback(() => {
     if (mobileView === "map") return;
-    if (isMobileLayout) {
-      window.history.pushState(
-        { bestTableMapView: true },
-        "",
-        window.location.href,
-      );
-    }
-    setMobileView("map");
-  }, [mobileView, isMobileLayout]);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("view", "map");
+      return next;
+    });
+  }, [mobileView, setSearchParams]);
 
-  const goToList = useCallback(() => {
-    if (mobileView !== "map") return;
-    const state = isMobileLayout
-      ? (window.history.state as { bestTableMapView?: boolean } | null)
-      : null;
-    if (state?.bestTableMapView) {
-      // 積んだ履歴エントリを消費する。実際の切り替えは popstate ハンドラが行う。
-      window.history.back();
-      return;
-    }
-    setMobileView("list");
-  }, [mobileView, isMobileLayout]);
+  const switchToList = useCallback(() => {
+    if (mobileView === "list") return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("view");
+      return next;
+    });
+  }, [mobileView, setSearchParams]);
 
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      const state = event.state as { bestTableMapView?: boolean } | null;
-      setMobileView(state?.bestTableMapView ? "map" : "list");
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+  // 一覧を左にスワイプすると地図へ切り替える。リアルタイム追従はさせず、指を離した
+  // 時点の移動量だけで判定する（＝地図パンや端末の戻るジェスチャーと取り合わない）。
+  const listSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const SWIPE_THRESHOLD_PX = 40;
+
+  const handleListTouchStart = useCallback((event: ReactTouchEvent) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    listSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
   }, []);
 
-  // 新規検索時は一覧へ強制的に戻す。積まれた履歴エントリが残っていると、後で
-  // 「戻る」を押したときにページを離れず無反応になってしまうため、あわせて無効化する。
-  const resetMobileViewForSearch = useCallback(() => {
-    if (
-      isMobileLayout &&
-      (window.history.state as { bestTableMapView?: boolean } | null)
-        ?.bestTableMapView
-    ) {
-      window.history.replaceState(null, "", window.location.href);
-    }
-    setMobileView("list");
-  }, [isMobileLayout]);
+  const handleListTouchEnd = useCallback(
+    (event: ReactTouchEvent) => {
+      const start = listSwipeStartRef.current;
+      listSwipeStartRef.current = null;
+      const touch = event.changedTouches[0];
+      if (!start || !touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (dx > -SWIPE_THRESHOLD_PX) return;
+      if (Math.abs(dx) <= Math.abs(dy)) return;
+      switchToMap();
+    },
+    [switchToMap],
+  );
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
@@ -234,9 +233,9 @@ export function ResultsScreen() {
       setActiveStoreId(storeId);
       setSelectedStoreId(storeId);
       setScrollTarget({ storeId });
-      goToMap();
+      switchToMap();
     },
-    [goToMap],
+    [switchToMap],
   );
 
   const handleSelectStore = useCallback((storeId: string) => {
@@ -276,7 +275,6 @@ export function ResultsScreen() {
         setActiveStoreId(null);
         setSelectedStoreId(null);
         setIsCompareOpen(false);
-        resetMobileViewForSearch();
       } else {
         setIsLoadingMore(true);
       }
@@ -382,14 +380,7 @@ export function ResultsScreen() {
         setSearchPhase(null);
       }
     },
-    [
-      appendRestaurants,
-      query,
-      resetMobileViewForSearch,
-      restaurants,
-      setRestaurants,
-      updateRestaurant,
-    ],
+    [appendRestaurants, query, restaurants, setRestaurants, updateRestaurant],
   );
 
   useEffect(() => {
@@ -563,7 +554,7 @@ export function ResultsScreen() {
             <button
               key={view}
               type="button"
-              onClick={() => (view === "map" ? goToMap() : goToList())}
+              onClick={() => (view === "map" ? switchToMap() : switchToList())}
               aria-pressed={mobileView === view}
               className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
             >
@@ -628,6 +619,8 @@ export function ResultsScreen() {
                   onSelectStore={handleSelectStore}
                   scrollTarget={scrollTarget}
                   hiddenTiers={hiddenTiers}
+                  onTouchStart={handleListTouchStart}
+                  onTouchEnd={handleListTouchEnd}
                   banner={
                     searchError && hasVisibleStores ? (
                       <div
