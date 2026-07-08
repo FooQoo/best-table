@@ -1,9 +1,13 @@
 import type { ActionFunctionArgs } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
-import { getRestaurantSearchRepository } from "~/server/repositories/restaurant-search-repository";
+import {
+  getRestaurantSearchRepository,
+  type RestaurantSearchRepository,
+} from "~/server/repositories/restaurant-search-repository";
 import {
   streamRestaurants,
   type RestaurantSearchStreamEvent,
+  type RestaurantSearchPagination,
 } from "~/server/services/restaurant-search";
 import type { RestaurantSearchQueryCondition } from "~/server/services/restaurant-search-query";
 import { parseRestaurantSearchPagination } from "~/server/services/restaurant-search-pagination";
@@ -49,6 +53,100 @@ function encodeEvent(event: StreamEvent): Uint8Array {
   return encoder.encode(`${JSON.stringify(event)}\n`);
 }
 
+type PumpRestaurantSearchStreamInput = {
+  writer: WritableStreamDefaultWriter<Uint8Array>;
+  abortSignal: AbortSignal;
+  condition: RestaurantSearchQueryCondition;
+  pagination: RestaurantSearchPagination;
+  repository: RestaurantSearchRepository;
+  mode: string | undefined;
+  streamRestaurantsFn?: typeof streamRestaurants;
+};
+
+export async function pumpRestaurantSearchStream({
+  writer,
+  abortSignal,
+  condition,
+  pagination,
+  repository,
+  mode,
+  streamRestaurantsFn = streamRestaurants,
+}: PumpRestaurantSearchStreamInput): Promise<void> {
+  let closed = false;
+
+  const send = async (event: StreamEvent) => {
+    if (closed || abortSignal.aborted) return;
+    try {
+      await writer.write(encodeEvent(event));
+    } catch {
+      closed = true;
+    }
+  };
+
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    try {
+      await writer.close();
+    } catch {
+      // already closed
+    }
+  };
+
+  try {
+    if (mode === "mock") {
+      await send({ type: "phase", phase: "searching" });
+      const result = await repository.search(condition, pagination);
+      const existingRestaurantKeys = new Set(pagination.existingRestaurantKeys);
+      const restaurants = result.restaurants.filter(
+        (restaurant) =>
+          !existingRestaurantKeys.has(
+            getRestaurantDeduplicationKey(restaurant),
+          ),
+      );
+      for (const restaurant of restaurants) {
+        await send({
+          type: "restaurant",
+          restaurant: toBaseRestaurant(restaurant),
+        });
+      }
+      await send({ type: "phase", phase: "evaluating" });
+      for (const restaurant of restaurants) {
+        if (closed || abortSignal.aborted) return;
+        await sleep(150); // 段階表示（先に一覧、後からマッチ度）を目視確認できるようにする
+        await send({ type: "restaurant-evaluated", restaurant });
+      }
+      await send({
+        type: "done",
+        fromCache: result.fromCache,
+        hasMore: result.hasMore,
+        nextOffset: result.nextOffset,
+      });
+      return;
+    }
+
+    for await (const event of streamRestaurantsFn(condition, pagination)) {
+      if (closed || abortSignal.aborted) return;
+      await send(event);
+    }
+  } catch (error) {
+    if (!abortSignal.aborted) {
+      console.error("[restaurants-search-stream-route] failed", {
+        error: summarizeError(error),
+      });
+      await send({ type: "error", message: "レストラン検索に失敗しました。" });
+      await send({
+        type: "done",
+        fromCache: false,
+        hasMore: false,
+        nextOffset: null,
+      });
+    }
+  } finally {
+    await close();
+  }
+}
+
 export async function action({ request }: ActionFunctionArgs) {
   const abortSignal = request.signal;
 
@@ -69,89 +167,23 @@ export async function action({ request }: ActionFunctionArgs) {
     limit: rawLimit,
     offset: rawOffset,
     existingRestaurantKeys: Array.isArray(rawExistingRestaurantKeys)
-      ? rawExistingRestaurantKeys.filter((key): key is string => typeof key === "string")
+      ? rawExistingRestaurantKeys.filter(
+          (key): key is string => typeof key === "string",
+        )
       : [],
   });
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false;
-
-      const send = (event: StreamEvent) => {
-        if (closed || abortSignal.aborted) return;
-        try {
-          controller.enqueue(encodeEvent(event));
-        } catch {
-          closed = true;
-        }
-      };
-
-      const close = () => {
-        if (closed) return;
-        closed = true;
-        try {
-          controller.close();
-        } catch {
-          // already closed
-        }
-      };
-
-      try {
-        const repository = getRestaurantSearchRepository();
-
-        if (process.env.MODE === "mock") {
-          send({ type: "phase", phase: "searching" });
-          const result = await repository.search(condition, pagination);
-          const existingRestaurantKeys = new Set(pagination.existingRestaurantKeys);
-          const restaurants = result.restaurants.filter(
-            (restaurant) =>
-              !existingRestaurantKeys.has(getRestaurantDeduplicationKey(restaurant)),
-          );
-          for (const restaurant of restaurants) {
-            send({ type: "restaurant", restaurant: toBaseRestaurant(restaurant) });
-          }
-          send({ type: "phase", phase: "evaluating" });
-          for (const restaurant of restaurants) {
-            if (closed || abortSignal.aborted) return;
-            await sleep(150); // 段階表示（先に一覧、後からマッチ度）を目視確認できるようにする
-            send({ type: "restaurant-evaluated", restaurant });
-          }
-          send({
-            type: "done",
-            fromCache: result.fromCache,
-            hasMore: result.hasMore,
-            nextOffset: result.nextOffset,
-          });
-          return;
-        }
-
-        for await (const event of streamRestaurants(condition, pagination)) {
-          if (closed || abortSignal.aborted) return;
-          send(event);
-        }
-      } catch (error) {
-        if (!abortSignal.aborted) {
-          console.error("[restaurants-search-stream-route] failed", {
-            error: summarizeError(error),
-          });
-          send({ type: "error", message: "レストラン検索に失敗しました。" });
-          send({
-            type: "done",
-            fromCache: false,
-            hasMore: false,
-            nextOffset: null,
-          });
-        }
-      } finally {
-        close();
-      }
-    },
-    cancel() {
-      // Client disconnected; the start() closure observes abortSignal/closed.
-    },
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  void pumpRestaurantSearchStream({
+    writer: writable.getWriter(),
+    abortSignal,
+    condition,
+    pagination,
+    repository: getRestaurantSearchRepository(),
+    mode: process.env.MODE,
   });
 
-  return new Response(stream, {
+  return new Response(readable, {
     headers: {
       "Cache-Control": "no-cache, no-transform",
       "Content-Type": "application/x-ndjson; charset=utf-8",
