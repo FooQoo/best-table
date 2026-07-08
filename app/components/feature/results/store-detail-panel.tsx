@@ -1,4 +1,9 @@
-import { useEffect, useRef } from "react";
+import {
+  useEffect,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { X } from "lucide-react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { MatchTierBadge } from "~/components/ui/match-tier-badge";
@@ -22,6 +27,16 @@ type StoreDetailPanelProps = {
 export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
   const qa = buildStoreQA(store);
   const panelRef = useRef<HTMLElement | null>(null);
+
+  const stopPanelEventPropagation = (
+    event: ReactPointerEvent<HTMLElement> | ReactMouseEvent<HTMLElement>,
+  ) => {
+    // パネル自体へのタップ/クリックは「外側タップ」でも地図操作でもない。
+    // Google Maps や下層の一覧/地図にイベントが伝播すると、パネルを閉じる・
+    // 選択店舗を切り替える操作として誤解釈されることがあるため、
+    // パネル境界で明示的に止める。スクロールは pointermove/wheel を止めず維持する。
+    event.stopPropagation();
+  };
 
   useEffect(() => {
     // タップ開始位置からの移動量が小さい場合のみ「外側タップ」とみなして閉じる。
@@ -84,6 +99,9 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
       ref={panelRef}
       aria-label={`${store.name}の詳細`}
       className={`absolute inset-x-3 top-3 bottom-3 ${Z_INDEX.storeDetailPanel} overflow-y-auto rounded-md border-[1.5px] border-[#d8c79d] bg-[#fffdf8] shadow-[0_10px_30px_rgba(20,20,20,.22)] duration-150 animate-in fade-in-0 slide-in-from-left-2 md:inset-x-auto md:left-4 md:top-4 md:bottom-4 md:w-[420px] md:max-w-[calc(100%-32px)]`}
+      onPointerDown={stopPanelEventPropagation}
+      onPointerUp={stopPanelEventPropagation}
+      onClick={stopPanelEventPropagation}
     >
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#e4ded0] bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
         <div className="min-w-0">

@@ -72,6 +72,25 @@ describe("StoreDetailPanel", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("詳細パネル自体をタップしても閉じず、イベントを外側へ伝播させない", () => {
+    const onClose = vi.fn();
+    const onOutsideClick = vi.fn();
+
+    render(
+      <div onClick={onOutsideClick}>
+        <StoreDetailPanel store={STORES[0]} onClose={onClose} />
+      </div>,
+    );
+
+    const panel = screen.getByLabelText(`${STORES[0].name}の詳細`);
+    fireEvent.pointerDown(panel, { clientX: 100, clientY: 100 });
+    fireEvent.pointerUp(panel, { clientX: 100, clientY: 100 });
+    fireEvent.click(panel);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onOutsideClick).not.toHaveBeenCalled();
+  });
+
   it("店舗名を term にした一休.comの検索URLへの送客リンクを表示する", () => {
     const store = STORES[0];
     render(<StoreDetailPanel store={store} onClose={() => {}} />);
