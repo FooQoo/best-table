@@ -14,8 +14,6 @@ import {
   EVIDENCE_LABELS,
   GENRE_LABELS,
 } from "~/utils/evidence-labels";
-import { buildGoogleMapsUrl } from "~/utils/google-maps-url";
-import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
 import { buildStoreQA } from "~/utils/store-qa";
 import { Z_INDEX } from "~/styles/z-index";
 
@@ -136,25 +134,6 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
             <div>予算目安：{store.budgetLabel ?? "情報なし"}</div>
             <div>アクセス：{store.access ?? "情報なし"}</div>
             <div>連絡先：{store.phone ?? "情報なし"}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <a
-                href={buildIkyuSearchUrl(store)}
-                target="_blank"
-                rel="noopener"
-                data-testid="ikyu-referral-link"
-                className="inline-block font-bold text-[#8a6a1f] underline underline-offset-2"
-              >
-                一休.comで空席を確認
-              </a>
-              <a
-                href={buildGoogleMapsUrl(store)}
-                target="_blank"
-                rel="noopener"
-                className="inline-block text-[#8a6a1f] underline underline-offset-2"
-              >
-                Google Mapで空席・予約を確認
-              </a>
-            </div>
           </div>
         </div>
 

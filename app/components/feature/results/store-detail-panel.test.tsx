@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { STORES } from "~/mocks/data";
-import { buildIkyuSearchUrl } from "~/utils/ikyu-search-url";
 import { StoreDetailPanel } from "./store-detail-panel";
 
 describe("StoreDetailPanel", () => {
@@ -91,12 +90,14 @@ describe("StoreDetailPanel", () => {
     expect(onOutsideClick).not.toHaveBeenCalled();
   });
 
-  it("店舗名を term にした一休.comの検索URLへの送客リンクを表示する", () => {
-    const store = STORES[0];
-    render(<StoreDetailPanel store={store} onClose={() => {}} />);
+  it("詳細パネルには一休.comとGoogle Mapの送客リンクを表示しない", () => {
+    render(<StoreDetailPanel store={STORES[0]} onClose={() => {}} />);
 
-    const link = screen.getByTestId("ikyu-referral-link");
-    expect(link).toHaveTextContent("一休.comで空席を確認");
-    expect(link).toHaveAttribute("href", buildIkyuSearchUrl(store));
+    expect(
+      screen.queryByRole("link", { name: "一休.comで空席を確認" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Google Mapで空席・予約を確認" }),
+    ).not.toBeInTheDocument();
   });
 });
