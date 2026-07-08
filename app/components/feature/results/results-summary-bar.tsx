@@ -83,7 +83,7 @@ export function ResultsSummaryBar({
 
       {isEditingConditions && (
         <div
-          className={`absolute left-0 right-0 top-full ${Z_INDEX.conditionsEditorOverlay} max-h-[calc(100vh-160px)] overflow-y-auto border-b-[1.5px] border-[#e4ded0] bg-white px-4 py-4 shadow-[0_12px_24px_rgba(20,20,20,.14)] sm:px-8 sm:py-5`}
+          className={`absolute left-0 right-0 top-full ${Z_INDEX.conditionsEditorOverlay} max-h-[calc(100dvh-160px)] overflow-y-auto border-b-[1.5px] border-[#e4ded0] bg-white px-4 py-4 shadow-[0_12px_24px_rgba(20,20,20,.14)] sm:px-8 sm:py-5`}
         >
           <ConditionsEditor />
         </div>

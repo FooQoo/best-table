@@ -626,7 +626,7 @@ export function ResultsScreen() {
   );
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden box-border">
+    <div className="h-[calc(100dvh-64px)] flex flex-col overflow-hidden box-border">
       <ResultsSummaryBar
         recapKeyword={recapKeyword}
         recapDateTime={recapDateTime}
