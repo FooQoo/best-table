@@ -29,6 +29,7 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
     // 発火してしまい、スクロールしようとしただけでカードが閉じてしまう。
     const TAP_MOVE_THRESHOLD_PX = 10;
     let pointerDownPosition: { x: number; y: number } | null = null;
+    let pointerDownStartedOutside = false;
 
     const isOutsideTarget = (target: EventTarget | null) => {
       if (!(target instanceof Node)) return false;
@@ -42,11 +43,15 @@ export function StoreDetailPanel({ store, onClose }: StoreDetailPanelProps) {
 
     const handlePointerDown = (event: PointerEvent) => {
       pointerDownPosition = { x: event.clientX, y: event.clientY };
+      pointerDownStartedOutside = isOutsideTarget(event.target);
     };
 
     const handlePointerUp = (event: PointerEvent) => {
       const start = pointerDownPosition;
+      const startedOutside = pointerDownStartedOutside;
       pointerDownPosition = null;
+      pointerDownStartedOutside = false;
+      if (!startedOutside) return;
       if (!isOutsideTarget(event.target)) return;
       if (start) {
         const distance = Math.hypot(
