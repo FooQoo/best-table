@@ -607,7 +607,12 @@ export function ResultsScreen() {
     committedMapCenterRef.current = null;
     submittedSearchKeyRef.current = searchConditionKey;
     submitSearch("initial", 0, null);
-  }, [clearCompareIds, clearTransientResultsState, searchConditionKey, submitSearch]);
+  }, [
+    clearCompareIds,
+    clearTransientResultsState,
+    searchConditionKey,
+    submitSearch,
+  ]);
 
   const cancelConditions = useCallback(() => {
     setIsEditingConditions(false);
@@ -626,135 +631,45 @@ export function ResultsScreen() {
   );
 
   return (
-    <div className="relative h-[calc(100dvh-64px)] flex flex-col overflow-hidden box-border">
-      <ResultsSummaryBar
-        recapKeyword={recapKeyword}
-        recapDateTime={recapDateTime}
-        people={query.people}
-        recapBudget={recapBudget}
-        recapPriorities={recapPriorities}
-        isEditingConditions={isEditingConditions}
-        onStartEditingConditions={startEditingConditions}
-        onConfirmConditions={confirmConditions}
-        onCancelConditions={cancelConditions}
-        searchPhase={isInitialSearching || isLoadingMore ? searchPhase : null}
-        phaseRestaurantCount={phaseRestaurantCount}
-      />
+    <div className="h-[calc(100dvh-64px)] flex flex-col overflow-hidden box-border">
+      <div className="relative flex flex-1 flex-col overflow-hidden min-h-0">
+        <ResultsSummaryBar
+          recapKeyword={recapKeyword}
+          recapDateTime={recapDateTime}
+          people={query.people}
+          recapBudget={recapBudget}
+          recapPriorities={recapPriorities}
+          isEditingConditions={isEditingConditions}
+          onStartEditingConditions={startEditingConditions}
+          onConfirmConditions={confirmConditions}
+          onCancelConditions={cancelConditions}
+          searchPhase={isInitialSearching || isLoadingMore ? searchPhase : null}
+          phaseRestaurantCount={phaseRestaurantCount}
+        />
 
-      <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
-        <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
-          {(["list", "map"] as const).map((view) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => (view === "map" ? switchToMap() : switchToList())}
-              aria-pressed={mobileView === view}
-              className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
-            >
-              {view === "list" ? "一覧" : "地図"}
-            </button>
-          ))}
+        <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
+          <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
+            {(["list", "map"] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                onClick={() =>
+                  view === "map" ? switchToMap() : switchToList()
+                }
+                aria-pressed={mobileView === view}
+                className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
+              >
+                {view === "list" ? "一覧" : "地図"}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="relative flex-1 flex overflow-hidden min-h-0">
-        {shouldShowInitialSkeleton ? (
-          <div ref={trackRef} className={carouselTrackClass}>
-            <div className="flex w-1/2 flex-none md:w-[400px]">
-              <StoreListSkeleton />
-            </div>
-            <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
-              <MapSwipeEdge
-                onTouchStart={handleSwipeTouchStart}
-                onTouchMove={handleSwipeTouchMove}
-                onTouchEnd={handleSwipeTouchEnd}
-              />
-              <ResultsMap
-                stores={[]}
-                bookingSummary={chatBookingSummary}
-                hiddenTiers={hiddenTiers}
-                onToggleTier={toggleHiddenTier}
-                compareIds={state.compareIds}
-                hiddenCompareGroups={hiddenCompareGroups}
-                onToggleCompareGroup={toggleHiddenCompareGroup}
-              />
-            </div>
-          </div>
-        ) : searchError && !hasVisibleStores ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
-            <div>{searchError}</div>
-            <button
-              type="button"
-              onClick={startEditingConditions}
-              className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
-            >
-              条件を変更する
-            </button>
-          </div>
-        ) : hasSearched && !isInitialSearching && restaurants.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
-            <div>条件に合う店舗が見つかりませんでした。</div>
-            <button
-              type="button"
-              onClick={startEditingConditions}
-              className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
-            >
-              条件を変更する
-            </button>
-          </div>
-        ) : (
-          <>
+        <div className="relative flex-1 flex overflow-hidden min-h-0">
+          {shouldShowInitialSkeleton ? (
             <div ref={trackRef} className={carouselTrackClass}>
               <div className="flex w-1/2 flex-none md:w-[400px]">
-                <StoreList
-                  stores={restaurants}
-                  compareIds={state.compareIds}
-                  onToggleCompare={toggleCompare}
-                  counterpartId={query.counterpart}
-                  activeStoreId={activeStoreId}
-                  selectedStoreId={selectedStoreId}
-                  onActivateStore={setActiveStoreId}
-                  onSelectStore={handleSelectStore}
-                  scrollTarget={scrollTarget}
-                  hiddenTiers={hiddenTiers}
-                  className="touch-pan-y"
-                  onTouchStart={handleSwipeTouchStart}
-                  onTouchMove={handleSwipeTouchMove}
-                  onTouchEnd={handleSwipeTouchEnd}
-                  banner={
-                    searchError && hasVisibleStores ? (
-                      <div
-                        data-testid="evaluation-error-banner"
-                        className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
-                      >
-                        {searchError}
-                      </div>
-                    ) : null
-                  }
-                  footer={
-                    <>
-                      {shouldShowStoreSkeleton && (
-                        <StoreListSkeletonItems count={3} />
-                      )}
-                      {loadMoreError && (
-                        <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
-                          <div>{loadMoreError}</div>
-                          <button
-                            type="button"
-                            onClick={loadMore}
-                            className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
-                          >
-                            もう一度読み込む
-                          </button>
-                        </div>
-                      )}
-                      <div
-                        ref={loadMoreRef}
-                        data-testid="results-load-more-sentinel"
-                      />
-                    </>
-                  }
-                />
+                <StoreListSkeleton />
               </div>
               <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
                 <MapSwipeEdge
@@ -763,63 +678,170 @@ export function ResultsScreen() {
                   onTouchEnd={handleSwipeTouchEnd}
                 />
                 <ResultsMap
-                  stores={restaurants}
+                  stores={[]}
                   bookingSummary={chatBookingSummary}
-                  activeStoreId={activeStoreId}
-                  focusStoreId={selectedStoreId}
-                  onMarkerClick={handleMarkerClick}
-                  onCenterChanged={handleMapCenterChanged}
-                  showSearchThisArea={showSearchThisArea}
-                  onSearchThisArea={searchThisArea}
                   hiddenTiers={hiddenTiers}
                   onToggleTier={toggleHiddenTier}
                   compareIds={state.compareIds}
                   hiddenCompareGroups={hiddenCompareGroups}
                   onToggleCompareGroup={toggleHiddenCompareGroup}
                 />
-                <div className="hidden md:block">
-                  {selectedStore && (
-                    <StoreDetailPanel
-                      key={selectedStore.id}
-                      store={selectedStore}
-                      onClose={() => setSelectedStoreId(null)}
-                    />
-                  )}
-                  {(canCompare || isCompareOpen) && (
-                    <ComparePanel
-                      stores={compareStores}
-                      counterpartId={query.counterpart}
-                      isOpen={isCompareOpen}
-                    />
-                  )}
-                </div>
               </div>
             </div>
-            <div className="md:hidden">
-              {selectedStore && (
-                <>
-                  {/* 一覧表示中は、パネルの inset 余白にスクロール中のカードがはみ出すことがあり、
+          ) : searchError && !hasVisibleStores ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
+              <div>{searchError}</div>
+              <button
+                type="button"
+                onClick={startEditingConditions}
+                className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+              >
+                条件を変更する
+              </button>
+            </div>
+          ) : hasSearched && !isInitialSearching && restaurants.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
+              <div>条件に合う店舗が見つかりませんでした。</div>
+              <button
+                type="button"
+                onClick={startEditingConditions}
+                className="text-[13px] text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+              >
+                条件を変更する
+              </button>
+            </div>
+          ) : (
+            <>
+              <div ref={trackRef} className={carouselTrackClass}>
+                <div className="flex w-1/2 flex-none md:w-[400px]">
+                  <StoreList
+                    stores={restaurants}
+                    compareIds={state.compareIds}
+                    onToggleCompare={toggleCompare}
+                    counterpartId={query.counterpart}
+                    activeStoreId={activeStoreId}
+                    selectedStoreId={selectedStoreId}
+                    onActivateStore={setActiveStoreId}
+                    onSelectStore={handleSelectStore}
+                    scrollTarget={scrollTarget}
+                    hiddenTiers={hiddenTiers}
+                    className="touch-pan-y"
+                    onTouchStart={handleSwipeTouchStart}
+                    onTouchMove={handleSwipeTouchMove}
+                    onTouchEnd={handleSwipeTouchEnd}
+                    banner={
+                      searchError && hasVisibleStores ? (
+                        <div
+                          data-testid="evaluation-error-banner"
+                          className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
+                        >
+                          {searchError}
+                        </div>
+                      ) : null
+                    }
+                    footer={
+                      <>
+                        {shouldShowStoreSkeleton && (
+                          <StoreListSkeletonItems count={3} />
+                        )}
+                        {loadMoreError && (
+                          <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
+                            <div>{loadMoreError}</div>
+                            <button
+                              type="button"
+                              onClick={loadMore}
+                              className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+                            >
+                              もう一度読み込む
+                            </button>
+                          </div>
+                        )}
+                        <div
+                          ref={loadMoreRef}
+                          data-testid="results-load-more-sentinel"
+                        />
+                      </>
+                    }
+                  />
+                </div>
+                <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+                  <MapSwipeEdge
+                    onTouchStart={handleSwipeTouchStart}
+                    onTouchMove={handleSwipeTouchMove}
+                    onTouchEnd={handleSwipeTouchEnd}
+                  />
+                  <ResultsMap
+                    stores={restaurants}
+                    bookingSummary={chatBookingSummary}
+                    activeStoreId={activeStoreId}
+                    focusStoreId={selectedStoreId}
+                    onMarkerClick={handleMarkerClick}
+                    onCenterChanged={handleMapCenterChanged}
+                    showSearchThisArea={showSearchThisArea}
+                    onSearchThisArea={searchThisArea}
+                    hiddenTiers={hiddenTiers}
+                    onToggleTier={toggleHiddenTier}
+                    compareIds={state.compareIds}
+                    hiddenCompareGroups={hiddenCompareGroups}
+                    onToggleCompareGroup={toggleHiddenCompareGroup}
+                  />
+                  <div className="hidden md:block">
+                    {selectedStore && (
+                      <StoreDetailPanel
+                        key={selectedStore.id}
+                        store={selectedStore}
+                        onClose={() => setSelectedStoreId(null)}
+                      />
+                    )}
+                    {(canCompare || isCompareOpen) && (
+                      <ComparePanel
+                        stores={compareStores}
+                        counterpartId={query.counterpart}
+                        isOpen={isCompareOpen}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="md:hidden">
+                {selectedStore && (
+                  <>
+                    {/* 一覧表示中は、パネルの inset 余白にスクロール中のカードがはみ出すことがあり、
                       そこをタップすると閉じずにカードへ貫通してしまう。全面バックドロップを敷いて
                       タップの到達先をカードから塞ぐことで、StoreDetailPanel 自身が持つ「外側タップで
                       閉じる」判定（pointerup, isOutsideTarget）に正しく検知させる。閉じる処理自体は
                       その既存ロジックに任せるため、この div に onClick は付けない
                       （地図表示中はマーカー間の直接切り替えを妨げないよう対象外）。 */}
-                  {mobileView === "list" && (
-                    <div
-                      className={cn("absolute inset-0", Z_INDEX.storeDetailBackdrop)}
-                      aria-hidden="true"
+                    {mobileView === "list" && (
+                      <div
+                        className={cn(
+                          "absolute inset-0",
+                          Z_INDEX.storeDetailBackdrop,
+                        )}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <StoreDetailPanel
+                      key={selectedStore.id}
+                      store={selectedStore}
+                      onClose={() => setSelectedStoreId(null)}
                     />
-                  )}
-                  <StoreDetailPanel
-                    key={selectedStore.id}
-                    store={selectedStore}
-                    onClose={() => setSelectedStoreId(null)}
-                  />
-                </>
-              )}
-            </div>
-          </>
-        )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="md:hidden">
+          {(canCompare || isCompareOpen) && (
+            <ComparePanel
+              stores={compareStores}
+              counterpartId={query.counterpart}
+              isOpen={isCompareOpen}
+            />
+          )}
+        </div>
       </div>
 
       <CompareTray
@@ -830,16 +852,6 @@ export function ResultsScreen() {
           setIsCompareOpen((open) => (open ? false : canCompare))
         }
       />
-
-      <div className="md:hidden">
-        {(canCompare || isCompareOpen) && (
-          <ComparePanel
-            stores={compareStores}
-            counterpartId={query.counterpart}
-            isOpen={isCompareOpen}
-          />
-        )}
-      </div>
     </div>
   );
 }
