@@ -725,6 +725,7 @@ export function ResultsScreen() {
                     onSelectStore={handleSelectStore}
                     scrollTarget={scrollTarget}
                     hiddenTiers={hiddenTiers}
+                    hiddenCompareGroups={hiddenCompareGroups}
                     className="touch-pan-y"
                     onTouchStart={handleSwipeTouchStart}
                     onTouchMove={handleSwipeTouchMove}

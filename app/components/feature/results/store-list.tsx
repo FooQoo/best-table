@@ -1,4 +1,9 @@
-import { useEffect, useRef, type ReactNode, type TouchEventHandler } from "react";
+import {
+  useEffect,
+  useRef,
+  type ReactNode,
+  type TouchEventHandler,
+} from "react";
 import { ConcernTags } from "~/components/ui/concern-tags";
 import { MatchTierBadge } from "~/components/ui/match-tier-badge";
 import { StorePhoto } from "~/components/ui/store-photo";
@@ -11,6 +16,7 @@ import {
   resolveTierFilterKey,
   type TierFilterKey,
 } from "~/components/feature/maps/match-tier-colors";
+import type { CompareVisibilityGroup } from "~/components/feature/maps/map-filter-panel";
 
 export type StoreListScrollTarget = { storeId: string };
 
@@ -27,6 +33,7 @@ type StoreListProps = {
   // スクロールしない（一覧を眺めているだけのユーザーの視点を勝手に動かさないため）。
   scrollTarget?: StoreListScrollTarget | null;
   hiddenTiers?: ReadonlySet<TierFilterKey>;
+  hiddenCompareGroups?: ReadonlySet<CompareVisibilityGroup>;
   footer?: ReactNode;
   banner?: ReactNode;
   className?: string;
@@ -46,6 +53,7 @@ export function StoreList({
   onSelectStore,
   scrollTarget,
   hiddenTiers,
+  hiddenCompareGroups,
   footer,
   banner,
   className,
@@ -78,8 +86,13 @@ export function StoreList({
         const active = activeStoreId === store.id;
         const panelOpen = selectedStoreId === store.id;
         const disabled = !selected && compareCount >= MAX_COMPARE_COUNT;
-        const dimmedByLegend =
+        const dimmedByTier =
           hiddenTiers?.has(resolveTierFilterKey(store.matchTier)) ?? false;
+        const compareGroup: CompareVisibilityGroup = selected
+          ? "target"
+          : "excluded";
+        const dimmedByCompare = hiddenCompareGroups?.has(compareGroup) ?? false;
+        const dimmedByLegend = dimmedByTier || dimmedByCompare;
         const s = toggleButtonStyle(t, selected, disabled);
 
         return (
@@ -125,14 +138,18 @@ export function StoreList({
               <StorePhoto store={store} className="h-20 w-20 flex-none" />
               <div className="flex-1">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="font-bold text-[15px] leading-snug">{store.name}</div>
+                  <div className="font-bold text-[15px] leading-snug">
+                    {store.name}
+                  </div>
                   <MatchTierBadge tier={store.matchTier} />
                 </div>
                 <div className="text-xs text-[#79726a] mt-1">
-                  {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}・{store.area}
+                  {store.genre ? GENRE_LABELS[store.genre] : "ジャンル情報なし"}
+                  ・{store.area}
                 </div>
                 <div className="text-xs text-[#79726a] mt-0.5">
-                  個室：{store.room ?? "情報なし"}・予算目安：{store.budgetLabel ?? "情報なし"}
+                  個室：{store.room ?? "情報なし"}・予算目安：
+                  {store.budgetLabel ?? "情報なし"}
                 </div>
               </div>
             </div>
