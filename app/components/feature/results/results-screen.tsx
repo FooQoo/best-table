@@ -76,11 +76,11 @@ export function canRequestMoreResults(input: {
   return input.hasMore && !input.isLoadingMore && input.nextOffset !== null;
 }
 
-export function toggleSelectedStoreId(
-  currentStoreId: string | null,
+export function selectStoreDetailId(
+  _currentStoreId: string | null,
   nextStoreId: string,
-): string | null {
-  return currentStoreId === nextStoreId ? null : nextStoreId;
+): string {
+  return nextStoreId;
 }
 
 export function hasMapCenterMoved(
@@ -341,7 +341,7 @@ export function ResultsScreen() {
   const handleSelectStore = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
     setSelectedStoreId((currentStoreId) =>
-      toggleSelectedStoreId(currentStoreId, storeId),
+      selectStoreDetailId(currentStoreId, storeId),
     );
     setIsCompareOpen(false);
   }, []);

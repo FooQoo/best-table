@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canRequestMoreResults,
   hasMapCenterMoved,
-  toggleSelectedStoreId,
+  selectStoreDetailId,
 } from "./results-screen";
 
 describe("canRequestMoreResults", () => {
@@ -41,14 +41,14 @@ describe("canRequestMoreResults", () => {
   });
 });
 
-describe("toggleSelectedStoreId", () => {
+describe("selectStoreDetailId", () => {
   it("未選択または別店舗のときは、押した店舗の詳細パネルをONにする", () => {
-    expect(toggleSelectedStoreId(null, "store-a")).toBe("store-a");
-    expect(toggleSelectedStoreId("store-b", "store-a")).toBe("store-a");
+    expect(selectStoreDetailId(null, "store-a")).toBe("store-a");
+    expect(selectStoreDetailId("store-b", "store-a")).toBe("store-a");
   });
 
-  it("詳細パネルがONの店舗を再度押すとOFFにする", () => {
-    expect(toggleSelectedStoreId("store-a", "store-a")).toBeNull();
+  it("詳細パネルがONの店舗を再度押しても閉じず、同じ店舗を表示し続ける", () => {
+    expect(selectStoreDetailId("store-a", "store-a")).toBe("store-a");
   });
 });
 
