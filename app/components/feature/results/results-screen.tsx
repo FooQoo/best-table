@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type TouchEvent as ReactTouchEvent,
+  type TouchEventHandler,
 } from "react";
 import { useSearchParams } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
@@ -102,6 +103,32 @@ function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
     typeof event.fromCache === "boolean" &&
     typeof event.hasMore === "boolean" &&
     (typeof event.nextOffset === "number" || event.nextOffset === null)
+  );
+}
+
+// 地図左端の細いスワイプ受付ストリップ。地図本体（ここ以外の全域）はパン操作専用とし、
+// このストリップだけで一覧へ戻るスワイプを受け付ける。スケルトン表示中・結果表示中の
+// 両方で同じ見た目・挙動が必要なため、共通コンポーネントとして切り出す。
+function MapSwipeEdge({
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+}: {
+  onTouchStart: TouchEventHandler<HTMLDivElement>;
+  onTouchMove: TouchEventHandler<HTMLDivElement>;
+  onTouchEnd: TouchEventHandler<HTMLDivElement>;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-y-0 left-0 w-16 touch-none md:hidden",
+        Z_INDEX.mapSwipeEdge,
+      )}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -637,15 +664,10 @@ export function ResultsScreen() {
               <StoreListSkeleton />
             </div>
             <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
-              <div
-                className={cn(
-                  "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
-                  Z_INDEX.mapSwipeEdge,
-                )}
+              <MapSwipeEdge
                 onTouchStart={handleSwipeTouchStart}
                 onTouchMove={handleSwipeTouchMove}
                 onTouchEnd={handleSwipeTouchEnd}
-                aria-hidden="true"
               />
               <ResultsMap
                 stores={[]}
@@ -735,15 +757,10 @@ export function ResultsScreen() {
                 />
               </div>
               <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
-                <div
-                  className={cn(
-                    "absolute inset-y-0 left-0 w-8 touch-none md:hidden",
-                    Z_INDEX.mapSwipeEdge,
-                  )}
+                <MapSwipeEdge
                   onTouchStart={handleSwipeTouchStart}
                   onTouchMove={handleSwipeTouchMove}
                   onTouchEnd={handleSwipeTouchEnd}
-                  aria-hidden="true"
                 />
                 <ResultsMap
                   stores={restaurants}
@@ -783,11 +800,13 @@ export function ResultsScreen() {
                 <>
                   {/* 一覧表示中は、パネルの inset 余白にスクロール中のカードがはみ出すことがあり、
                       そこをタップすると閉じずにカードへ貫通してしまう。全面バックドロップを敷いて
-                      確実に閉じられるようにする（地図表示中はマーカー間の直接切り替えを妨げないよう対象外）。 */}
+                      タップの到達先をカードから塞ぐことで、StoreDetailPanel 自身が持つ「外側タップで
+                      閉じる」判定（pointerup, isOutsideTarget）に正しく検知させる。閉じる処理自体は
+                      その既存ロジックに任せるため、この div に onClick は付けない
+                      （地図表示中はマーカー間の直接切り替えを妨げないよう対象外）。 */}
                   {mobileView === "list" && (
                     <div
                       className={cn("absolute inset-0", Z_INDEX.storeDetailBackdrop)}
-                      onClick={() => setSelectedStoreId(null)}
                       aria-hidden="true"
                     />
                   )}
