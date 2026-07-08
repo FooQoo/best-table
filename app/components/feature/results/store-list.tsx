@@ -31,6 +31,7 @@ type StoreListProps = {
   banner?: ReactNode;
   className?: string;
   onTouchStart?: TouchEventHandler<HTMLDivElement>;
+  onTouchMove?: TouchEventHandler<HTMLDivElement>;
   onTouchEnd?: TouchEventHandler<HTMLDivElement>;
 };
 
@@ -49,6 +50,7 @@ export function StoreList({
   banner,
   className,
   onTouchStart,
+  onTouchMove,
   onTouchEnd,
 }: StoreListProps) {
   const t = getTheme();
@@ -66,6 +68,7 @@ export function StoreList({
     <div
       className={`w-full flex-none overflow-y-auto bg-[#f7f4ee] p-4 flex flex-col gap-4 md:w-[400px] md:p-6 ${className ?? ""}`}
       onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       {banner}

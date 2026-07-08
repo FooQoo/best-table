@@ -2,6 +2,8 @@
 // 値は Tailwind の z-* ユーティリティ名（文字列）で持ち、下から上へ並べる。
 export const Z_INDEX = {
   mapControls: "z-10",
+  mapSwipeEdge: "z-10",
+  storeDetailBackdrop: "z-10",
   mapActionButton: "z-20",
   storeDetailPanel: "z-20",
   aiChatButton: "z-20",

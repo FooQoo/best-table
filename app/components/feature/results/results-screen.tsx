@@ -4,7 +4,9 @@ import {
   useRef,
   useState,
   type TouchEvent as ReactTouchEvent,
+  type TouchEventHandler,
 } from "react";
+import { useSearchParams } from "react-router";
 import type { Restaurant } from "~/domain/models/restaurant";
 import type { TierFilterKey } from "~/components/feature/maps/match-tier-colors";
 import { MIN_COMPARE_COUNT } from "~/domain/models/restaurant";
@@ -33,7 +35,8 @@ import {
   StoreListSkeletonItems,
 } from "~/components/feature/results/store-list-skeleton";
 import type { SearchPhase } from "~/utils/search-phase-message";
-import { resolveSwipeDirection, type SwipePoint } from "~/utils/swipe";
+import { cn } from "~/utils/cn";
+import { Z_INDEX } from "~/styles/z-index";
 import { getRestaurantDeduplicationKey } from "~/utils/restaurant-deduplication";
 
 const PAGE_SIZE = 10;
@@ -103,6 +106,32 @@ function isSearchStreamEvent(value: unknown): value is SearchStreamEvent {
   );
 }
 
+// 地図左端の細いスワイプ受付ストリップ。地図本体（ここ以外の全域）はパン操作専用とし、
+// このストリップだけで一覧へ戻るスワイプを受け付ける。スケルトン表示中・結果表示中の
+// 両方で同じ見た目・挙動が必要なため、共通コンポーネントとして切り出す。
+function MapSwipeEdge({
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+}: {
+  onTouchStart: TouchEventHandler<HTMLDivElement>;
+  onTouchMove: TouchEventHandler<HTMLDivElement>;
+  onTouchEnd: TouchEventHandler<HTMLDivElement>;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-y-0 left-0 w-16 touch-none md:hidden",
+        Z_INDEX.mapSwipeEdge,
+      )}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function ResultsScreen() {
   const {
     state,
@@ -143,43 +172,127 @@ export function ResultsScreen() {
     Set<CompareVisibilityGroup>
   >(new Set());
   const [isEditingConditions, setIsEditingConditions] = useState(false);
-  const [mobileView, setMobileView] = useState<MobileResultsView>("list");
   const conditionsSnapshotRef = useRef<BookingQueryState | null>(null);
-  const swipeStartRef = useRef<SwipePoint | null>(null);
+
+  // 「今どちらの画面を見ているか」は URL の view パラメータで表現する。検索条件
+  // （areas/date/... 等）とは別のキーなので、切り替えても再検索・再評価は起きない
+  // （setQueryState は view を含まない URLSearchParams で置き換えるため、条件編集を
+  // 確定すると view は自然に消え一覧へ戻る）。ブラウザの「戻る」は通常のページ内
+  // ナビゲーションとして働くので、地図表示中の「戻る」は一覧に戻るだけで
+  // /results を離れない。
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mobileView: MobileResultsView =
+    searchParams.get("view") === "map" ? "map" : "list";
+
+  const switchToMap = useCallback(() => {
+    if (mobileView === "map") return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("view", "map");
+      return next;
+    });
+  }, [mobileView, setSearchParams]);
+
+  const switchToList = useCallback(() => {
+    if (mobileView === "list") return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("view");
+      return next;
+    });
+  }, [mobileView, setSearchParams]);
+
+  // スマホアプリ風に、スワイプ中は指へ 1:1 で追従させる。対象は一覧本体と地図左端の
+  // 細いストリップだけにし、地図のパン操作（ストリップ以外の全域）とは取り合わない。
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dragAxisRef = useRef<"horizontal" | "vertical" | null>(null);
+  const dragPanelWidthRef = useRef(0);
+
+  const clearTrackInlineStyle = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.style.transition = "";
+    track.style.translate = "";
+  }, []);
 
   const handleSwipeTouchStart = useCallback((event: ReactTouchEvent) => {
     const touch = event.touches[0];
     if (!touch) return;
-    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+    dragStartRef.current = { x: touch.clientX, y: touch.clientY };
+    dragAxisRef.current = null;
+    const track = trackRef.current;
+    // トラック幅は 200%（=パネル2枚分）なので、半分が1画面（パネル1枚）の幅。
+    dragPanelWidthRef.current = track
+      ? track.clientWidth / 2
+      : window.innerWidth;
   }, []);
 
-  // タブ帯（「一覧/地図」ボタンの帯）は地図のパン操作と競合しないため、両方向のスワイプを許可する。
-  const handleTabBarSwipeEnd = useCallback((event: ReactTouchEvent) => {
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-    const touch = event.changedTouches[0];
-    if (!start || !touch) return;
-    const direction = resolveSwipeDirection(start, {
-      x: touch.clientX,
-      y: touch.clientY,
-    });
-    if (direction === "left") setMobileView("map");
-    if (direction === "right") setMobileView("list");
-  }, []);
+  const handleSwipeTouchMove = useCallback(
+    (event: ReactTouchEvent) => {
+      const start = dragStartRef.current;
+      const track = trackRef.current;
+      if (!start || !track) return;
+      const touch = event.touches[0];
+      if (!touch) return;
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      // 最初のわずかな移動で縦スクロールか横スワイプかを判定し、以後はその軸に固定する。
+      if (dragAxisRef.current === null) {
+        if (Math.hypot(dx, dy) < 8) return;
+        dragAxisRef.current =
+          Math.abs(dx) > Math.abs(dy) ? "horizontal" : "vertical";
+        if (dragAxisRef.current === "horizontal") {
+          track.style.transition = "none";
+        }
+      }
+      if (dragAxisRef.current !== "horizontal") return;
+      const width = dragPanelWidthRef.current || 1;
+      const base = mobileView === "map" ? -width : 0;
+      const offset = Math.min(0, Math.max(-width, base + dx));
+      track.style.translate = `${offset}px`;
+    },
+    [mobileView],
+  );
 
-  // 一覧は縦スクロールのみなので、コンテンツ全面での左スワイプ（地図へ）は安全に許可できる。
-  // 地図は1本指ドラッグでパンするため、地図側では上部のタブ帯のみでスワイプを受け付ける。
-  const handleListSwipeEnd = useCallback((event: ReactTouchEvent) => {
-    const start = swipeStartRef.current;
-    swipeStartRef.current = null;
-    const touch = event.changedTouches[0];
-    if (!start || !touch) return;
-    const direction = resolveSwipeDirection(start, {
-      x: touch.clientX,
-      y: touch.clientY,
-    });
-    if (direction === "left") setMobileView("map");
-  }, []);
+  const handleSwipeTouchEnd = useCallback(
+    (event: ReactTouchEvent) => {
+      const start = dragStartRef.current;
+      const track = trackRef.current;
+      dragStartRef.current = null;
+      const wasHorizontal = dragAxisRef.current === "horizontal";
+      dragAxisRef.current = null;
+      if (!start || !track || !wasHorizontal) return;
+      const touch = event.changedTouches[0];
+      const width = dragPanelWidthRef.current || 1;
+      const dx = touch ? touch.clientX - start.x : 0;
+      // 画面幅の 4割を超えて引いたらビューを切り替え、そうでなければ元へスナップして戻す。
+      // やや大きめの閾値にして、軽く触れただけで意図せず切り替わらないようにする。
+      const threshold = width * 0.4;
+      const target: MobileResultsView =
+        mobileView === "list" && dx < -threshold
+          ? "map"
+          : mobileView === "map" && dx > threshold
+            ? "list"
+            : mobileView;
+      track.style.transition = "";
+      track.style.translate = target === "map" ? "-50%" : "0%";
+      // 遷移が終わったら inline style を外し、className ベースの translate
+      // （タブタップでの切り替え）に制御を戻す。念のためタイムアウトでも保険をかける。
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        track.removeEventListener("transitionend", cleanup);
+        clearTrackInlineStyle();
+      };
+      track.addEventListener("transitionend", cleanup);
+      window.setTimeout(cleanup, 350);
+      if (target === "map") switchToMap();
+      else switchToList();
+    },
+    [mobileView, switchToMap, switchToList, clearTrackInlineStyle],
+  );
 
   const toggleHiddenTier = useCallback((tier: TierFilterKey) => {
     setHiddenTiers((prev) => {
@@ -208,12 +321,15 @@ export function ResultsScreen() {
     [],
   );
 
-  const handleMarkerClick = useCallback((storeId: string) => {
-    setActiveStoreId(storeId);
-    setSelectedStoreId(storeId);
-    setScrollTarget({ storeId });
-    setMobileView("map");
-  }, []);
+  const handleMarkerClick = useCallback(
+    (storeId: string) => {
+      setActiveStoreId(storeId);
+      setSelectedStoreId(storeId);
+      setScrollTarget({ storeId });
+      switchToMap();
+    },
+    [switchToMap],
+  );
 
   const handleSelectStore = useCallback((storeId: string) => {
     setActiveStoreId(storeId);
@@ -252,7 +368,6 @@ export function ResultsScreen() {
         setActiveStoreId(null);
         setSelectedStoreId(null);
         setIsCompareOpen(false);
-        setMobileView("list");
       } else {
         setIsLoadingMore(true);
       }
@@ -358,13 +473,7 @@ export function ResultsScreen() {
         setSearchPhase(null);
       }
     },
-    [
-      appendRestaurants,
-      query,
-      restaurants,
-      setRestaurants,
-      updateRestaurant,
-    ],
+    [appendRestaurants, query, restaurants, setRestaurants, updateRestaurant],
   );
 
   useEffect(() => {
@@ -509,6 +618,13 @@ export function ResultsScreen() {
     }
   }, [query]);
 
+  // モバイルでは一覧/地図を横並びのトラックに載せ、タブ切り替え時に translateX でスライドする。
+  // PC(md:) ではトラックを無効化し、従来どおり左右分割レイアウトに戻す。
+  const carouselTrackClass = cn(
+    "flex w-[200%] flex-none transition-transform duration-300 ease-out will-change-transform md:w-full md:translate-x-0",
+    mobileView === "map" ? "-translate-x-1/2" : "translate-x-0",
+  );
+
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden box-border">
       <ResultsSummaryBar
@@ -525,17 +641,13 @@ export function ResultsScreen() {
         phaseRestaurantCount={phaseRestaurantCount}
       />
 
-      <div
-        className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden"
-        onTouchStart={handleSwipeTouchStart}
-        onTouchEnd={handleTabBarSwipeEnd}
-      >
+      <div className="flex-none border-b border-[#e4ded0] bg-[#f7f4ee] px-4 py-2 md:hidden">
         <div className="grid grid-cols-2 rounded-md border border-[#d8d2c0] bg-white p-1">
           {(["list", "map"] as const).map((view) => (
             <button
               key={view}
               type="button"
-              onClick={() => setMobileView(view)}
+              onClick={() => (view === "map" ? switchToMap() : switchToList())}
               aria-pressed={mobileView === view}
               className="rounded px-3 py-2 text-[13px] font-bold transition-colors aria-pressed:bg-[#12202f] aria-pressed:text-[#fffdf8]"
             >
@@ -547,13 +659,16 @@ export function ResultsScreen() {
 
       <div className="relative flex-1 flex overflow-hidden min-h-0">
         {shouldShowInitialSkeleton ? (
-          <>
-            <StoreListSkeleton
-              className={mobileView === "list" ? "" : "hidden md:flex"}
-            />
-            <div
-              className={`${mobileView === "map" ? "block" : "hidden"} min-w-0 flex-1 md:block`}
-            >
+          <div ref={trackRef} className={carouselTrackClass}>
+            <div className="flex w-1/2 flex-none md:w-[400px]">
+              <StoreListSkeleton />
+            </div>
+            <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+              <MapSwipeEdge
+                onTouchStart={handleSwipeTouchStart}
+                onTouchMove={handleSwipeTouchMove}
+                onTouchEnd={handleSwipeTouchEnd}
+              />
               <ResultsMap
                 stores={[]}
                 bookingSummary={chatBookingSummary}
@@ -564,7 +679,7 @@ export function ResultsScreen() {
                 onToggleCompareGroup={toggleHiddenCompareGroup}
               />
             </div>
-          </>
+          </div>
         ) : searchError && !hasVisibleStores ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#79726a] text-sm">
             <div>{searchError}</div>
@@ -589,96 +704,118 @@ export function ResultsScreen() {
           </div>
         ) : (
           <>
-            <StoreList
-              stores={restaurants}
-              compareIds={state.compareIds}
-              onToggleCompare={toggleCompare}
-              counterpartId={query.counterpart}
-              activeStoreId={activeStoreId}
-              selectedStoreId={selectedStoreId}
-              onActivateStore={setActiveStoreId}
-              onSelectStore={handleSelectStore}
-              scrollTarget={scrollTarget}
-              hiddenTiers={hiddenTiers}
-              className={mobileView === "list" ? "" : "hidden md:flex"}
-              onTouchStart={handleSwipeTouchStart}
-              onTouchEnd={handleListSwipeEnd}
-              banner={
-                searchError && hasVisibleStores ? (
-                  <div
-                    data-testid="evaluation-error-banner"
-                    className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
-                  >
-                    {searchError}
-                  </div>
-                ) : null
-              }
-              footer={
-                <>
-                  {shouldShowStoreSkeleton && (
-                    <StoreListSkeletonItems count={3} />
-                  )}
-                  {loadMoreError && (
-                    <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
-                      <div>{loadMoreError}</div>
-                      <button
-                        type="button"
-                        onClick={loadMore}
-                        className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+            <div ref={trackRef} className={carouselTrackClass}>
+              <div className="flex w-1/2 flex-none md:w-[400px]">
+                <StoreList
+                  stores={restaurants}
+                  compareIds={state.compareIds}
+                  onToggleCompare={toggleCompare}
+                  counterpartId={query.counterpart}
+                  activeStoreId={activeStoreId}
+                  selectedStoreId={selectedStoreId}
+                  onActivateStore={setActiveStoreId}
+                  onSelectStore={handleSelectStore}
+                  scrollTarget={scrollTarget}
+                  hiddenTiers={hiddenTiers}
+                  className="touch-pan-y"
+                  onTouchStart={handleSwipeTouchStart}
+                  onTouchMove={handleSwipeTouchMove}
+                  onTouchEnd={handleSwipeTouchEnd}
+                  banner={
+                    searchError && hasVisibleStores ? (
+                      <div
+                        data-testid="evaluation-error-banner"
+                        className="text-[13px] text-[#8a6a1a] bg-[#f3e7cf] border border-[#e0c98f] rounded-md px-3 py-2"
                       >
-                        もう一度読み込む
-                      </button>
-                    </div>
+                        {searchError}
+                      </div>
+                    ) : null
+                  }
+                  footer={
+                    <>
+                      {shouldShowStoreSkeleton && (
+                        <StoreListSkeletonItems count={3} />
+                      )}
+                      {loadMoreError && (
+                        <div className="flex flex-col gap-2 text-[13px] text-[#79726a]">
+                          <div>{loadMoreError}</div>
+                          <button
+                            type="button"
+                            onClick={loadMore}
+                            className="self-start text-[#8a6a1a] underline bg-transparent border-none cursor-pointer"
+                          >
+                            もう一度読み込む
+                          </button>
+                        </div>
+                      )}
+                      <div
+                        ref={loadMoreRef}
+                        data-testid="results-load-more-sentinel"
+                      />
+                    </>
+                  }
+                />
+              </div>
+              <div className="relative w-1/2 flex-none md:min-w-0 md:flex-1">
+                <MapSwipeEdge
+                  onTouchStart={handleSwipeTouchStart}
+                  onTouchMove={handleSwipeTouchMove}
+                  onTouchEnd={handleSwipeTouchEnd}
+                />
+                <ResultsMap
+                  stores={restaurants}
+                  bookingSummary={chatBookingSummary}
+                  activeStoreId={activeStoreId}
+                  focusStoreId={selectedStoreId}
+                  onMarkerClick={handleMarkerClick}
+                  onCenterChanged={handleMapCenterChanged}
+                  showSearchThisArea={showSearchThisArea}
+                  onSearchThisArea={searchThisArea}
+                  hiddenTiers={hiddenTiers}
+                  onToggleTier={toggleHiddenTier}
+                  compareIds={state.compareIds}
+                  hiddenCompareGroups={hiddenCompareGroups}
+                  onToggleCompareGroup={toggleHiddenCompareGroup}
+                />
+                <div className="hidden md:block">
+                  {selectedStore && (
+                    <StoreDetailPanel
+                      key={selectedStore.id}
+                      store={selectedStore}
+                      onClose={() => setSelectedStoreId(null)}
+                    />
                   )}
-                  <div
-                    ref={loadMoreRef}
-                    data-testid="results-load-more-sentinel"
-                  />
-                </>
-              }
-            />
-            <div
-              className={`relative min-w-0 flex-1 ${mobileView === "map" ? "block" : "hidden"} md:block`}
-            >
-              <ResultsMap
-                stores={restaurants}
-                bookingSummary={chatBookingSummary}
-                activeStoreId={activeStoreId}
-                focusStoreId={selectedStoreId}
-                onMarkerClick={handleMarkerClick}
-                onCenterChanged={handleMapCenterChanged}
-                showSearchThisArea={showSearchThisArea}
-                onSearchThisArea={searchThisArea}
-                hiddenTiers={hiddenTiers}
-                onToggleTier={toggleHiddenTier}
-                compareIds={state.compareIds}
-                hiddenCompareGroups={hiddenCompareGroups}
-                onToggleCompareGroup={toggleHiddenCompareGroup}
-              />
-              <div className="hidden md:block">
-                {selectedStore && (
+                  {(canCompare || isCompareOpen) && (
+                    <ComparePanel
+                      stores={compareStores}
+                      counterpartId={query.counterpart}
+                      isOpen={isCompareOpen}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="md:hidden">
+              {selectedStore && (
+                <>
+                  {/* 一覧表示中は、パネルの inset 余白にスクロール中のカードがはみ出すことがあり、
+                      そこをタップすると閉じずにカードへ貫通してしまう。全面バックドロップを敷いて
+                      タップの到達先をカードから塞ぐことで、StoreDetailPanel 自身が持つ「外側タップで
+                      閉じる」判定（pointerup, isOutsideTarget）に正しく検知させる。閉じる処理自体は
+                      その既存ロジックに任せるため、この div に onClick は付けない
+                      （地図表示中はマーカー間の直接切り替えを妨げないよう対象外）。 */}
+                  {mobileView === "list" && (
+                    <div
+                      className={cn("absolute inset-0", Z_INDEX.storeDetailBackdrop)}
+                      aria-hidden="true"
+                    />
+                  )}
                   <StoreDetailPanel
                     key={selectedStore.id}
                     store={selectedStore}
                     onClose={() => setSelectedStoreId(null)}
                   />
-                )}
-                {(canCompare || isCompareOpen) && (
-                  <ComparePanel
-                    stores={compareStores}
-                    counterpartId={query.counterpart}
-                    isOpen={isCompareOpen}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="md:hidden">
-              {selectedStore && (
-                <StoreDetailPanel
-                  key={selectedStore.id}
-                  store={selectedStore}
-                  onClose={() => setSelectedStoreId(null)}
-                />
+                </>
               )}
               {(canCompare || isCompareOpen) && (
                 <ComparePanel
